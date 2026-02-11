@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Workflow Service API
-  version: 1.0.0
+  version: 3.0.0
   description: |
     OpenAPI contract for the DIGIT Workflow service. All endpoints are relative to the
     configured context path (for example, `/workflow`). Each request must include

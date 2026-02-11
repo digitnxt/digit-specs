@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Common API Specification
-  version: 1.0.0
+  version: 3.0.0
   description: Common headers and objects for all DIGIT specifications.
 
 paths: {}

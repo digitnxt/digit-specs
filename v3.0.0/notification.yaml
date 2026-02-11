@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Notification
-  version: 1.0.0
+  version: 3.0.0
   description: |
     APIs to manage notification templates with dynamic placeholder rendering, and to send notifications via Email and SMS.
   contact:
