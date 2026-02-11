@@ -1,0 +1,733 @@
+openapi: 3.0.0
+info:
+  title: Notification
+  version: 1.0.0
+  description: |
+    APIs to manage notification templates with dynamic placeholder rendering, and to send notifications via Email and SMS.
+  contact:
+    name: eGovernments Foundation
+
+servers:
+  - url: https://prod-api.example.com/notification
+    description: Production server
+  - url: https://staging-api.example.com/notification
+    description: Staging server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Templates
+    description: Endpoints for managing notification templates
+  - name: Notifications
+    description: Endpoints for sending notifications
+
+paths:
+  /template:
+    post:
+      tags:
+        - Templates
+      summary: Create a notification template
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/Template'
+      parameters: 
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '201':
+          description: Template Created
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad Request
+          content:
+            'application/json':
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Templates
+      summary: Update a notification template
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/Template'
+      parameters: 
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Template Updated
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad Request
+          content:
+            'application/json':
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Templates
+      summary: Search notification templates
+      parameters:
+       - name: ids
+         in: query
+         description: Comma-separated list of uuids
+         schema:
+          type: string
+       - name: templateId
+         in: query
+         schema:
+          type: string
+       - name: tenantId
+         in: query
+         required: true
+         schema:
+          type: string
+       - name: version
+         in: query
+         schema:
+          type: string
+       - name: type
+         in: query
+         schema:
+          type: string
+          enum: [EMAIL, SMS]
+       - name: isHtml
+         in: query
+         schema:
+          type: boolean
+       - $ref: '#/components/parameters/RequestIdHeader'
+       - $ref: '#/components/parameters/CorrelationIdHeader'
+       - $ref: '#/components/parameters/UserAgentHeader'
+       - $ref: '#/components/parameters/TenantIdHeader'
+       - $ref: '#/components/parameters/ForwardedForHeader'
+       - $ref: '#/components/parameters/ClientId'
+       - $ref: '#/components/parameters/ClientSecret'
+       - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: List of Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            'application/json':
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Templates
+      summary: Delete a notification template
+      parameters:
+        - name: templateId
+          in: query
+          schema:
+            type: string
+          required: true
+        - name: tenantId
+          in: query
+          schema:
+            type: string
+          required: true
+        - name: version
+          in: query
+          schema:
+            type: string
+          required: true
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Template Deleted
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            'application/json':
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /template/preview:
+    post:
+      tags:
+        - Templates
+      summary: Preview a notification template with sample or actual data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplatePreviewRequest'
+      parameters: 
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Rendered template preview
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/TemplatePreviewResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad Request
+          content:
+            'application/json':
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+
+  /email/send:
+    post:
+      tags:
+        - Notifications
+      summary: Send an email notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      parameters: 
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Email sent successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad Request
+          content:
+            'application/json':
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sms/send:
+    post:
+      tags:
+        - Notifications
+      summary: Send a SMS notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SMSRequest'
+      parameters: 
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: SMS sent successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad Request
+          content:
+            'application/json':
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+
+  parameters:
+    RequestIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+    CorrelationIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+    UserAgentHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+    TenantIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    ForwardedForHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+    ClientId:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+    ClientSecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+    TimeStamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+  
+  headers:
+    X-Response-Time:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+    X-Response-Timestamp:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+    X-Request-ID:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+    X-Correlation-ID:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+    X-Tenant-ID:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+    X-Rate-Limit:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+    X-Rate-Limit-Remaining:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+    X-Rate-Limit-Reset:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+
+  schemas:
+    Template:
+      type: object
+      required:
+        - templateId
+        - version
+        - tenantId
+        - type
+        - content
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: System-generated unique identifier for the notification template.
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"  
+        templateId:
+          type: string
+          description: Unique code or identifier for the template, used to reference it in notification APIs.
+          example: "user-notify"
+        version:
+          type: string
+          description: Semantic version of the template. Used for version control and template evolution.
+          example: "1.0.0"
+        tenantId:
+          type: string
+          description: Identifier for the tenant or client using the template.
+          example: "pg"
+        type:
+          type: string
+          enum: [EMAIL, SMS]
+          description: Type of notification template. Can be 'EMAIL' or 'SMS'.
+          example: "EMAIL"
+        subject:
+          type: string
+          description: Subject line of the email. Applicable only if type is 'EMAIL'.
+          example: "Welcome to DIGIT"
+        content:
+          type: string
+          description: The actual template body, written using Go template syntax.
+          example: "Hello {{ .name }}, your account is ready."
+        isHTML:
+          type: boolean
+          description: Indicates whether the email content is HTML-formatted. Applicable for email templates only.
+          example: true
+          default: false
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+
+    EmailRequest:
+      type: object
+      required:
+        - templateId
+        - version
+        - tenantId
+        - emailIds
+      properties:
+        templateId:
+          type: string
+          description: Unique code or identifier for the template, used to reference it in notification APIs.
+          example: "user-notify"
+        version:
+          type: string
+          description: Semantic version of the template. Used for version control and template evolution.
+          example: "1.0.0"
+        tenantId:
+          type: string
+          description: Identifier for the tenant or client using the template.
+          example: "pg"
+        emailIds:
+          type: array
+          items:
+            type: string
+            format: email
+            maxLength: 320
+            description: Valid email address (e.g., user@example.com)
+        enrich:
+          type: boolean
+          description: Whether to enrich the payload using external data sources.
+          example: true
+          default: false
+        payload:
+          type: object
+        attachments:
+          type: array
+          items:
+            type: string
+            description: Filestore file reference IDs
+
+    SMSRequest:
+      type: object
+      required:
+        - templateId
+        - version
+        - tenantId
+        - mobileNumbers
+      properties:
+        templateId:
+          type: string
+          description: Unique code or identifier for the template, used to reference it in notification APIs.
+          example: "user-notify"
+        version:
+          type: string
+          description: Semantic version of the template. Used for version control and template evolution.
+          example: "1.0.0"
+        tenantId:
+          type: string
+          description: Identifier for the tenant or client using the template.
+          example: "pg"
+        mobileNumbers:
+          type: array
+          items:
+            type: string
+            pattern: '^\\+?[0-9]{10,15}$'
+            description: Mobile number with optional '+' prefix. Should be 10 to 15 digits (e.g., +919876543210)
+        enrich:
+          type: boolean
+          description: Whether to enrich the payload using external data sources.
+          example: true
+          default: false
+        payload:
+          type: object
+        category:
+          type: string
+          enum: [OTP, TRANSACTION, PROMOTION, NOTIFICATION, OTHERS]
+          description: Classification of the SMS notification.
+
+    TemplatePreviewRequest:
+      type: object
+      required:
+        - templateId
+        - version
+        - tenantId
+      properties:
+        templateId:
+          type: string
+          description: Unique code or identifier for the template, used to reference it in notification APIs.
+          example: "user-notify"
+        version:
+          type: string
+          description: Semantic version of the template. Used for version control and template evolution.
+          example: "1.0.0"
+        tenantId:
+          type: string
+          description: Identifier for the tenant or client using the template.
+          example: "pg"
+        enrich:
+          type: boolean
+          description: Whether to enrich the payload using external data sources.
+          example: true
+          default: false
+        payload:
+          type: object
+    
+    TemplatePreviewResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [EMAIL, SMS]
+          description: Type of notification template. Can be 'EMAIL' or 'SMS'.
+          example: "EMAIL"
+        isHTML:
+          type: boolean
+          description: Indicates whether the email content is HTML-formatted. Applicable for email templates only.
+          example: true
+          default: false
+        renderedSubject:
+          type: string
+        renderedContent:
+          type: string
+        
+    Error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+    
+    AuditDetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
