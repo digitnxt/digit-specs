@@ -190,27 +190,7 @@ components:
           type: string
 
     Error:
-      type: object
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: string
-          description: "Module-specific error code."
-          example: "User.NotFound"
-        message:
-          type: string
-          description: "Readable error message."
-          example: "User not found."
-        description:
-          type: string
-          description: "Optional long description for debugging."
-        params:
-          type: array
-          description: "Optional placeholders for dynamic messages."
-          items:
-            type: string
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
               
   responses:
     TooManyRequests:

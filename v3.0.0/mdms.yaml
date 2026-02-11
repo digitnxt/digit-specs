@@ -569,7 +569,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
   /egov-mdms-service/v2/_update/{schemaCode}:
     post:
       tags:
@@ -604,7 +604,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
   /egov-mdms-service/v1/_search:
     post:
       tags:
@@ -631,7 +631,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
   /egov-mdms-service/v2/_search:
     post:
       tags:
@@ -658,7 +658,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     BearerAuth:

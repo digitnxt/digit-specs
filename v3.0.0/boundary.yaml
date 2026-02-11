@@ -59,7 +59,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
   /shapefile/boundary/create:
     post:
@@ -129,7 +129,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
   /_search:
     get:
       tags:
@@ -186,7 +186,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
   /_update:
     put:
@@ -238,7 +238,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
   /hierarchy-definition/_create:
     post:
@@ -290,7 +290,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
   /hierarchy-definition/_search:
     get:
@@ -345,7 +345,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
   /boundary-relationships/_create:
     post:
@@ -397,7 +397,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
   /boundary-relationships/_search:
     get:
@@ -480,7 +480,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
   /boundary-relationships/_update:
     put:
@@ -532,7 +532,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+                $ref: '#/components/schemas/Error'
       x-codegen-request-body-name: requestInfo
       
 components:
@@ -576,6 +576,8 @@ components:
         $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
   
   schemas:
+    Error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
     HierarchyType:
       required:
       - code

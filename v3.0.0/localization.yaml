@@ -168,10 +168,7 @@ components:
         success:
           type: boolean
     Error:
-      type: object
-      properties:
-        error:
-          type: string
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
 tags:
   - name: Messages
     description: "Core endpoints for managing localization messages."
