@@ -1,0 +1,541 @@
+openapi: 3.0.3
+info:
+  title: OTP Service API
+  version: "3.0.0"
+  description: >
+    OTP generation, resend, verification and management API.
+    Delivery is delegated to a Notification Service. OTPs are stored hashed.
+servers:
+  - url: https://api.example.com
+    description: Primary production server
+
+tags:
+  - name: otp
+    description: OTP generation and verification operations
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  headers:
+    X-Response-Time:
+      description: Time taken to generate the response (in ms)
+      schema:
+        type: string
+    X-Response-Timestamp:
+      description: Timestamp when the response was generated
+      schema:
+        type: string
+        format: date-time
+    X-Request-ID:
+      description: Unique request identifier
+      schema:
+        type: string
+    X-Correlation-ID:
+      description: Correlation ID to track requests across services
+      schema:
+        type: string
+    X-Tenant-ID:
+      description: Tenant identifier
+      schema:
+        type: string
+    X-Rate-Limit:
+      description: Rate limit for the API
+      schema:
+        type: integer
+    X-Rate-Limit-Remaining:
+      description: Number of requests remaining in the current window
+      schema:
+        type: integer
+    X-Rate-Limit-Reset:
+      description: Time (in seconds) until rate limit resets
+      schema:
+        type: integer
+
+  parameters:
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      description: "The tenant ID for the request."
+      required: true
+      schema:
+        type: string
+    RequestId:
+      name: X-Request-ID
+      in: header
+      description: Client-provided idempotency / correlation id
+      required: false
+      schema:
+        type: string
+
+  schemas:
+    GenerateOtpRequest:
+      type: object
+      required:
+        - destination
+        - destination_type
+        - purpose
+      properties:
+        destination:
+          type: string
+          description: E.164 phone number or email address (canonicalized)
+        destination_type:
+          type: string
+          enum: [phone, email, push]
+        purpose:
+          type: string
+          description: e.g. login, mfa, password_reset, transaction
+        otp_length:
+          type: integer
+          description: Optional override (default configured per tenant)
+          minimum: 4
+          maximum: 10
+        otp_charset:
+          type: string
+          enum: [digits, alphanumeric, base32]
+          description: Optional override
+        client_metadata:
+          type: object
+          additionalProperties: true
+
+    GenerateOtpResponse:
+      type: object
+      properties:
+        request_id:
+          type: string
+        destination:
+          type: string
+        resend_allowed_after:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, failed]
+        message:
+          type: string
+
+    ResendOtpRequest:
+      type: object
+      required:
+        - request_id
+      properties:
+        request_id:
+          type: string
+        client_metadata:
+          type: object
+          additionalProperties: true
+
+    ResendOtpResponse:
+      type: object
+      properties:
+        request_id:
+          type: string
+        resend_count:
+          type: integer
+        resend_allowed_after:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    VerifyOtpRequest:
+      type: object
+      required:
+        - request_id
+        - otp
+      properties:
+        request_id:
+          type: string
+        otp:
+          type: string
+          description: OTP code supplied by user
+        client_metadata:
+          type: object
+          additionalProperties: true
+
+    VerifyOtpResponse:
+      type: object
+      properties:
+        request_id:
+          type: string
+        status:
+          type: string
+          enum: [verified, invalid, expired, locked]
+        verified_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    InvalidateOtpRequest:
+      type: object
+      required:
+        - request_id
+      properties:
+        request_id:
+          type: string
+        reason:
+          type: string
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: "Module-specific error code."
+          example: "User.NotFound"
+        message:
+          type: string
+          description: "Readable error message."
+          example: "User not found."
+        description:
+          type: string
+          description: "Optional long description for debugging."
+        params:
+          type: array
+          description: "Optional placeholders for dynamic messages."
+          items:
+            type: string
+              
+  responses:
+    TooManyRequests:
+      description: Too many requests
+      headers:
+        X-Response-Time:
+          $ref: '#/components/headers/X-Response-Time'
+        X-Response-Timestamp:
+          $ref: '#/components/headers/X-Response-Timestamp'
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+        X-Tenant-ID:
+          $ref: '#/components/headers/X-Tenant-ID'
+        X-Rate-Limit:
+          $ref: '#/components/headers/X-Rate-Limit'
+        X-Rate-Limit-Remaining:
+          $ref: '#/components/headers/X-Rate-Limit-Remaining'
+        X-Rate-Limit-Reset:
+          $ref: '#/components/headers/X-Rate-Limit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Not found
+      headers:
+        X-Response-Time:
+          $ref: '#/components/headers/X-Response-Time'
+        X-Response-Timestamp:
+          $ref: '#/components/headers/X-Response-Timestamp'
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+        X-Tenant-ID:
+          $ref: '#/components/headers/X-Tenant-ID'
+        X-Rate-Limit:
+          $ref: '#/components/headers/X-Rate-Limit'
+        X-Rate-Limit-Remaining:
+          $ref: '#/components/headers/X-Rate-Limit-Remaining'
+        X-Rate-Limit-Reset:
+          $ref: '#/components/headers/X-Rate-Limit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Bad request
+      headers:
+        X-Response-Time:
+          $ref: '#/components/headers/X-Response-Time'
+        X-Response-Timestamp:
+          $ref: '#/components/headers/X-Response-Timestamp'
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+        X-Tenant-ID:
+          $ref: '#/components/headers/X-Tenant-ID'
+        X-Rate-Limit:
+          $ref: '#/components/headers/X-Rate-Limit'
+        X-Rate-Limit-Remaining:
+          $ref: '#/components/headers/X-Rate-Limit-Remaining'
+        X-Rate-Limit-Reset:
+          $ref: '#/components/headers/X-Rate-Limit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      headers:
+        X-Response-Time:
+          $ref: '#/components/headers/X-Response-Time'
+        X-Response-Timestamp:
+          $ref: '#/components/headers/X-Response-Timestamp'
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
+        X-Correlation-ID:
+          $ref: '#/components/headers/X-Correlation-ID'
+        X-Tenant-ID:
+          $ref: '#/components/headers/X-Tenant-ID'
+        X-Rate-Limit:
+          $ref: '#/components/headers/X-Rate-Limit'
+        X-Rate-Limit-Remaining:
+          $ref: '#/components/headers/X-Rate-Limit-Remaining'
+        X-Rate-Limit-Reset:
+          $ref: '#/components/headers/X-Rate-Limit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+paths:
+  /v3/otp/generate:
+    post:
+      tags: [otp]
+      summary: Generate an OTP and send via Notification Service
+      description: >
+        Creates an OTPRecord, stores hashed OTP, calls Notification Service.
+        Returns a request_id for subsequent operations.
+      operationId: generateOtp
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateOtpRequest'
+      responses:
+        '201':
+          description: OTP generated
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateOtpResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          description: Notification service temporarily unavailable
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v3/otp/resend:
+    post:
+      tags: [otp]
+      summary: Resend an existing OTP or create a new one per config
+      operationId: resendOtp
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendOtpRequest'
+      responses:
+        '200':
+          description: Resent
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResendOtpResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /v3/otp/verify:
+    post:
+      tags: [otp]
+      summary: Verify an OTP for a request_id
+      operationId: verifyOtp
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOtpRequest'
+      responses:
+        '200':
+          description: Verified or failed with status
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyOtpResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '423':
+          description: Locked due to too many attempts
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v3/otp/invalidate:
+    post:
+      tags: [otp]
+      summary: Invalidate an OTP (admin or system)
+      operationId: invalidateOtp
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvalidateOtpRequest'
+      responses:
+        '200':
+          description: Invalidated
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  request_id:
+                    type: string
+                  status:
+                    type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
