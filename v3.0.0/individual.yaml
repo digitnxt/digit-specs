@@ -1,0 +1,898 @@
+openapi: 3.0.3
+info:
+  title: DIGIT Individual Service API (HashVault Edition)
+  description: |
+    Individual Service is a core registry microservice within the eGov DIGIT ecosystem that manages
+    citizen/individual records with enhanced PII encryption using HashiCorp Vault. It provides CRUD
+    operations, bulk processing, and advanced search capabilities for individual demographic information,
+    addresses, identifiers.
+
+    ## Key Features
+    - Individual registry management ( Create, Read, Update, Delete)
+    - Multi-tenant support with tenant-level isolation
+    - **Enhanced PII data encryption using HashiCorp Vault** (mobile numbers, identifiers, sensitive fields)
+    - User account integration
+    - Bulk operations with transactional support
+    - Complex search with multiple criteria
+    - Soft deletion with audit trails
+    - Optimistic locking for concurrency control
+    - RESTful API design with proper HTTP methods
+  version: 1.0.0
+  contact:
+    name: DIGIT Support
+    url: https://core.digit.org
+    email: support@digit.org
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8999/individual
+    description: Local Development Server
+  - url: https://dev.digit.org/individual/v1
+    description: Development Server
+  - url: https://staging.digit.org/individual/v1
+    description: Staging Server
+  - url: https://api.digit.org/individual/v1
+    description: Production Server
+
+tags:
+  - name: Individuals
+    description: Individual management operations
+  - name: Bulk
+    description: Bulk create, update, and delete operations
+  - name: Health
+    description: Service health check
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health Check
+      description: Check if the service is up and running. No authentication required.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+
+  /v1:
+    post:
+      tags: [Individuals]
+      summary: Create Individual
+      description: |
+        Create a new individual record.
+        - Automatically generates UUID and formatted individual ID
+        - Encrypts PII data (mobile numbers, identifiers) using HashiCorp Vault
+        - Sets audit fields from headers
+        - TenantId is populated from X-Tenant-Id header
+      operationId: createIndividual
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndividualRequest'
+      responses:
+        '201':
+          description: Individual created
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict (e.g., duplicate unique key)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Individuals]
+      summary: Search individuals
+      description: |
+        Search individuals with multiple criteria and pagination.
+        - Supports filtering by name, mobile, gender, date of birth, etc.
+        - Returns decrypted PII data to authorized clients
+        - Queryable fields mirror IndividualSearchCriteria
+      operationId: searchIndividuals
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/LastChangedSince'
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/IndividualId'
+        - $ref: '#/components/parameters/IndividualName'
+        - $ref: '#/components/parameters/DateOfBirth'
+        - $ref: '#/components/parameters/Gender'
+        - $ref: '#/components/parameters/MobileNumber'
+        - $ref: '#/components/parameters/CreatedFrom'
+        - $ref: '#/components/parameters/CreatedTo'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Search successful
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualSearchResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/{id}:
+    get:
+      tags: [Individuals]
+      summary: Get Individual by ID
+      description: Retrieve a single individual by UUID. Returns decrypted PII data.
+      operationId: getIndividualById
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: id
+          in: path
+          required: true
+          description: Individual UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Individual found
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Individual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Individuals]
+      summary: Update Individual
+      description: Update an existing individual record by ID. Uses optimistic locking via `rowVersion`.
+      operationId: putIndividual
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: id
+          in: path
+          required: true
+          description: Individual UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Individual'
+      responses:
+        '200':
+          description: Individual updated
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Individual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Optimistic locking error (row version mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Individuals]
+      summary: Soft delete Individual
+      description: |
+        Soft delete an individual record (sets isDeleted=true).
+        - Cascades soft delete to related entities (addresses, identifiers)
+        - Updates lastModifiedBy from headers
+      operationId: deleteIndividual
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: id
+          in: path
+          required: true
+          description: Individual UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No Content
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Individual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/bulk:
+    post:
+      tags: [Bulk]
+      summary: Bulk create individuals
+      operationId: bulkCreateIndividuals
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ClientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndividualBulkRequest'
+      responses:
+        '200':
+          description: Bulk created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualBulkResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Bulk]
+      summary: Bulk update individuals
+      operationId: bulkUpdateIndividuals
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ClientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndividualBulkRequest'
+      responses:
+        '200':
+          description: Bulk updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualBulkResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Optimistic locking error in one or more items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Bulk]
+      summary: Bulk delete individuals
+      operationId: bulkDeleteIndividuals
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ClientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndividualBulkRequest'
+      responses:
+        '200':
+          description: Bulk deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualBulkResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+
+  parameters:
+    RequestIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+    CorrelationIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+    UserAgentHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+    TenantIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    ForwardedForHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+    ClientId:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+    ClientSecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+    TimeStamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Provide a unique value to prevent duplicate creations on retries.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+
+    Limit:
+      name: limit
+      in: query
+      description: Maximum number of records to return
+      schema:
+        type: integer
+        default: 100
+        minimum: 1
+        maximum: 1000
+
+    Offset:
+      name: offset
+      in: query
+      description: Offset for pagination
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+    LastChangedSince:
+      name: lastChangedSince
+      in: query
+      description: Timestamp filter for incremental sync (epoch milliseconds)
+      schema:
+        type: integer
+        format: int64
+
+    IncludeDeleted:
+      name: includeDeleted
+      in: query
+      description: Include soft-deleted records
+      schema:
+        type: boolean
+        default: false
+
+    Id:
+      name: id
+      in: query
+      description: List of individual IDs (repeatable)
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+
+    IndividualId:
+      name: individualId
+      in: query
+      description: Individual ID
+      schema:
+        type: string
+
+    IndividualName:
+      name: individualName
+      in: query
+      description: Name search (partial match)
+      schema:
+        type: string
+
+    DateOfBirth:
+      name: dateOfBirth
+      in: query
+      description: Date of birth (YYYY-MM-DD)
+      schema:
+        type: string
+        format: date
+
+    Gender:
+      name: gender
+      in: query
+      schema:
+        type: string
+        enum: [MALE, FEMALE, OTHER]
+
+    MobileNumber:
+      name: mobileNumber
+      in: query
+      description: Mobile number (encrypted-at-rest in DB; plaintext as filter)
+      schema:
+        type: string
+
+    CreatedFrom:
+      name: createdFrom
+      in: query
+      description: Created from timestamp (epoch ms)
+      schema:
+        type: integer
+        format: int64
+
+    CreatedTo:
+      name: createdTo
+      in: query
+      description: Created to timestamp (epoch ms)
+      schema:
+        type: integer
+        format: int64
+
+    UserId:
+      name: userId
+      in: query
+      description: User ID
+      schema:
+        type: string
+
+  headers:
+    X-Response-Time:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+    X-Response-Timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+    X-Request-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+    X-Correlation-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+    X-Tenant-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+    X-Rate-Limit:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+    X-Rate-Limit-Remaining:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+    X-Rate-Limit-Reset:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+
+
+  schemas:
+    # --- Keep your original schemas verbatim (trimmed here for brevity) ---
+
+
+
+    ErrorInfo:
+      type: object
+      properties:
+        errorCode:
+          type: string
+          example: VALIDATION_ERROR
+        errorMessage:
+          type: string
+          example: Mobile number must contain only digits
+        type:
+          type: string
+          enum: [RECOVERABLE, NON_RECOVERABLE]
+        exception:
+          type: string
+
+    Individual:
+      type: object
+      required: [tenantId, name]
+      properties:
+        id:
+          type: string
+          example: 550e8400-e29b-41d4-a716-446655440000
+        individualId:
+          type: string
+          example: IND-2025-001
+        userId:
+          type: string
+        tenantId:
+          type: string
+          example: mz
+        name:
+          $ref: '#/components/schemas/Name'
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1990-01-15"
+          description: Date of birth (YYYY-MM-DD)
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+          description: Gender
+        mobileNumber:
+          type: string
+          pattern: '^[0-9]{10}$'
+          example: "9876543210"
+          description: 10-digit mobile number (encrypted at rest using HashiCorp Vault)
+        mobileNumberVerified:
+          type: boolean
+          default: false
+          description: Mobile number verification status
+        altContactNumber:
+          type: string
+          description: Alternate contact number
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+          description: Email address
+        emailVerified:
+          type: boolean
+          default: false
+          description: Email verification status
+        zoneInfo:
+          type: string
+          description: String from IANA Time Zone Database representing the End-User's time zone. For example, Europe/Paris or America/Los_Angeles.
+        locale:
+          type: string
+          description: User's locale/language preference
+        picture:
+          type: string
+          description: URL of the End-User's profile picture. This URL MUST refer to an image file (PNG, JPEG, or GIF), rather than to a Web page containing an image.
+        profile:
+          type: string
+          description: URL of the End-User's profile page. The contents of this Web page SHOULD be about the End-User.
+        website:
+          type: string
+          description: URL of the End-User's Web page or blog. This Web page SHOULD contain information published by the End-User or an organization that the End-User is affiliated with.
+        active:
+          type: boolean
+          default: false
+          description: Active status
+        address:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+          description: List of addresses
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+          description: List of identifiers (encrypted at rest)
+        additionalFields:
+          $ref: '#/components/schemas/AdditionalFields'
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetails'
+        rowVersion:
+          type: integer
+          format: int64
+          example: 1
+          description: Row version for optimistic locking
+        isDeleted:
+          type: boolean
+          default: false
+          description: Soft delete flag
+
+    Name:
+      type: object
+      required: [givenName]
+      properties:
+        givenName:
+          type: string
+          example: John
+          description: Given name (first name)
+        familyName:
+          type: string
+          example: Doe
+          description: Family name (last name)
+        middleName:
+          type: string
+          description: Middle name
+        nickname:
+          type: string
+          description: Nickname
+
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+          description: Tenant ID
+        doorNo:
+          type: string
+          example: "123"
+          description: Door/house number
+        latitude:
+          type: number
+          format: double
+          example: -25.9663
+          description: GPS latitude
+        longitude:
+          type: number
+          format: double
+          example: 32.5732
+          description: GPS longitude
+        locationAccuracy:
+          type: integer
+          description: Location accuracy in meters
+        type:
+          type: string
+          enum: [PERMANENT, CORRESPONDENCE]
+        landmark:
+          type: string
+          description: Landmark
+        city:
+          type: string
+          example: Maputo
+        region:
+          type: string
+          description: State, province, prefecture, or region component. 
+        pincode:
+          type: string
+          example: "1100"
+          description: Postal code
+        buildingName:
+          type: string
+          description: Building name
+        street:
+          type: string
+        country:
+          type: string
+          description: Country
+        formatted:
+          type: string
+          description: Full mailing address, formatted for display or use on a mailing label. This field MAY contain multiple lines, separated by newlines. Newlines can be represented either as a carriage return/line feed pair ("\r\n") or as a single line feed character ("\n").
+        locality:
+          $ref: '#/components/schemas/Locality'
+
+
+    Locality:
+      type: object
+      properties:
+        code:
+          type: string
+          example: MZ_LOC_001
+          description: Locality boundary code
+        name:
+          type: string
+          description: Locality name
+
+    Ward:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Ward boundary code
+        name:
+          type: string
+          description: Ward name
+
+    Identifier:
+      type: object
+      required: [identifierType, identifierId]
+      properties:
+        id:
+          type: string
+        clientReferenceId:
+          type: string
+          description: Client reference ID
+        identifierType:
+          type: string
+          enum: [NATIONAL_ID, AADHAAR, PASSPORT, SYSTEM_GENERATED]
+        identifierId:
+          type: string
+          example: "123456789012"
+          description: Identifier value (encrypted at rest using HashiCorp Vault)
+        isDeleted:
+          type: boolean
+          default: false
+          description: Soft delete flag
+
+
+    AdditionalFields:
+      type: object
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Field'
+
+    Field:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+
+    AuditDetails:
+      type: object
+      properties:
+        createdBy:
+          type: string
+          example: user-uuid-123
+        createdTime:
+          type: integer
+          format: int64
+          example: 1653290261853
+        lastModifiedBy:
+          type: string
+        lastModifiedTime:
+          type: integer
+          format: int64
+
+    IndividualSearchCriteria:
+      type: object
+      properties:
+        id:
+          type: array
+          items:
+            type: string
+        individualId:
+          type: string
+        individualName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+        mobileNumber:
+          type: string
+        createdFrom:
+          type: integer
+          format: int64
+        createdTo:
+          type: integer
+          format: int64
+        userId:
+          type: string
+
+    IndividualRequest:
+      type: object
+      required: [Individual]
+      properties:
+        Individual:
+          $ref: '#/components/schemas/Individual'
+
+
+    IndividualResponse:
+      type: object
+      properties:
+        Individuals:
+          $ref: '#/components/schemas/Individual'
+
+
+
+    IndividualSearchResponse:
+      type: object
+      properties:
+        Individuals:
+          type: array
+          items:
+            $ref: '#/components/schemas/Individual'
+        totalCount:
+          type: integer
+          format: int64
+
+    Error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+
+security:
+  - BearerAuth: []
