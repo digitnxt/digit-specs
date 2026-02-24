@@ -1417,6 +1417,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /payments/{id}:
+    get:
+      summary: Get payment by ID
+      operationId: getPaymentByID
+      tags: [Payment]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: paymentModes found
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
 
 components:
@@ -2022,13 +2069,16 @@ components:
             $ref: '#/components/schemas/LineItem'
         status:
           type: string
-          enum: [DRAFT, ACTIVE, FROZEN, CANCELLED]
+          enum: [DRAFT, ACTIVE, FROZEN, PARTIALLY_PAID, PAID, ROLL_FORWARDED, CANCELLED]
           default: ACTIVE
           description: |
             Demand lifecycle:
-            - **DRAFT**: Created but not yet validated/finalized. Fully editable. Not eligible for billing.
+            - **DRAFT**: Created but not yet validated/finalized. Fully editable and not eligible for billing.
             - **ACTIVE**: Validated and eligible for billing. Minor corrections allowed until frozen (per policy).
             - **FROZEN**: Locked for bill generation; **no edits** allowed (use adjustments or a new demand).
+            - **PARTIALLY_PAID**: Received multiple payments but total payable amount is not yet fully settled.
+            - **PAID**: Fully settled through payments. Considered Financially closed.
+            - **ROLL_FORWARDED**: Financially closed due to arrear carry-forward. Not editable and not eligible for bill generation.
             - **CANCELLED**: Voided. Not billable. Used when assessment is withdrawn or superseded.
         totalAmount:
           type: number
@@ -2201,17 +2251,15 @@ components:
             and carries the assessed amount for this demand period.
             **Service rule**: duplicate taxHeadCode entries within the same demand are rejected.
           items:
-            $ref: '#/components/schemas/LineItem'
+            $ref: '#/components/schemas/LineItemCreate'
         status:
           type: string
-          enum: [DRAFT, ACTIVE, FROZEN, CANCELLED]
+          enum: [DRAFT, ACTIVE]
           default: ACTIVE
           description: |
             Demand lifecycle:
-            - **DRAFT**: Created but not yet validated/finalized. Fully editable. Not eligible for billing.
+            - **DRAFT**: Created but not yet validated/finalized. Fully editable and not eligible for billing.
             - **ACTIVE**: Validated and eligible for billing. Minor corrections allowed until frozen (per policy).
-            - **FROZEN**: Locked for bill generation; **no edits** allowed (use adjustments or a new demand).
-            - **CANCELLED**: Voided. Not billable. Used when assessment is withdrawn or superseded.
         metadata:
           type: object
           additionalProperties: true
@@ -2223,6 +2271,47 @@ components:
         - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0.
         - Duplicate taxHeadCode in lineItems is not allowed.
         - Demand is editable only in DRAFT/ACTIVE; transitions enforced by service.
+
+    LineItemCreate:
+      type: object
+      description: Breakdown of an assessed amount within a Demand, mapped to a specific TaxHead (e.g., base charge, penalty, cess).
+      required: 
+        - taxHeadCode
+        - amount
+      properties:
+        taxHeadCode:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
+          description: |
+            Code of the configured Tax Head (same Business Service; active within the period).
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT_BASE
+        amount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          multipleOf: 0.01
+          description: |
+            Assessed amount for this line. Positive values increase payable; negative values represent credits
+            (e.g., rebates). Two-decimal precision enforced.
+          example: 4500
+        collectedAmount:
+          type: number
+          format: double
+          minimum: 0
+          maximum:  1000000000
+          default: 0
+          multipleOf: 0.01
+          description: |
+            Amount already collected against this line. Must be ≥ 0 and, for positive `amount`, must not exceed `amount`.
+            For negative `amount` (credits), `collectionAmount` must be **0**.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
 
     DemandUpdate:
       type: object
@@ -2280,7 +2369,7 @@ components:
             and carries the assessed amount for this demand period.
             **Service rule**: duplicate taxHeadCode entries within the same demand are rejected.
           items:
-            $ref: '#/components/schemas/LineItem'
+            $ref: '#/components/schemas/LineItemCreate'
         status:
           type: string
           enum: [DRAFT, ACTIVE]
@@ -2717,3 +2806,4 @@ components:
 
 
         
+
