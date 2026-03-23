@@ -1,3 +1,7 @@
+
+
+==================== idgen.diff ====================
+
 --- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/id-generation.yaml"	2026-03-23 10:50:25.033727367 +0530
 +++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/idgen.yaml	2026-03-23 10:51:46.198660142 +0530
 @@ -1,330 +1,540 @@

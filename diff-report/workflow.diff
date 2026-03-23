@@ -1,3 +1,7 @@
+
+
+==================== workflow.diff ====================
+
 --- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/workflow.yaml"	2026-03-23 10:50:25.034727301 +0530
 +++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/workflow.yaml	2026-03-23 10:51:46.198660142 +0530
 @@ -1,1812 +1,1082 @@
