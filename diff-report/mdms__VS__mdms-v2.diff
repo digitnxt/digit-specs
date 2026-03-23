@@ -1,0 +1,728 @@
+--- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/mdms-v2.yaml"	2026-03-23 10:50:25.034727301 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/mdms.yaml	2026-03-23 10:51:46.198660142 +0530
+@@ -1,68 +1,541 @@
+ openapi: 3.0.1
+ info:
+-  title: Master Data Management Service(MDMS)
++  title: Data Management Service(DMS)
+   description: | 
+    APIs available to get the master data for particular tenant and module
+    master.
+   contact:
+     name: eGovernments Foundation
+-  version: 1.0.0
++  version: 3.0.0
+ servers:
+ - url: https://unified-dev.digit.org/
++
++security:
++  - BearerAuth: []
++
++tags:
++  - name: "Schema Definition"
++    description: "Operations related to workflow processes"
++  - name: "Data"
++    description: "Operations for managing states within a process"
++  
++
+ paths:
+-  /egov-mdms-service/schema/v1/_create:
++  /schemas:
+     post:
+-      tags:
+-      - MDMS-Schema
+-      summary: Create the schema for master
+-      description: Each master data will have diffrent schema, mdms create and update APIs will use this schema to validate the data request
++      summary: Create a new schema
++      tags: 
++        - Schema Definition
++      operationId: createSchema
+       requestBody:
+-        description: Request body to add new master schema
++        required: true
+         content:
+-          '*/*':
++          application/json:
+             schema:
+-              $ref: '#/components/schemas/SchemaDefinitionRequest'
++              $ref: '#/components/schemas/SchemaDefinition'
++      parameters: 
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++      responses:
++        '202':
++          description: Accepted
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/SchemaDefinition'
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Bad Request
++          content:
++            application/json:
++              schema:
++                type: array
++                items: 
++                  $ref: '#/components/schemas/Error'
++      
++    get:
++      summary: List all schemas
++      tags: 
++        - Schema Definition
++      operationId: listSchemas
++      responses:
++        '200':
++          description: List of schema metadata
++          content:
++            application/json:
++              schema:
++                type: array
++                items:
++                  $ref: '#/components/schemas/SchemaDefinition'
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++
++        '400':
++          description: Bad Request
++          content:
++            application/json:
++              schema:
++                type: array
++                items: 
++                  $ref: '#/components/schemas/Error'
++
++      parameters: 
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: query
++          name: service
++          schema:
++            type: string
++          description: Filter by service name   
++  /schemas/{schemaCode}:
++    get:
++      summary: Get a schema by schemaCode
++      tags: 
++        - Schema Definition
++      operationId: getSchema
++      parameters:
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
++      responses:
++        '200':
++          description: JSON Schema
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/SchemaDefinition'
++        '404':
++          description: Schema not found
++    put:
++      summary: Update an existing schema
++      tags: 
++        - Schema Definition
++      operationId: updateSchema
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
++      requestBody:
+         required: true
++        content:
++          application/json:
++            schema:
++              $ref: '#/components/schemas/SchemaDefinition'
+       responses:
+-        201:
+-          description: Master schema added successfully.
++        '200':
++          description: Accepted
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/SchemaDefinitionResponse'
+-        400:
+-          description: Invalid input.
++                $ref: '#/components/schemas/SchemaDefinition'
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Bad Request
+           content:
+-            '*/*':
++            application/json:
++              schema:
++                type: array
++                items: 
++                  $ref: '#/components/schemas/Error'
++        '404':
++          description: Schema not found
++    delete:
++      summary: Delete a schema
++      tags: 
++        - Schema Definition
++      operationId: deleteSchema
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
++      responses:
++        '204':
++          description: Schema deleted
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Bad Request
++          content:
++            application/json:
+               schema:
+-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+-  /egov-mdms-service/schema/v1/_search:
++                type: array
++                items: 
++                  $ref: '#/components/schemas/Error'
++        '404':
++          description: Schema not found
++
++  /data/{schemaCode}:
+     post:
+-      tags:
+-      - MDMS-Schema
+-      summary: Get list of masters for a particular module and tenantId.
+-      description: Get list of masters for a perticulare module and tenantId.
++      summary: Create new master data records
++      tags: 
++        - Data
++      operationId: createData
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
+       requestBody:
+-        description: Details of module and master which need to be search using MDMS
+-          .
++        required: true
+         content:
+-          '*/*':
++          application/json:
+             schema:
+-              $ref: '#/components/schemas/SchemaDefSearchRequest'
+-        required: true
++              type: array
++              items:
++                type: object
++                description: Validates against the schema for schemaCode
+       responses:
+-        200:
+-          description: Schema Definition searched sucessfully.
++        '201':
++          description: Records created
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Validation error or bad request
++
++    get:
++      summary: List master data records
++      tags: 
++        - Data
++      operationId: listData
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
++        - in: query
++          name: filters
++          description: Optional JSON-based filters
++          required: false
++          schema:
++            type: string
++            example: '{"status":"active"}'
++      responses:
++        '200':
++          description: List of matching master data
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/SchemaDefinitionResponse'
+-        400:
+-          description: Invalid input.
++                type: array
++                items:
++                  type: object
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++
++  /data/{schemaCode}/{id}:
++    get:
++      summary: Get master data by ID
++      tags: 
++        - Data
++      operationId: getDataById
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
++        - in: path
++          name: id
++          required: true
++          schema:
++            type: string
++      responses:
++        '200':
++          description: Single master data record
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
++                type: object
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '404':
++          description: Record not found
++
++    put:
++      summary: Update master data by ID
++      tags: 
++        - Data
++      operationId: updateDataById
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
++        - in: path
++          name: id
++          required: true
++          schema:
++            type: string
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              type: object
++      responses:
++        '200':
++          description: Record updated
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Validation failed
++        '404':
++          description: Record not found
++
++    delete:
++      summary: Delete master data by ID
++      tags: 
++        - Data
++      operationId: deleteDataById
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: path
++          name: schemaCode
++          required: true
++          schema:
++            type: string
++        - in: path
++          name: id
++          required: true
++          schema:
++            type: string
++      responses:
++        '204':
++          description: Record deleted
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '404':
++          description: Record not found
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
++  
+   /egov-mdms-service/v2/_create/{schemaCode}:
+     post:
+       tags:
+@@ -96,7 +569,7 @@
+           content:
+             '*/*':
+               schema:
+-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
++                $ref: '#/components/schemas/Error'
+   /egov-mdms-service/v2/_update/{schemaCode}:
+     post:
+       tags:
+@@ -131,7 +604,7 @@
+           content:
+             '*/*':
+               schema:
+-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
++                $ref: '#/components/schemas/Error'
+   /egov-mdms-service/v1/_search:
+     post:
+       tags:
+@@ -158,7 +631,7 @@
+           content:
+             '*/*':
+               schema:
+-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
++                $ref: '#/components/schemas/Error'
+   /egov-mdms-service/v2/_search:
+     post:
+       tags:
+@@ -185,9 +658,57 @@
+           content:
+             '*/*':
+               schema:
+-                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
++                $ref: '#/components/schemas/Error'
+ components:
++  securitySchemes:
++    BearerAuth:
++      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
++  parameters:
++    RequestIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
++    CorrelationIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
++    UserAgentHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
++    TenantIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
++    ForwardedForHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
++    ClientId:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
++    ClientSecret:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
++    TimeStamp:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
++  
++  headers:
++    X-Response-Time:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
++    X-Response-Timestamp:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
++    X-Request-ID:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
++    X-Correlation-ID:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
++    X-Tenant-ID:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
++    X-Rate-Limit:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
++    X-Rate-Limit-Remaining:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
++    X-Rate-Limit-Reset:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
++    
+   schemas:
++    Error:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
++    
++    AuditDetail:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
++    
++    Document:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Document'
++    
+     SchemaDefinition:
+       type: object
+       description: Bind the request meta data(RequestInfo) and Schema defination
+@@ -207,14 +728,51 @@
+           maxLength: 512
+           minLength: 2
+           type: string
+-          description:  Description about schema defination 
+-        definition:
++          description:  Description about schema defination
++         
++        schema:
+           type: object
+-          additionalProperties: true
++          description: Valid JSON Schema v7 definition
++          example:
++            type: object
++            properties:
++              id:
++                type: string
++              name:
++                type: string
++            required: [id, name]
++        unique:
++            type: array
++            description: >
++                Defines fields or combinations of fields that must be unique across all records of this master.
++                - To define a unique constraint on a single field, provide it as a one-element array in `fields`.
++                - To define a composite unique constraint, list all involved fields in the `fields` array.
++                These constraints are enforced during create and update operations.
++
++                Examples:
++                - Unique on "code"
++                - Composite unique on ["code", "tenantId"]
++            items:
++                type: object
++                required:
++                - fields
++                properties:
++                    fields:
++                        type: array
++                        description: List of one or more field names that together must be unique.
++                        items:
++                            type: string
++                        example:
++                            - fields: ["code"]
++                            - fields: ["code", "tenantId"]  
++        
+         isActive:
+           type: boolean
+           default: true
+           example: Property.PropertyType
++        version:
++          type: string
++          example: "1.0"
+         auditDetails:
+           $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/AuditDetails'
+       required: [tenantId, code, definition]
+@@ -472,4 +1030,4 @@
+           maxLength: 128
+           minLength: 2
+           type: string
+-          description: unique identifier of the master data
+\ No newline at end of file
++          description: unique identifier of the master data

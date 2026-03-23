@@ -1,0 +1,1846 @@
+--- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/user.yaml"	2026-03-23 10:50:25.034727301 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/individual.yaml	2026-03-23 10:51:46.198660142 +0530
+@@ -1,1081 +1,898 @@
+-openapi: 3.0.1
++openapi: 3.0.3
+ info:
+-  title: User Service
+-  description: User services APIs - to create, update and search users. All individuals
+-    interacting with the platform - Citizens, Employees, Contractors, Vendors etc.
+-    are considered as users of the platform
++  title: DIGIT Individual Service API (HashVault Edition)
++  description: |
++    Individual Service is a core registry microservice within the eGov DIGIT ecosystem that manages
++    citizen/individual records with enhanced PII encryption using HashiCorp Vault. It provides CRUD
++    operations, bulk processing, and advanced search capabilities for individual demographic information,
++    addresses, identifiers.
++
++    ## Key Features
++    - Individual registry management ( Create, Read, Update, Delete)
++    - Multi-tenant support with tenant-level isolation
++    - **Enhanced PII data encryption using HashiCorp Vault** (mobile numbers, identifiers, sensitive fields)
++    - User account integration
++    - Bulk operations with transactional support
++    - Complex search with multiple criteria
++    - Soft deletion with audit trails
++    - Optimistic locking for concurrency control
++    - RESTful API design with proper HTTP methods
++  version: 1.0.0
+   contact:
+-    name: eGov
+-    email: info@egovernments.org
+-  version: 1.1.0
++    name: DIGIT Support
++    url: https://core.digit.org
++    email: support@digit.org
++  license:
++    name: MIT
++    url: https://opensource.org/licenses/MIT
++
+ servers:
+-- url: /users/
++  - url: http://localhost:8999/individual
++    description: Local Development Server
++  - url: https://dev.digit.org/individual/v1
++    description: Development Server
++  - url: https://staging.digit.org/individual/v1
++    description: Staging Server
++  - url: https://api.digit.org/individual/v1
++    description: Production Server
++
++tags:
++  - name: Individuals
++    description: Individual management operations
++  - name: Bulk
++    description: Bulk create, update, and delete operations
++  - name: Health
++    description: Service health check
++
+ paths:
+-  /citizen/_create:
+-    post:
+-      tags:
+-      - Users
+-      summary: Create a new User.
+-      description: "To create new User(s) in the system. API supports bulk creation\
+-        \ with max limit as defined in the UserReq. Please note that either whole\
+-        \ batch succeeds or fails, there's no partial batch success. To create one\
+-        \ user, please pass array with one user object. \n\nUsers can be created based\
+-        \ on the roles. Users with types as SYSTEM and EMPLOYEE can create other users\
+-        \ if their RBAC mapping provides them the permission. Users with CITIZEN type\
+-        \ can only create themselves, while EMPLOYEE and SYSTEM type users can also\
+-        \ create other EMPLOYEES and CITIZENS.\n\nUser registration will always be\
+-        \ a two step process, where this API will create a non authenticated user\
+-        \ (without password) and after verification (using OTP) other user details\
+-        \ (including password) can be updated using update user API to complete the\
+-        \ user registration process.\n"
+-      requestBody:
+-        description: Details for the new user + RequestInfo meta data
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/UserReq'
+-        required: true
++  /health:
++    get:
++      tags: [Health]
++      summary: Health Check
++      description: Check if the service is up and running. No authentication required.
++      operationId: healthCheck
+       responses:
+-        201:
+-          description: User(s) created sucessfully
++        '200':
++          description: Service is healthy
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/UserRes'
+-        400:
+-          description: User(s) creation failed
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: users
+-  /citizen/_update:
++                type: object
++                properties:
++                  status:
++                    type: string
++                    example: UP
++
++  /v1:
+     post:
+-      tags:
+-      - Users
+-      summary: Update user API
++      tags: [Individuals]
++      summary: Create Individual
+       description: |
+-        This API will update all user related details based on their type. Following rules apply -
+-          1. Username cannot be updated once created
+-          2. Password can only be updated by the user itself (CITIZEN or EMPLOYEE) using reissue OTP issued to them
+-          3. User can self update mobile number/email by doing OTP verification with old phone/email
+-          4. An employee can reset another user mobile number/email after OTP/other necessary validation (need specific privilege)
++        Create a new individual record.
++        - Automatically generates UUID and formatted individual ID
++        - Encrypts PII data (mobile numbers, identifiers) using HashiCorp Vault
++        - Sets audit fields from headers
++        - TenantId is populated from X-Tenant-Id header
++      operationId: createIndividual
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - $ref: '#/components/parameters/IdempotencyKey'
+       requestBody:
+-        description: Request header for the user with new of values.
++        required: true
+         content:
+-          '*/*':
++          application/json:
+             schema:
+-              $ref: '#/components/schemas/UserReq'
+-        required: true
++              $ref: '#/components/schemas/IndividualRequest'
+       responses:
+-        200:
+-          description: Update user(s) successful
++        '201':
++          description: Individual created
++          headers:
++            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
++            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
++            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
++            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
++            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
++            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
++            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
++            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/IndividualResponse'
++        '400':
++          description: Validation error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '409':
++          description: Conflict (e.g., duplicate unique key)
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/UserRes'
+-        400:
+-          description: Update user(s) failed
++                $ref: '#/components/schemas/Error'
++
++    get:
++      tags: [Individuals]
++      summary: Search individuals
++      description: |
++        Search individuals with multiple criteria and pagination.
++        - Supports filtering by name, mobile, gender, date of birth, etc.
++        - Returns decrypted PII data to authorized clients
++        - Queryable fields mirror IndividualSearchCriteria
++      operationId: searchIndividuals
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - $ref: '#/components/parameters/Limit'
++        - $ref: '#/components/parameters/Offset'
++        - $ref: '#/components/parameters/LastChangedSince'
++        - $ref: '#/components/parameters/IncludeDeleted'
++        - $ref: '#/components/parameters/Id'
++        - $ref: '#/components/parameters/IndividualId'
++        - $ref: '#/components/parameters/IndividualName'
++        - $ref: '#/components/parameters/DateOfBirth'
++        - $ref: '#/components/parameters/Gender'
++        - $ref: '#/components/parameters/MobileNumber'
++        - $ref: '#/components/parameters/CreatedFrom'
++        - $ref: '#/components/parameters/CreatedTo'
++        - $ref: '#/components/parameters/UserId'
++      responses:
++        '200':
++          description: Search successful
++          headers:
++            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
++            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
++            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
++            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
++            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
++            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
++            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
++            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/IndividualSearchResponse'
++        '400':
++          description: Validation error
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: users
+-  /citizen/_search:
+-    post:
+-      tags:
+-      - Users
+-      summary: Search the users in the system based on the criterion specified.
+-      description: |
+-        Search and get user(s) based on defined search criteria. Currently search parameters are only allowed as HTTP query params. In case multiple parameters are passed user will be searched as an AND combination of all the parameters. Maximum result size is restricted based on the maxlength of Users as defined in UserRes model.
++                $ref: '#/components/schemas/Error'
+ 
+-        By default results will be sorted by UserName
++  /v1/{id}:
++    get:
++      tags: [Individuals]
++      summary: Get Individual by ID
++      description: Retrieve a single individual by UUID. Returns decrypted PII data.
++      operationId: getIndividualById
+       parameters:
+-      - name: tenantId
+-        in: query
+-        description: Unique id for a tenant.
+-        required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: lastChangedSince
+-        in: query
+-        description: |
+-          epoch of the time since when the changes on the object should be picked up. Search results from this parameter should include both newly created objects since this time as well as any modified objects since this time. This criterion is included to help polling clients to get the changes in system since a last time they synchronized with the platform.
+-        schema:
+-          type: integer
+-          format: int64
+-      - name: userName
+-        in: query
+-        description: The unique user name of the User.
+-        schema:
+-          maxLength: 64
+-          minLength: 0
+-          type: string
+-      - name: active
+-        in: query
+-        description: True will be set in cases where only active users are needed
+-          and False will be set when inactive users are needed and no value will be
+-          set when all users are needed.
+-        allowEmptyValue: true
+-        schema:
+-          type: boolean
+-          format: varchar
+-          default: true
+-      - name: id
+-        in: query
+-        description: List of Unique Id of User
+-        style: form
+-        explode: false
+-        schema:
+-          type: array
+-          items:
+-            type: integer
+-      - name: userType
+-        in: query
+-        description: Defines the type of user. Possible values are as per type enum
+-          defined in User object.
+-        schema:
+-          exclusiveMaximum: false
+-          exclusiveMinimum: true
+-          maxLength: 64
+-          minLength: 0
+-          type: string
+-      - name: roleCodes
+-        in: query
+-        description: roles assigned to the user(roleCodes).Search response will have
+-          all users having all roles specified in the request.
+-        style: form
+-        explode: false
+-        schema:
+-          type: array
+-          items:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - name: id
++          in: path
++          required: true
++          description: Individual UUID
++          schema:
+             type: string
+-      - name: includeDetails
+-        in: query
+-        description: parameter to indicate whether UserDetails should be included
+-          as a part of User object in the response
+-        schema:
+-          type: boolean
+-          default: false
+-      - name: pageSize
+-        in: query
+-        description: Number of records returned.
+-        schema:
+-          multipleOf: 10.0
+-          maximum: 100
+-          exclusiveMaximum: false
+-          minimum: 0
+-          exclusiveMinimum: true
+-          type: integer
+-          default: 20
+-      - name: pageNumber
+-        in: query
+-        description: Page number
+-        schema:
+-          type: integer
+-          default: 1
+-      - name: sort
+-        in: query
+-        description: User results will be sorted by name ascending by default if this
+-          parameter is not provided.
+-        style: pipeDelimited
+-        schema:
+-          maxItems: 3
+-          minItems: 1
+-          uniqueItems: true
+-          type: array
+-          items:
+-            pattern: '[-+](userName|name|gender)'
++            format: uuid
++      responses:
++        '200':
++          description: Individual found
++          headers:
++            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
++            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
++            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
++            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
++            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
++            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
++            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
++            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/IndividualResponse'
++        '400':
++          description: Validation error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '404':
++          description: Individual not found
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++    put:
++      tags: [Individuals]
++      summary: Update Individual
++      description: Update an existing individual record by ID. Uses optimistic locking via `rowVersion`.
++      operationId: putIndividual
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - name: id
++          in: path
++          required: true
++          description: Individual UUID
++          schema:
+             type: string
+-          default: '["+name"]'
++            format: uuid
+       requestBody:
+-        description: Parameter to carry Request metadata in the request body
++        required: true
+         content:
+-          '*/*':
++          application/json:
+             schema:
+-              $ref: '#/components/schemas/RequestInfo'
+-        required: false
++              $ref: '#/components/schemas/Individual'
+       responses:
+-        200:
+-          description: Successful response
++        '200':
++          description: Individual updated
++          headers:
++            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
++            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
++            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
++            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
++            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
++            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
++            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
++            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/IndividualResponse'
++        '400':
++          description: Validation error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '404':
++          description: Individual not found
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '409':
++          description: Optimistic locking error (row version mismatch)
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/UserRes'
+-        400:
+-          description: Invalid input.
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: requestInfo
+-  /v1/_search:
+-    post:
+-      tags:
+-      - Users
+-      summary: Search the users in the system based on the criterion specified.
+-      description: |
+-        Search and get user(s) based on defined search criteria. Currently search parameters are only allowed as HTTP query params. In case multiple parameters are passed user will be searched as an AND combination of all the parameters. Maximum result size is restricted based on the maxlength of Users as defined in UserRes model.
++                $ref: '#/components/schemas/Error'
+ 
+-        By default results will be sorted by UserName
++    delete:
++      tags: [Individuals]
++      summary: Soft delete Individual
++      description: |
++        Soft delete an individual record (sets isDeleted=true).
++        - Cascades soft delete to related entities (addresses, identifiers)
++        - Updates lastModifiedBy from headers
++      operationId: deleteIndividual
+       parameters:
+-      - name: tenantId
+-        in: query
+-        description: Unique id for a tenant.
+-        required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: lastChangedSince
+-        in: query
+-        description: |
+-          epoch of the time since when the changes on the object should be picked up. Search results from this parameter should include both newly created objects since this time as well as any modified objects since this time. This criterion is included to help polling clients to get the changes in system since a last time they synchronized with the platform.
+-        schema:
+-          type: integer
+-          format: int64
+-      - name: userName
+-        in: query
+-        description: The unique user name of the User.
+-        schema:
+-          maxLength: 64
+-          minLength: 0
+-          type: string
+-      - name: active
+-        in: query
+-        description: True will be set in cases where only active users are needed
+-          and False will be set when inactive users are needed and no value will be
+-          set when all users are needed.
+-        allowEmptyValue: true
+-        schema:
+-          type: boolean
+-          format: varchar
+-          default: true
+-      - name: id
+-        in: query
+-        description: List of Unique Id of User
+-        style: form
+-        explode: false
+-        schema:
+-          type: array
+-          items:
+-            type: integer
+-      - name: userType
+-        in: query
+-        description: Defines the type of user. Possible values are as per type enum
+-          defined in User object.
+-        schema:
+-          exclusiveMaximum: false
+-          exclusiveMinimum: true
+-          maxLength: 64
+-          minLength: 0
+-          type: string
+-      - name: roleCodes
+-        in: query
+-        description: roles assigned to the user(roleCodes).Search response will have
+-          all users having all roles specified in the request.
+-        style: form
+-        explode: false
+-        schema:
+-          type: array
+-          items:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - name: id
++          in: path
++          required: true
++          description: Individual UUID
++          schema:
+             type: string
+-      - name: includeDetails
+-        in: query
+-        description: parameter to indicate whether UserDetails should be included
+-          as a part of User object in the response
+-        schema:
+-          type: boolean
+-          default: false
+-      - name: pageSize
+-        in: query
+-        description: Number of records returned.
+-        schema:
+-          multipleOf: 10.0
+-          maximum: 100
+-          exclusiveMaximum: false
+-          minimum: 0
+-          exclusiveMinimum: true
+-          type: integer
+-          default: 20
+-      - name: pageNumber
+-        in: query
+-        description: Page number
+-        schema:
+-          type: integer
+-          default: 1
+-      - name: sort
+-        in: query
+-        description: User results will be sorted by name ascending by default if this
+-          parameter is not provided.
+-        style: pipeDelimited
+-        schema:
+-          maxItems: 3
+-          minItems: 1
+-          uniqueItems: true
+-          type: array
+-          items:
+-            pattern: '[-+](userName|name|gender)'
+-            type: string
+-          default: '["+name"]'
+-      requestBody:
+-        description: Parameter to carry Request metadata in the request body
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/RequestInfo'
+-        required: false
++            format: uuid
+       responses:
+-        200:
+-          description: Successful response
++        '204':
++          description: No Content
++          headers:
++            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
++            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
++            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
++            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
++            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
++            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
++            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
++            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
++        '400':
++          description: Validation error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '404':
++          description: Individual not found
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/UserRes'
+-        400:
+-          description: Invalid input.
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: requestInfo    
+-  /users/_createnovalidate:
++                $ref: '#/components/schemas/Error'
++
++  /v1/bulk:
+     post:
+-      tags:
+-      - Users
+-      summary: Create user without otp vallidation
+-      description: "End-point to create the user without otp validation."
++      tags: [Bulk]
++      summary: Bulk create individuals
++      operationId: bulkCreateIndividuals
++      parameters:
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ClientId'
+       requestBody:
+-        description: Details for the new user + RequestInfo meta data
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/UserReq'
+         required: true
+-      responses:
+-        200:
+-          description: Update user(s) successful
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/UserRes'
+-        400:
+-          description: Update user(s) failed
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: users  
+-  /users/_updatenovalidate:
+-    post:
+-      tags:
+-      - Users
+-      summary: Update user without otp vallidation
+-      description: "End-point to update the user without otp validation."
+-      requestBody:
+-        description: Details for the new user + RequestInfo meta data
+         content:
+-          '*/*':
++          application/json:
+             schema:
+-              $ref: '#/components/schemas/UserReq'
+-        required: true
++              $ref: '#/components/schemas/IndividualBulkRequest'
+       responses:
+-        200:
+-          description: Update user(s) successful
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/UserRes'
+-        400:
+-          description: Update user(s) failed
++        '200':
++          description: Bulk created
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: users      
+-  /profile/_update:
+-    post:
+-      tags:
+-      - Users
+-      summary: Update the profile of the user
+-      description: "End-point to create the user without otp validation."
++                $ref: '#/components/schemas/IndividualBulkResponse'
++        '400':
++          description: Validation error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++    put:
++      tags: [Bulk]
++      summary: Bulk update individuals
++      operationId: bulkUpdateIndividuals
++      parameters:
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ClientId'
+       requestBody:
+-        description: Details for the new user + RequestInfo meta data
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/UserReq'
+         required: true
+-      responses:
+-        200:
+-          description: Update user(s) successful
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/UserRes'
+-        400:
+-          description: Update user(s) failed
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: users      
+-  /password/_update:
+-    post:
+-      tags:
+-      - Update password
+-      summary: The user can update his password after login
+-      description: |
+-        This API used for update the password after login
+-      requestBody:
+-        description: Request header for the user with new of values.
+         content:
+-          '*/*':
++          application/json:
+             schema:
+-              $ref: '#/components/schemas/updatePasswordReq'
+-        required: true
++              $ref: '#/components/schemas/IndividualBulkRequest'
+       responses:
+-        200:
+-          description: Updated password successful
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/PasswordRes'
+-        400:
+-          description: Updated password failed
++        '200':
++          description: Bulk updated
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: update password
+-  /password/nologin/_update:
+-    post:
+-      tags:
+-      - Update password
+-      summary: This API act as reset password or forgot password before login
+-      description: |
+-        This API used for reset the password when user forgot his password   by getting otp Reference through registerd mobile number,
+-      requestBody:
+-        description: Request header for the user with new of values.
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/resetpasswordreq'
+-        required: true
+-      responses:
+-        200:
+-          description: Updated password successful
++                $ref: '#/components/schemas/IndividualBulkResponse'
++        '400':
++          description: Validation error
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/PasswordRes'
+-        400:
+-          description: Updated password failed
++                $ref: '#/components/schemas/Error'
++        '409':
++          description: Optimistic locking error in one or more items
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: Reset password before login using five digit otp
+-  /_logout:
+-    post:
+-      tags:
+-      - Logout 
+-      summary: Logout user
+-      description: "End-point to create the user without otp validation."
++                $ref: '#/components/schemas/Error'
++    delete:
++      tags: [Bulk]
++      summary: Bulk delete individuals
++      operationId: bulkDeleteIndividuals
++      parameters:
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ClientId'
+       requestBody:
+-        description: Details for the new user + RequestInfo meta data
++        required: true
+         content:
+-          '*/*':
++          application/json:
+             schema:
+-              $ref: '#/components/schemas/TokenWrapper'
+-        required: true
++              $ref: '#/components/schemas/IndividualBulkRequest'
+       responses:
+-        200:
+-          description: logout successful
++        '200':
++          description: Bulk deleted
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ResponseInfo'
+-        400:
+-          description: Update user(s) failed
++                $ref: '#/components/schemas/IndividualBulkResponse'
++        '400':
++          description: Validation error
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: logout  
++                $ref: '#/components/schemas/Error'
++
+ components:
++  securitySchemes:
++    BearerAuth:
++      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
++
++  parameters:
++    RequestIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
++    CorrelationIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
++    UserAgentHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
++    TenantIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
++    ForwardedForHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
++    ClientId:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
++    ClientSecret:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
++    TimeStamp:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
++    IdempotencyKey:
++      name: Idempotency-Key
++      in: header
++      required: false
++      description: Provide a unique value to prevent duplicate creations on retries.
++      schema:
++        type: string
++        minLength: 8
++        maxLength: 128
++
++    Limit:
++      name: limit
++      in: query
++      description: Maximum number of records to return
++      schema:
++        type: integer
++        default: 100
++        minimum: 1
++        maximum: 1000
++
++    Offset:
++      name: offset
++      in: query
++      description: Offset for pagination
++      schema:
++        type: integer
++        default: 0
++        minimum: 0
++
++    LastChangedSince:
++      name: lastChangedSince
++      in: query
++      description: Timestamp filter for incremental sync (epoch milliseconds)
++      schema:
++        type: integer
++        format: int64
++
++    IncludeDeleted:
++      name: includeDeleted
++      in: query
++      description: Include soft-deleted records
++      schema:
++        type: boolean
++        default: false
++
++    Id:
++      name: id
++      in: query
++      description: List of individual IDs (repeatable)
++      schema:
++        type: array
++        items:
++          type: string
++      style: form
++      explode: true
++
++    IndividualId:
++      name: individualId
++      in: query
++      description: Individual ID
++      schema:
++        type: string
++
++    IndividualName:
++      name: individualName
++      in: query
++      description: Name search (partial match)
++      schema:
++        type: string
++
++    DateOfBirth:
++      name: dateOfBirth
++      in: query
++      description: Date of birth (YYYY-MM-DD)
++      schema:
++        type: string
++        format: date
++
++    Gender:
++      name: gender
++      in: query
++      schema:
++        type: string
++        enum: [MALE, FEMALE, OTHER]
++
++    MobileNumber:
++      name: mobileNumber
++      in: query
++      description: Mobile number (encrypted-at-rest in DB; plaintext as filter)
++      schema:
++        type: string
++
++    CreatedFrom:
++      name: createdFrom
++      in: query
++      description: Created from timestamp (epoch ms)
++      schema:
++        type: integer
++        format: int64
++
++    CreatedTo:
++      name: createdTo
++      in: query
++      description: Created to timestamp (epoch ms)
++      schema:
++        type: integer
++        format: int64
++
++    UserId:
++      name: userId
++      in: query
++      description: User ID
++      schema:
++        type: string
++
++  headers:
++    X-Response-Time:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
++    X-Response-Timestamp:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
++    X-Request-ID:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
++    X-Correlation-ID:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
++    X-Tenant-ID:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
++    X-Rate-Limit:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
++    X-Rate-Limit-Remaining:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
++    X-Rate-Limit-Reset:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
++
++
+   schemas:
+-    resetpasswordreq:
+-      required:
+-      - newPassword
+-      - otpReference
+-      - tenantId
+-      - userName
++    # --- Keep your original schemas verbatim (trimmed here for brevity) ---
++
++
++
++    ErrorInfo:
+       type: object
+       properties:
+-        RequestInfo:
+-          $ref: '#/components/schemas/RequestInfo'
+-        otpReference:
++        errorCode:
+           type: string
+-          description: otp reference number which sent to registered mobile
+-        userName:
++          example: VALIDATION_ERROR
++        errorMessage:
+           type: string
+-          description: Registered User name
+-        newPassword:
++          example: Mobile number must contain only digits
++        type:
+           type: string
+-          description: New password
+-        tenantId:
++          enum: [RECOVERABLE, NON_RECOVERABLE]
++        exception:
+           type: string
+-          description: Unique Identifier of the tenant to which user primarily belongs
+-    updatePasswordReq:
+-      required:
+-      - existingPassword
+-      - newPassword
+-      - tenantId
++
++    Individual:
+       type: object
++      required: [tenantId, name]
+       properties:
+-        RequestInfo:
+-          $ref: '#/components/schemas/RequestInfo'
+-        existingPassword:
++        id:
+           type: string
+-          description: Existing password
+-        newPassword:
++          example: 550e8400-e29b-41d4-a716-446655440000
++        individualId:
+           type: string
+-          description: New password
+-        tenantId:
++          example: IND-2025-001
++        userId:
+           type: string
+-          description: Unique Identifier of the tenant to which user primarily belongs
+-    PasswordRes:
+-      type: object
+-      properties:
+-        ResponseInfo:
+-          $ref: '#/components/schemas/ResponseInfo'
+-    User:
+-      required:
+-      - active
+-      - gender
+-      - locale
+-      - mobileNumber
+-      - name
+-      - tenantId
+-      - type
+-      - userName
+-      type: object
+-      properties:
+         tenantId:
+           type: string
+-          description: Unique Identifier of the tenant to which user primarily belongs
+-        id:
+-          type: integer
+-          description: The unique numeric id of an user. To be deprecated in future.
+-          format: int64
+-        userName:
+-          maxLength: 64
+-          minLength: 4
+-          type: string
+-          description: The unique username used of the user - this will be used for
+-            user login. This needs to be unique within the tenant.
+-        authToken:
+-          type: string
+-          description: "Authentication token for the user that may be - \n1. Password\
+-            \ in case of basic auth\n2. OTP in case of OTP based verification\n3.\
+-            \ OAuth auth token for OAuth based auth\n"
+-          format: password
+-        salutation:
+-          maxLength: 5
+-          type: string
+-          description: The salutation of user name. Example- Mr, Miss, Mrs
++          example: mz
+         name:
+-          maxLength: 100
+-          minLength: 3
++          $ref: '#/components/schemas/Name'
++        dateOfBirth:
+           type: string
+-          description: The full name of the user.
++          format: date
++          example: "1990-01-15"
++          description: Date of birth (YYYY-MM-DD)
+         gender:
+           type: string
+-          description: Gender of the user.
++          enum: [MALE, FEMALE, OTHER]
++          description: Gender
+         mobileNumber:
+-          maxLength: 10
+           type: string
+-          description: Mobile number of the user
+-        emailId:
+-          maxLength: 128
+-          type: string
+-          description: Email address of the user
+-        aadhaarNumber:
+-          maxLength: 12
+-          pattern: '[0-9]'
++          pattern: '^[0-9]{10}$'
++          example: "9876543210"
++          description: 10-digit mobile number (encrypted at rest using HashiCorp Vault)
++        mobileNumberVerified:
++          type: boolean
++          default: false
++          description: Mobile number verification status
++        altContactNumber:
+           type: string
+-          description: Aadhaar number of the user
+-        active:
++          description: Alternate contact number
++        email:
++          type: string
++          format: email
++          example: john.doe@example.com
++          description: Email address
++        emailVerified:
+           type: boolean
+-          description: True if the user is active and False if the user is inactive.
+-        pwdExpiryDate:
+-          type: integer
+-          description: epoch of time when the current auth token (password/OTP) will
+-            expire.
+-          format: int64
+-          readOnly: true
++          default: false
++          description: Email verification status
++        zoneInfo:
++          type: string
++          description: String from IANA Time Zone Database representing the End-User's time zone. For example, Europe/Paris or America/Los_Angeles.
+         locale:
+-          maxLength: 5
+           type: string
+-          description: Value will be set to "en_IN".
+-        type:
+-          maxLength: 20
++          description: User's locale/language preference
++        picture:
++          type: string
++          description: URL of the End-User's profile picture. This URL MUST refer to an image file (PNG, JPEG, or GIF), rather than to a Web page containing an image.
++        profile:
++          type: string
++          description: URL of the End-User's profile page. The contents of this Web page SHOULD be about the End-User.
++        website:
+           type: string
+-          description: System set value internally. For employee value will be always
+-            "EMPLOYEE". For citizen value will be "CITIZEN".
+-        accountLocked:
++          description: URL of the End-User's Web page or blog. This Web page SHOULD contain information published by the End-User or an organization that the End-User is affiliated with.
++        active:
+           type: boolean
+-          description: Set to True if account is locked after several incorrect password
+-            attempt. False if account is not locked.
+           default: false
+-        roles:
++          description: Active status
++        address:
+           type: array
+-          description: List of roles that are attached to the user.
+           items:
+-            $ref: '#/components/schemas/Role'
+-        userDetails:
+-          $ref: '#/components/schemas/UserDetails'
++            $ref: '#/components/schemas/Address'
++          description: List of addresses
++        identifiers:
++          type: array
++          items:
++            $ref: '#/components/schemas/Identifier'
++          description: List of identifiers (encrypted at rest)
++        additionalFields:
++          $ref: '#/components/schemas/AdditionalFields'
+         auditDetails:
+           $ref: '#/components/schemas/AuditDetails'
+-    UserDetails:
++        rowVersion:
++          type: integer
++          format: int64
++          example: 1
++          description: Row version for optimistic locking
++        isDeleted:
++          type: boolean
++          default: false
++          description: Soft delete flag
++
++    Name:
+       type: object
++      required: [givenName]
+       properties:
+-        firstName:
+-          maxLength: 32
+-          minLength: 1
++        givenName:
+           type: string
+-          description: The full name of the user.
+-        middleName:
+-          maxLength: 32
+-          minLength: 1
+-          type: string
+-          description: The full name of the user.
+-        lastName:
+-          maxLength: 32
+-          minLength: 1
++          example: John
++          description: Given name (first name)
++        familyName:
+           type: string
+-          description: The full name of the user.
+-        dob:
++          example: Doe
++          description: Family name (last name)
++        middleName:
+           type: string
+-          description: Date of birth of the user in dd/mm/yyyy format.
+-          format: date
+-        altContactNumber:
+-          maxLength: 16
++          description: Middle name
++        nickname:
+           type: string
+-          description: Alternate contact number of the user
+-        fatherName:
+-          maxLength: 100
+-          type: string
+-          description: User's father's name if available
+-        husbandName:
+-          maxLength: 100
+-          type: string
+-          description: Name of user's husband - if applicable
+-        bloodGroup:
+-          maxLength: 3
+-          type: string
+-          description: Blood group of the user.
+-        pan:
+-          maxLength: 10
+-          type: string
+-          description: PAN number of the user
+-        permanentAddress:
+-          maxLength: 300
+-          type: string
+-          description: Permanent address of the user.
+-        permanentCity:
+-          maxLength: 300
+-          type: string
+-          description: City of the permanent address.
+-        permanentPincode:
+-          maxLength: 6
+-          type: string
+-          description: Permanent address pincode.
+-        correspondenceCity:
+-          maxLength: 50
+-          type: string
+-          description: City of the correspondence address.
+-        correspondencePincode:
+-          maxLength: 6
+-          type: string
+-          description: Permanent address pincode.
+-        correspondenceAddress:
+-          maxLength: 300
+-          type: string
+-          description: Correspondence address of the user.
+-        signature:
+-          type: string
+-          description: Image to be loaded for the signature of the employee
+-        identificationMark:
+-          maxLength: 300
+-          type: string
+-          description: Any identification mark of the person.
+-        photo:
+-          type: string
+-          description: Image to be loaded for the photo of the user
+-      description: Infrequently used details for the user
+-    UserReq:
+-      required:
+-      - RequestInfo
+-      - Users
+-      type: object
+-      properties:
+-        RequestInfo:
+-          $ref: '#/components/schemas/RequestInfo'
+-        Users:
+-          type: array
+-          items:
+-            $ref: '#/components/schemas/User'
+-    UserRes:
+-      type: object
+-      properties:
+-        ResponseInfo:
+-          $ref: '#/components/schemas/ResponseInfo'
+-        Users:
+-          type: array
+-          items:
+-            $ref: '#/components/schemas/User'
+-    ErrorRes:
+-      required:
+-      - ResponseInfo
+-      type: object
+-      properties:
+-        ResponseInfo:
+-          $ref: '#/components/schemas/ResponseInfo'
+-        Errors:
+-          type: array
+-          description: Error response array corresponding to Request Object array.
+-            In case of single object submission or _search related paths this may
+-            be an array of one error element
+-          items:
+-            $ref: '#/components/schemas/Error'
+-      description: All APIs will return ErrorRes in case of failure which will carry
+-        ResponseInfo as metadata and Error object as actual representation of error.
+-        In case of bulk apis, some apis may chose to return the array of Error objects
+-        to indicate individual failure.
+-    ResponseInfo:
+-      required:
+-      - apiId
+-      - status
+-      - ts
+-      - ver
++          description: Nickname
++
++    Address:
+       type: object
+       properties:
+-        apiId:
+-          maxLength: 128
++        id:
+           type: string
+-          description: unique API ID
+-        ver:
+-          maxLength: 32
++        tenantId:
++          type: string
++          description: Tenant ID
++        doorNo:
+           type: string
+-          description: API version
+-        ts:
++          example: "123"
++          description: Door/house number
++        latitude:
++          type: number
++          format: double
++          example: -25.9663
++          description: GPS latitude
++        longitude:
++          type: number
++          format: double
++          example: 32.5732
++          description: GPS longitude
++        locationAccuracy:
+           type: integer
+-          description: response time in epoch
+-          format: int64
+-        resMsgId:
+-          maxLength: 256
++          description: Location accuracy in meters
++        type:
+           type: string
+-          description: unique response message id (UUID) - will usually be the correlation
+-            id from the server
+-        msgId:
+-          maxLength: 256
+-          type: string
+-          description: message id of the request
+-        status:
+-          type: string
+-          description: status of request processing - to be enhanced in futuer to
+-            include INPROGRESS
+-          enum:
+-          - SUCCESSFUL
+-          - FAILED
+-      description: ResponseInfo should be used to carry metadata information about
+-        the response from the server. apiId, ver and msgId in ResponseInfo should
+-        always correspond to the same values in respective request's RequestInfo.
+-    TokenWrapper:
+-      type: object
+-      properties:
+-        accessToken:
++          enum: [PERMANENT, CORRESPONDENCE]
++        landmark:
+           type: string
+-          description: access-token required for authentication
+-    Error:
+-      required:
+-      - code
+-      - message
++          description: Landmark
++        city:
++          type: string
++          example: Maputo
++        region:
++          type: string
++          description: State, province, prefecture, or region component. 
++        pincode:
++          type: string
++          example: "1100"
++          description: Postal code
++        buildingName:
++          type: string
++          description: Building name
++        street:
++          type: string
++        country:
++          type: string
++          description: Country
++        formatted:
++          type: string
++          description: Full mailing address, formatted for display or use on a mailing label. This field MAY contain multiple lines, separated by newlines. Newlines can be represented either as a carriage return/line feed pair ("\r\n") or as a single line feed character ("\n").
++        locality:
++          $ref: '#/components/schemas/Locality'
++
++
++    Locality:
+       type: object
+       properties:
+         code:
+           type: string
+-          description: Error Code will be module specific error label/code to identiffy
+-            the error. All modules should also publish the Error codes with their
+-            specific localized values in localization service to ensure clients can
+-            print locale specific error messages. Example for error code would be
+-            User.NotFound to indicate User Not Found by User/Authentication service.
+-            All services must declare their possible Error Codes with brief description
+-            in the error response section of their API path.
+-        message:
+-          type: string
+-          description: English locale message of the error code. Clients should make
+-            a separate call to get the other locale description if configured with
+-            the service. Clients may choose to cache these locale specific messages
+-            to enhance performance with a reasonable TTL (May be defined by the localization
+-            service based on tenant + module combination).
+-        description:
+-          type: string
+-          description: Optional long description of the error to help clients take
+-            remedial action. This will not be available as part of localization service.
+-        params:
+-          type: array
+-          description: Some error messages may carry replaceable fields (say $1, $2)
+-            to provide more context to the message. E.g. Format related errors may
+-            want to indicate the actual field for which the format is invalid. Client's
+-            should use the values in the param array to replace those fields.
+-          items:
+-            type: string
+-      description: Error object will be returned as a part of reponse body in conjunction
+-        with ResponseInfo as part of ErrorResponse whenever the request processing
+-        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
+-        be HTTP 400.
+-    RequestInfo:
+-      required:
+-      - action
+-      - apiId
+-      - msgId
+-      - ts
+-      - ver
++          example: MZ_LOC_001
++          description: Locality boundary code
++        name:
++          type: string
++          description: Locality name
++
++    Ward:
+       type: object
+       properties:
+-        apiId:
+-          maxLength: 128
+-          type: string
+-          description: unique API ID
+-        ver:
+-          maxLength: 32
+-          type: string
+-          description: API version - for HTTP based request this will be same as used
+-            in path
+-        ts:
+-          type: integer
+-          description: time in epoch
+-          format: int64
+-        action:
+-          maxLength: 32
+-          type: string
+-          description: API action to be performed like _create, _update, _search (denoting
+-            POST, PUT, GET) or _oauth etc
+-        did:
+-          maxLength: 1024
++        code:
+           type: string
+-          description: Device ID from which the API is called
+-        key:
+-          maxLength: 256
++          description: Ward boundary code
++        name:
+           type: string
+-          description: API key (API key provided to the caller in case of server to
+-            server communication)
+-        msgId:
+-          maxLength: 256
+-          type: string
+-          description: Unique request message id from the caller
+-        requesterId:
+-          maxLength: 256
+-          type: string
+-          description: UserId of the user calling
+-        authToken:
+-          type: string
+-          description: //session/jwt/saml token/oauth token - the usual value that
+-            would go into HTTP bearer token
+-        userInfo:
+-          $ref: '#/components/schemas/UserInfo'
+-        correlationId:
+-          type: string
+-          readOnly: true
+-      description: RequestInfo should be used to carry meta information about the
+-        requests to the server as described in the fields below. All eGov APIs will
+-        use requestinfo as a part of the request body to carry this meta information.
+-        Some of this information will be returned back from the server as part of
+-        the ResponseInfo in the response body to ensure correlation.
+-    UserInfo:
+-      required:
+-      - primaryrole
+-      - tenantId
+-      - userName
++          description: Ward name
++
++    Identifier:
+       type: object
++      required: [identifierType, identifierId]
+       properties:
+-        tenantId:
+-          type: string
+-          description: Unique Identifier of the tenant to which user primarily belongs
+         id:
+-          type: integer
+-          description: User id of the authenticated user. Will be deprecated in future
+-          format: int32
+-        userName:
+           type: string
+-          description: Unique user name of the authenticated user
+-        mobile:
++        clientReferenceId:
+           type: string
+-          description: mobile number of the autheticated user
+-        email:
++          description: Client reference ID
++        identifierType:
+           type: string
+-          description: email address of the authenticated user
+-        primaryrole:
+-          type: array
+-          description: List of all the roles for the primary tenant
+-          items:
+-            $ref: '#/components/schemas/Role'
+-        additionalroles:
++          enum: [NATIONAL_ID, AADHAAR, PASSPORT, SYSTEM_GENERATED]
++        identifierId:
++          type: string
++          example: "123456789012"
++          description: Identifier value (encrypted at rest using HashiCorp Vault)
++        isDeleted:
++          type: boolean
++          default: false
++          description: Soft delete flag
++
++
++    AdditionalFields:
++      type: object
++      properties:
++        fields:
+           type: array
+-          description: array of additional tenantids authorized for the authenticated
+-            user
+           items:
+-            $ref: '#/components/schemas/TenantRole'
+-      description: This is acting ID token of the authenticated user on the server.
+-        Any value provided by the clients will be ignored and actual user based on
+-        authtoken will be used on the server.
+-    Role:
+-      required:
+-      - name
++            $ref: '#/components/schemas/Field'
++
++    Field:
+       type: object
+       properties:
+-        name:
+-          maxLength: 64
+-          type: string
+-          description: Unique name of the role
+-        description:
++        key:
+           type: string
+-          description: brief description of the role
+-      description: |
+-        minimal representation of the Roles in the system to be carried along in UserInfo with RequestInfo meta data. Actual authorization service to extend this to have more role related attributes
+-    TenantRole:
+-      required:
+-      - roles
+-      - tenantId
+-      type: object
+-      properties:
+-        tenantId:
++        value:
+           type: string
+-          description: tenantid for the tenant
+-        roles:
+-          type: array
+-          description: Roles assigned for a particular tenant - array of role codes/names
+-          items:
+-            $ref: '#/components/schemas/Role'
+-      description: User role carries the tenant related role information for the user.
+-        A user can have multiple roles per tenant based on the need of the tenant.
+-        A user may also have multiple roles for multiple tenants.
++
+     AuditDetails:
+       type: object
+       properties:
+         createdBy:
+           type: string
+-          description: username (preferred) or userid of the user that created the
+-            object
+-        lastModifiedBy:
+-          type: string
+-          description: username (preferred) or userid of the user that last modified
+-            the object
++          example: user-uuid-123
+         createdTime:
+           type: integer
+-          description: epoch of the time object is created
+           format: int64
++          example: 1653290261853
++        lastModifiedBy:
++          type: string
+         lastModifiedTime:
+           type: integer
+-          description: epoch of the time object is last modified
+           format: int64
+-      description: Collection of audit related fields used by most models
+-  parameters:
+-    userName:
+-      name: userName
+-      in: query
+-      description: The unique user name of the User.
+-      schema:
+-        maxLength: 64
+-        minLength: 0
+-        type: string
+-    active:
+-      name: active
+-      in: query
+-      description: True will be set in cases where only active users are needed and
+-        False will be set when inactive users are needed and no value will be set
+-        when all users are needed.
+-      allowEmptyValue: true
+-      schema:
+-        type: boolean
+-        format: varchar
+-        default: true
+-    id:
+-      name: id
+-      in: query
+-      description: List of Unique Id of User
+-      style: form
+-      explode: false
+-      schema:
+-        type: array
+-        items:
+-          type: integer
+-    userType:
+-      name: userType
+-      in: query
+-      description: Defines the type of user. Possible values are as per type enum
+-        defined in User object.
+-      schema:
+-        exclusiveMaximum: false
+-        exclusiveMinimum: true
+-        maxLength: 64
+-        minLength: 0
+-        type: string
+-    roleCodes:
+-      name: roleCodes
+-      in: query
+-      description: roles assigned to the user(roleCodes).Search response will have
+-        all users having all roles specified in the request.
+-      style: form
+-      explode: false
+-      schema:
+-        type: array
+-        items:
++
++    IndividualSearchCriteria:
++      type: object
++      properties:
++        id:
++          type: array
++          items:
++            type: string
++        individualId:
+           type: string
+-    includeDetails:
+-      name: includeDetails
+-      in: query
+-      description: parameter to indicate whether UserDetails should be included as
+-        a part of User object in the response
+-      schema:
+-        type: boolean
+-        default: false
+-    pageSize:
+-      name: pageSize
+-      in: query
+-      description: Number of records returned.
+-      schema:
+-        multipleOf: 10.0
+-        maximum: 100
+-        exclusiveMaximum: false
+-        minimum: 0
+-        exclusiveMinimum: true
+-        type: integer
+-        default: 20
+-    pageNumber:
+-      name: pageNumber
+-      in: query
+-      description: Page number
+-      schema:
+-        type: integer
+-        default: 1
+-    sortUser:
+-      name: sort
+-      in: query
+-      description: User results will be sorted by name ascending by default if this
+-        parameter is not provided.
+-      style: pipeDelimited
+-      schema:
+-        maxItems: 3
+-        minItems: 1
+-        uniqueItems: true
+-        type: array
+-        items:
+-          pattern: '[-+](userName|name|gender)'
++        individualName:
+           type: string
+-        default: '["+name"]'
+-x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml
+-x-api-id: org.egov.users
+\ No newline at end of file
++        dateOfBirth:
++          type: string
++          format: date
++        gender:
++          type: string
++          enum: [MALE, FEMALE, OTHER]
++        mobileNumber:
++          type: string
++        createdFrom:
++          type: integer
++          format: int64
++        createdTo:
++          type: integer
++          format: int64
++        userId:
++          type: string
++
++    IndividualRequest:
++      type: object
++      required: [Individual]
++      properties:
++        Individual:
++          $ref: '#/components/schemas/Individual'
++
++
++    IndividualResponse:
++      type: object
++      properties:
++        Individuals:
++          $ref: '#/components/schemas/Individual'
++
++
++
++    IndividualSearchResponse:
++      type: object
++      properties:
++        Individuals:
++          type: array
++          items:
++            $ref: '#/components/schemas/Individual'
++        totalCount:
++          type: integer
++          format: int64
++
++    Error:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
++
++security:
++  - BearerAuth: []
+\ No newline at end of file

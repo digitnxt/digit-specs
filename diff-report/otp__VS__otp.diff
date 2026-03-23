@@ -1,0 +1,861 @@
+--- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/otp.yaml"	2026-03-23 10:50:25.034727301 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/otp.yaml	2026-03-23 10:51:46.198660142 +0530
+@@ -1,368 +1,521 @@
+-openapi: 3.0.1
++openapi: 3.0.3
+ info:
+-  title: Egov otp service
+-  description: Egov-otp service APIs - contains create , validate and search end point
+-  contact:
+-    name: eGov
+-    email: info@egovernments.org
+-  version: 1.1.0
++  title: OTP Service API
++  version: "3.0.0"
++  description: >
++    OTP generation, resend, verification and management API.
++    Delivery is delegated to a Notification Service. OTPs are stored hashed.
+ servers:
+-- url: /egov-otp/
+-paths:
+-  /otp/v1/_create:
+-    post:
+-      tags:
+-      - OTPConfig
+-      summary: create OTP Configuration entry
+-      description: create OTP Configuration this API is internaly call from v1/_send
+-        end point, this  end point present in user-otp service no need of explicity
+-        call
+-      requestBody:
+-        description: required parameters have to be populated
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/CreateOTPConfigReq'
+-        required: true
+-      responses:
+-        200:
+-          description: Request acknowledged sucessfully
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/OTPConfigRes'
+-        400:
+-          description: Request failed
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: OTPConfig
+-  /otp/v1/_validate:
+-    post:
+-      tags:
+-      - OTPConfig
+-      summary: validate OTP Configuration entry
+-      description: validate OTP Configuration this end point is validate the otp respect
+-        to mobilenumber
+-      requestBody:
+-        description: required parameters have to be populated
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/CreateOTPConfigReq'
+-        required: true
+-      responses:
+-        200:
+-          description: Request acknowledged sucessfully
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/OTPConfigRes'
+-        400:
+-          description: Request failed
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: OTPConfig
+-  /otp/v1/_search:
+-    post:
+-      tags:
+-      - OTPConfig
+-      summary: search OTP Configuration entry using uuid
+-      description: search the mobile number and otp using uuid ,uuid nothing but otp
+-        reference number
+-      requestBody:
+-        description: required parameters have to be populated
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/components/schemas/CreateOTPConfigReq'
+-        required: true
+-      responses:
+-        200:
+-          description: Request acknowledged sucessfully
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/OTPConfigRes'
+-        400:
+-          description: Request failed
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-      x-codegen-request-body-name: OTPConfig
++  - url: https://api.example.com
++    description: Primary production server
++
++tags:
++  - name: otp
++    description: OTP generation and verification operations
++
++security:
++  - bearerAuth: []
++
+ components:
++  securitySchemes:
++    bearerAuth:
++      type: http
++      scheme: bearer
++      bearerFormat: JWT
++
++  headers:
++    X-Response-Time:
++      description: Time taken to generate the response (in ms)
++      schema:
++        type: string
++    X-Response-Timestamp:
++      description: Timestamp when the response was generated
++      schema:
++        type: string
++        format: date-time
++    X-Request-ID:
++      description: Unique request identifier
++      schema:
++        type: string
++    X-Correlation-ID:
++      description: Correlation ID to track requests across services
++      schema:
++        type: string
++    X-Tenant-ID:
++      description: Tenant identifier
++      schema:
++        type: string
++    X-Rate-Limit:
++      description: Rate limit for the API
++      schema:
++        type: integer
++    X-Rate-Limit-Remaining:
++      description: Number of requests remaining in the current window
++      schema:
++        type: integer
++    X-Rate-Limit-Reset:
++      description: Time (in seconds) until rate limit resets
++      schema:
++        type: integer
++
++  parameters:
++    TenantHeader:
++      name: X-Tenant-ID
++      in: header
++      description: "The tenant ID for the request."
++      required: true
++      schema:
++        type: string
++    RequestId:
++      name: X-Request-ID
++      in: header
++      description: Client-provided idempotency / correlation id
++      required: false
++      schema:
++        type: string
++
+   schemas:
+-    Createotp:
+-      required:
+-      - identity
+-      - tenantId
++    GenerateOtpRequest:
+       type: object
++      required:
++        - destination
++        - destination_type
++        - purpose
+       properties:
+-        otp:
++        destination:
+           type: string
+-          description: this is the five digit otp number ,this is mandatory in validate
+-            end point should pass otp value in  /otp/v1/_validate end point, in other
+-            end point it is read only
+-        uuid:
+-          type: string
+-          description: this is otp reference id, this is mandatory in search end point
+-            (/otp/v1/_search), and in other end point it is read only.
+-        identity:
+-          type: string
+-          description: identity is  username or mobile number. this is  mandatory
+-            field in create and validate end point end point is(/otp/v1/_create, and
+-            /otp/v1/_validat) and optional field in /otp/v1/_search end point
+-        tenantId:
+-          type: string
+-          description: Unique Identifier of the tenantId to which user primarily belongs
+-            and it is mandatory field in all the end points shoiuld pass this value
+-        isValidationSuccessful:
+-          type: string
+-          description: it return true or false  this is optional or read only property
+-            in all end point,
+-    CreateOTPConfigReq:
+-      required:
+-      - RequestInfo
+-      - otp
++          description: E.164 phone number or email address (canonicalized)
++        destination_type:
++          type: string
++          enum: [phone, email, push]
++        purpose:
++          type: string
++          description: e.g. login, mfa, password_reset, transaction
++        otp_length:
++          type: integer
++          description: Optional override (default configured per tenant)
++          minimum: 4
++          maximum: 10
++        otp_charset:
++          type: string
++          enum: [digits, alphanumeric, base32]
++          description: Optional override
++        client_metadata:
++          type: object
++          additionalProperties: true
++
++    GenerateOtpResponse:
+       type: object
+       properties:
+-        RequestInfo:
+-          $ref: '#/components/schemas/RequestInfo'
+-        otp:
+-          $ref: '#/components/schemas/Createotp'
+-    OTPConfigRes:
++        request_id:
++          type: string
++        destination:
++          type: string
++        resend_allowed_after:
++          type: string
++          format: date-time
++        expires_at:
++          type: string
++          format: date-time
++        status:
++          type: string
++          enum: [pending, failed]
++        message:
++          type: string
++
++    ResendOtpRequest:
+       type: object
+-      properties:
+-        ResponseInfo:
+-          $ref: '#/components/schemas/ResponseInfo'
+-        otp:
+-          type: array
+-          items:
+-            $ref: '#/components/schemas/Createotp'
+-    ErrorRes:
+       required:
+-      - ResponseInfo
+-      type: object
++        - request_id
+       properties:
+-        ResponseInfo:
+-          $ref: '#/components/schemas/ResponseInfo'
+-        Errors:
+-          type: array
+-          description: Error response array corresponding to Request Object array.
+-            In case of single object submission or _search related paths this may
+-            be an array of one error element
+-          items:
+-            $ref: '#/components/schemas/Error'
+-      description: All APIs will return ErrorRes in case of failure which will carry
+-        ResponseInfo as metadata and Error object as actual representation of error.
+-        In case of bulk apis, some apis may chose to return the array of Error objects
+-        to indicate individual failure.
+-    ResponseInfo:
+-      required:
+-      - apiId
+-      - status
+-      - ts
+-      - ver
++        request_id:
++          type: string
++        client_metadata:
++          type: object
++          additionalProperties: true
++
++    ResendOtpResponse:
+       type: object
+       properties:
+-        apiId:
+-          maxLength: 128
++        request_id:
+           type: string
+-          description: unique API ID
+-        ver:
+-          maxLength: 32
+-          type: string
+-          description: API version
+-        ts:
++        resend_count:
+           type: integer
+-          description: response time in epoch
+-          format: int64
+-        resMsgId:
+-          maxLength: 256
+-          type: string
+-          description: unique response message id (UUID) - will usually be the correlation
+-            id from the server
+-        msgId:
+-          maxLength: 256
++        resend_allowed_after:
++          type: string
++          format: date-time
++        expires_at:
+           type: string
+-          description: message id of the request
++          format: date-time
+         status:
+           type: string
+-          description: status of request processing - to be enhanced in futuer to
+-            include INPROGRESS
+-          enum:
+-          - SUCCESSFUL
+-          - FAILED
+-      description: ResponseInfo should be used to carry metadata information about
+-        the response from the server. apiId, ver and msgId in ResponseInfo should
+-        always correspond to the same values in respective request's RequestInfo.
+-    Error:
+-      required:
+-      - code
+-      - message
++
++    VerifyOtpRequest:
+       type: object
++      required:
++        - request_id
++        - otp
+       properties:
+-        code:
++        request_id:
+           type: string
+-          description: Error Code will be module specific error label/code to identiffy
+-            the error. All modules should also publish the Error codes with their
+-            specific localized values in localization service to ensure clients can
+-            print locale specific error messages. Example for error code would be
+-            User.NotFound to indicate User Not Found by User/Authentication service.
+-            All services must declare their possible Error Codes with brief description
+-            in the error response section of their API path.
+-        message:
++        otp:
+           type: string
+-          description: English locale message of the error code. Clients should make
+-            a separate call to get the other locale description if configured with
+-            the service. Clients may choose to cache these locale specific messages
+-            to enhance performance with a reasonable TTL (May be defined by the localization
+-            service based on tenant + module combination).
+-        description:
+-          type: string
+-          description: Optional long description of the error to help clients take
+-            remedial action. This will not be available as part of localization service.
+-        params:
+-          type: array
+-          description: Some error messages may carry replaceable fields (say $1, $2)
+-            to provide more context to the message. E.g. Format related errors may
+-            want to indicate the actual field for which the format is invalid. Client's
+-            should use the values in the param array to replace those fields.
+-          items:
+-            type: string
+-      description: Error object will be returned as a part of reponse body in conjunction
+-        with ResponseInfo as part of ErrorResponse whenever the request processing
+-        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
+-        be HTTP 400.
+-    RequestInfo:
+-      required:
+-      - action
+-      - apiId
+-      - msgId
+-      - ts
+-      - ver
++          description: OTP code supplied by user
++        client_metadata:
++          type: object
++          additionalProperties: true
++
++    VerifyOtpResponse:
+       type: object
+       properties:
+-        apiId:
+-          maxLength: 128
++        request_id:
+           type: string
+-          description: unique API ID
+-        ver:
+-          maxLength: 32
+-          type: string
+-          description: API version - for HTTP based request this will be same as used
+-            in path
+-        ts:
+-          type: integer
+-          description: time in epoch
+-          format: int64
+-        action:
+-          maxLength: 32
+-          type: string
+-          description: API action to be performed like _create, _update, _search (denoting
+-            POST, PUT, GET) or _oauth etc
+-        did:
+-          maxLength: 1024
+-          type: string
+-          description: Device ID from which the API is called
+-        key:
+-          maxLength: 256
+-          type: string
+-          description: API key (API key provided to the caller in case of server to
+-            server communication)
+-        msgId:
+-          maxLength: 256
+-          type: string
+-          description: Unique request message id from the caller
+-        requesterId:
+-          maxLength: 256
+-          type: string
+-          description: UserId of the user calling
+-        authToken:
+-          type: string
+-          description: //session/jwt/saml token/oauth token - the usual value that
+-            would go into HTTP bearer token
+-        userInfo:
+-          $ref: '#/components/schemas/UserInfo'
+-        correlationId:
+-          type: string
+-          readOnly: true
+-      description: RequestInfo should be used to carry meta information about the
+-        requests to the server as described in the fields below. All eGov APIs will
+-        use requestinfo as a part of the request body to carry this meta information.
+-        Some of this information will be returned back from the server as part of
+-        the ResponseInfo in the response body to ensure correlation.
+-    UserInfo:
+-      required:
+-      - primaryrole
+-      - tenantId
+-      - userName
+-      type: object
+-      properties:
+-        tenantId:
++        status:
+           type: string
+-          description: Unique Identifier of the tenant to which user primarily belongs
+-        id:
+-          type: integer
+-          description: User id of the authenticated user. Will be deprecated in future
+-          format: int32
+-        userName:
+-          type: string
+-          description: Unique user name of the authenticated user
+-        mobile:
+-          type: string
+-          description: mobile number of the autheticated user
+-        email:
+-          type: string
+-          description: email address of the authenticated user
+-        primaryrole:
+-          type: array
+-          description: List of all the roles for the primary tenant
+-          items:
+-            $ref: '#/components/schemas/Role'
+-        additionalroles:
+-          type: array
+-          description: array of additional tenantids authorized for the authenticated
+-            user
+-          items:
+-            $ref: '#/components/schemas/TenantRole'
+-      description: This is acting ID token of the authenticated user on the server.
+-        Any value provided by the clients will be ignored and actual user based on
+-        authtoken will be used on the server.
+-    Role:
+-      required:
+-      - name
+-      type: object
+-      properties:
+-        name:
+-          maxLength: 64
++          enum: [verified, invalid, expired, locked]
++        verified_at:
+           type: string
+-          description: Unique name of the role
+-        description:
++          format: date-time
++        message:
+           type: string
+-          description: brief description of the role
+-      description: |
+-        minimal representation of the Roles in the system to be carried along in UserInfo with RequestInfo meta data. Actual authorization service to extend this to have more role related attributes
+-    TenantRole:
+-      required:
+-      - roles
+-      - tenantId
++
++    InvalidateOtpRequest:
+       type: object
++      required:
++        - request_id
+       properties:
+-        tenantId:
++        request_id:
+           type: string
+-          description: tenantid for the tenant
+-        roles:
+-          type: array
+-          description: Roles assigned for a particular tenant - array of role codes/names
+-          items:
+-            $ref: '#/components/schemas/Role'
+-      description: User role carries the tenant related role information for the user.
+-        A user can have multiple roles per tenant based on the need of the tenant.
+-        A user may also have multiple roles for multiple tenants.
+-x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml
+-x-api-id: org.egov.egov-otp
++        reason:
++          type: string
++
++    Error:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
++              
++  responses:
++    TooManyRequests:
++      description: Too many requests
++      headers:
++        X-Response-Time:
++          $ref: '#/components/headers/X-Response-Time'
++        X-Response-Timestamp:
++          $ref: '#/components/headers/X-Response-Timestamp'
++        X-Request-ID:
++          $ref: '#/components/headers/X-Request-ID'
++        X-Correlation-ID:
++          $ref: '#/components/headers/X-Correlation-ID'
++        X-Tenant-ID:
++          $ref: '#/components/headers/X-Tenant-ID'
++        X-Rate-Limit:
++          $ref: '#/components/headers/X-Rate-Limit'
++        X-Rate-Limit-Remaining:
++          $ref: '#/components/headers/X-Rate-Limit-Remaining'
++        X-Rate-Limit-Reset:
++          $ref: '#/components/headers/X-Rate-Limit-Reset'
++      content:
++        application/json:
++          schema:
++            $ref: '#/components/schemas/Error'
++
++    NotFound:
++      description: Not found
++      headers:
++        X-Response-Time:
++          $ref: '#/components/headers/X-Response-Time'
++        X-Response-Timestamp:
++          $ref: '#/components/headers/X-Response-Timestamp'
++        X-Request-ID:
++          $ref: '#/components/headers/X-Request-ID'
++        X-Correlation-ID:
++          $ref: '#/components/headers/X-Correlation-ID'
++        X-Tenant-ID:
++          $ref: '#/components/headers/X-Tenant-ID'
++        X-Rate-Limit:
++          $ref: '#/components/headers/X-Rate-Limit'
++        X-Rate-Limit-Remaining:
++          $ref: '#/components/headers/X-Rate-Limit-Remaining'
++        X-Rate-Limit-Reset:
++          $ref: '#/components/headers/X-Rate-Limit-Reset'
++      content:
++        application/json:
++          schema:
++            $ref: '#/components/schemas/Error'
++
++    BadRequest:
++      description: Bad request
++      headers:
++        X-Response-Time:
++          $ref: '#/components/headers/X-Response-Time'
++        X-Response-Timestamp:
++          $ref: '#/components/headers/X-Response-Timestamp'
++        X-Request-ID:
++          $ref: '#/components/headers/X-Request-ID'
++        X-Correlation-ID:
++          $ref: '#/components/headers/X-Correlation-ID'
++        X-Tenant-ID:
++          $ref: '#/components/headers/X-Tenant-ID'
++        X-Rate-Limit:
++          $ref: '#/components/headers/X-Rate-Limit'
++        X-Rate-Limit-Remaining:
++          $ref: '#/components/headers/X-Rate-Limit-Remaining'
++        X-Rate-Limit-Reset:
++          $ref: '#/components/headers/X-Rate-Limit-Reset'
++      content:
++        application/json:
++          schema:
++            $ref: '#/components/schemas/Error'
++
++    Unauthorized:
++      description: Unauthorized
++      headers:
++        X-Response-Time:
++          $ref: '#/components/headers/X-Response-Time'
++        X-Response-Timestamp:
++          $ref: '#/components/headers/X-Response-Timestamp'
++        X-Request-ID:
++          $ref: '#/components/headers/X-Request-ID'
++        X-Correlation-ID:
++          $ref: '#/components/headers/X-Correlation-ID'
++        X-Tenant-ID:
++          $ref: '#/components/headers/X-Tenant-ID'
++        X-Rate-Limit:
++          $ref: '#/components/headers/X-Rate-Limit'
++        X-Rate-Limit-Remaining:
++          $ref: '#/components/headers/X-Rate-Limit-Remaining'
++        X-Rate-Limit-Reset:
++          $ref: '#/components/headers/X-Rate-Limit-Reset'
++      content:
++        application/json:
++          schema:
++            $ref: '#/components/schemas/Error'
++
++paths:
++  /v3/otp/generate:
++    post:
++      tags: [otp]
++      summary: Generate an OTP and send via Notification Service
++      description: >
++        Creates an OTPRecord, stores hashed OTP, calls Notification Service.
++        Returns a request_id for subsequent operations.
++      operationId: generateOtp
++      parameters:
++        - $ref: '#/components/parameters/TenantHeader'
++        - $ref: '#/components/parameters/RequestId'
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              $ref: '#/components/schemas/GenerateOtpRequest'
++      responses:
++        '201':
++          description: OTP generated
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/GenerateOtpResponse'
++        '400':
++          $ref: '#/components/responses/BadRequest'
++        '429':
++          $ref: '#/components/responses/TooManyRequests'
++        '503':
++          description: Notification service temporarily unavailable
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++
++  /v3/otp/resend:
++    post:
++      tags: [otp]
++      summary: Resend an existing OTP or create a new one per config
++      operationId: resendOtp
++      parameters:
++        - $ref: '#/components/parameters/TenantHeader'
++        - $ref: '#/components/parameters/RequestId'
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              $ref: '#/components/schemas/ResendOtpRequest'
++      responses:
++        '200':
++          description: Resent
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/ResendOtpResponse'
++        '400':
++          $ref: '#/components/responses/BadRequest'
++        '404':
++          $ref: '#/components/responses/NotFound'
++        '429':
++          $ref: '#/components/responses/TooManyRequests'
++
++  /v3/otp/verify:
++    post:
++      tags: [otp]
++      summary: Verify an OTP for a request_id
++      operationId: verifyOtp
++      parameters:
++        - $ref: '#/components/parameters/TenantHeader'
++        - $ref: '#/components/parameters/RequestId'
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              $ref: '#/components/schemas/VerifyOtpRequest'
++      responses:
++        '200':
++          description: Verified or failed with status
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/VerifyOtpResponse'
++        '400':
++          $ref: '#/components/responses/BadRequest'
++        '401':
++          $ref: '#/components/responses/Unauthorized'
++        '423':
++          description: Locked due to too many attempts
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '404':
++          $ref: '#/components/responses/NotFound'
++
++  /v3/otp/invalidate:
++    post:
++      tags: [otp]
++      summary: Invalidate an OTP (admin or system)
++      operationId: invalidateOtp
++      parameters:
++        - $ref: '#/components/parameters/TenantHeader'
++        - $ref: '#/components/parameters/RequestId'
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              $ref: '#/components/schemas/InvalidateOtpRequest'
++      responses:
++        '200':
++          description: Invalidated
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++          content:
++            application/json:
++              schema:
++                type: object
++                properties:
++                  request_id:
++                    type: string
++                  status:
++                    type: string
++        '404':
++          $ref: '#/components/responses/NotFound'
++        '401':
++          $ref: '#/components/responses/Unauthorized'
+\ No newline at end of file

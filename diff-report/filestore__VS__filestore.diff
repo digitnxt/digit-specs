@@ -1,0 +1,1035 @@
+--- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/filestore.yaml"	2026-03-23 10:50:25.032727434 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/filestore.yaml	2026-03-23 10:51:46.198660142 +0530
+@@ -1,345 +1,755 @@
+-openapi: 3.0.1
++openapi: 3.0.3
+ info:
+-  title: Filestore serivce APIs
++  title: File Upload API
++  version: 3.0.0
+   description: |
+-    APIs available for filestore service
+-      -  Uploads different kinds of files to server including images and different document types.
+-  contact:
+-    name: eGovernments Foundation
+-    email: contacts@egovernments.org
+-  version: 2.0.0
++    API for managing file uploads and downloads using signed URLs, as well as maintaining document type metadata.
++    
++    This API supports:
++    - Generating signed upload/download URLs
++    - Confirming uploads
++    - Fetching uploaded files
++    - Managing document types (metadata for uploaded files)
++
+ servers:
+-- url: /filestore/v1
++  - url: https://api.example.com/file-store/v3
++    description: Production server
++  - url: https://staging-api.example.com/file-store/v3
++    description: Staging server
++
++security:
++  - BearerAuth: []
++
++tags:
++  - name: FileStore
++    description: |
++      Operations related to uploading and downloading files using signed or direct endpoints. 
++      Includes upload confirmation and download URL generation.
++  - name: DocumentCategory
++    description: |
++      Operations for managing metadata of document types used across various services. 
++      Includes creation, update, retrieval, and soft deletion.
++
+ paths:
+-  /files:
++  /document-categories:
+     post:
++      summary: Create a new document type
++      operationId: createDocumentCategory
+       tags:
+-      - Upload File
+-      summary: Uploads different kinds of files to server.
+-      description: The endpoint for uploading file in the system.
++        - DocumentCategory
+       requestBody:
++        required: true
+         content:
+-          multipart/form-data:
++          application/json:
+             schema:
+-              required:
+-              - file
+-              - tenantId
+-              properties:
+-                file:
+-                  type: string
+-                  description: The file to upload.
+-                  format: binary
+-                tenantId:
+-                  type: string
+-                  description: Unique ulb identifier.
+-                module:
+-                  type: string
+-                  description: module name.
+-                tag:
+-                  type: string
+-                  description: tag name.
+-        required: true
++              $ref: '#/components/schemas/DocumentCategory'
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
+       responses:
+-        200:
+-          description: Success response with filestoreid and tenantid.
++        '201':
++          description: Document type created
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/UploadFileResponse'
+-        400:
+-          description: Error response in case of failures.
++                $ref: '#/components/schemas/DocumentCategory'
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Bad Request
+           content:
+-            '*/*':
++            application/json:
++              schema:
++                type: array
++                items:
++                  $ref: '#/components/schemas/Error'
++        '500':
++          description: Internal server error
++          content:
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-  /files/url:
++                $ref: '#/components/schemas/Error'
++
++
+     get:
++      summary: Search document types by filters
++      operationId: searchDocumentCategory
+       tags:
+-      - Search
+-      summary: Search file url based on tenantid and filestoreid.
+-      description: Search file url.
++        - DocumentCategory
+       parameters:
+-      - name: tenantId
+-        in: query
+-        description: Unique id for a tenant.
+-        required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: fileStoreIds
+-        in: query
+-        description: Unique filestoreids.
+-        required: true
+-        schema:
+-          type: string
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - in: query
++          name: type
++          schema:
++            type: string
++          description: Filter by document type
++        - in: query
++          name: docCode
++          schema:
++            type: string
++          description: Filter by document code
++        - in: query
++          name: isSensitive
++          schema:
++            type: boolean
++          description: Filter by sensitivity
+       responses:
+-        200:
+-          description: List of urls to access the uploaded file which is map to particular
+-            fielstoreid.
++        '200':
++          description: List of document types
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/FilestoreIdResponse'
+-        400:
+-          description: Error response in case of failures.
++                type: array
++                items:
++                  $ref: '#/components/schemas/DocumentCategory'
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Bad Request
+           content:
+-            '*/*':
++            application/json:
++              schema:
++                type: array
++                items:
++                  $ref: '#/components/schemas/Error'
++        '500':
++          description: Internal server error
++          content:
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-  /files/tag:
++                $ref: '#/components/schemas/Error'
++
++  /document-categories/{docCode}:
+     get:
++      summary: Get a document type by docCode
++      operationId: getDocumentCategoryByCode
++      tags:
++        - DocumentCategory
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - name: docCode
++          in: path
++          required: true
++          description: Unique document code
++          schema:
++            type: string
++      responses:
++        '200':
++          description: Document type found
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/DocumentCategory'
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '404':
++          description: Document type not found
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/NotFound'
++        '400':
++          description: Bad Request
++          content:
++            application/json:
++              schema:
++                type: array
++                items:
++                  $ref: '#/components/schemas/Error'
++        '500':
++          description: Internal server error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++
++    
++    put:
++      summary: Update a document type
++      operationId: updateDocumentCategory
+       tags:
+-      - Search
+-      summary: Search file url based on tenantid and tag name.
+-      description: Search file url.
++        - DocumentCategory
+       parameters:
+-      - name: tenantId
+-        in: query
+-        description: Unique id for a tenant.
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - name: docCode
++          in: path
++          required: true
++          description: Unique document code
++          schema:
++            type: string
++      requestBody:
+         required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: tag
+-        in: query
+-        description: tag name.
++        content:
++          application/json:
++            schema:
++              $ref: '#/components/schemas/DocumentCategory'
++      responses:
++        '200':
++          description: Updated successfully
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/DocumentCategory'
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '400':
++          description: Bad Request
++          content:
++            application/json:
++              schema:
++                type: array
++                items:
++                  $ref: '#/components/schemas/Error'
++        '404':
++          description: Document type not found
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '500':
++          description: Internal server error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++
++    delete:
++      summary: Delete or deactivate a document type
++      operationId: deleteDocumentCategory
++      tags:
++        - DocumentCategory
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++        - name: docCode
++          in: path
++          required: true
++          description: Unique document code to delete or deactivate
++          schema:
++            type: string
++      responses:
++        '204':
++          description: Deleted successfully
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
++        '404':
++          description: Document type not found
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++        '500':
++          description: Internal server error
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/Error'
++  
++  
++  /upload:
++    post:
++      summary: Upload file directly
++      operationId: directUpload
++      tags: 
++        - FileStore
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++      requestBody:
+         required: true
+-        schema:
+-          type: string
++        content:
++          multipart/form-data:
++            schema:
++              type: object
++              required:
++                - file
++              properties:
++                file:
++                  type: string
++                  format: binary
+       responses:
+-        200:
+-          description: List of urls to access the uploaded file which is map to particular
+-            tag name.
++        '200':
++          description: Success response with filestoreid and tenantid
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/TagFileResponse'
+-        400:
+-          description: Error response in case of failures.
++                $ref: '#/components/schemas/UploadFileResponse'
++        '400':
++          description: Bad request
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-  /files/metaData:
+-    get:
++                $ref: '#/components/schemas/BadRequest'
++
++
++  /upload-url:
++    post:
++      summary: Generate signed URL for file upload
++      operationId: generateUploadUrl
+       tags:
+-      - Search
+-      summary: Get metadata of file based on tenantId and filestoreId.
+-      description: metadata of file.
++        - FileStore
+       parameters:
+-      - name: tenantId
+-        in: query
+-        description: Unique id for a tenant.
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++      requestBody:
+         required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: fileStoreId
+-        in: query
+-        description: Unique fileStoreId.
++        content:
++          application/json:
++            schema:
++              type: object
++              required:
++                - fileName
++                - contentType
++              properties:
++                fileName:
++                  type: string
++                contentType:
++                  type: string
++      responses:
++        '200':
++          description: Signed upload URL
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++
++
++  /confirm-upload:
++    post:
++      summary: Confirm file upload using fileStoreId
++      operationId: confirmUpload
++      tags:
++        - FileStore
++      parameters:
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++      requestBody:
+         required: true
+-        schema:
+-          type: string
++        content:
++          application/json:
++            schema:
++              type: object
++              required:
++                - fileStoreId
++              properties:
++                fileStoreId:
++                  type: string
+       responses:
+-        200:
+-          description: Metadata of file map to particulare filestoreId.
++        '200':
++          description: Upload confirmed
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/MetaDataResponse'
+-        400:
+-          description: Error response in case of failures.
++                type: object
++                properties:
++                  status:
++                    type: string
++                    example: VALID
++        '400':
++          description: Bad request
+           content:
+-            '*/*':
++            application/json:
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
+-  /files/id:
++                $ref: '#/components/schemas/BadRequest'
++
++
++  /download-urls:
+     get:
++      summary: Generate signed download URLs for given fileStoreIds
++      operationId: getDownloadUrls
+       tags:
+-      - Search
+-      summary: Search file url based on tenantid and filestoreid.
+-      description: Search file url.
++        - FileStore
+       parameters:
+-      - name: tenantId
+-        in: query
+-        description: Unique id for a tenant.
+-        required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: fileStoreId
+-        in: query
+-        description: fileStore id.
+-        required: true
+-        schema:
+-          type: string
++        - name: fileStoreIds
++          in: query
++          required: true
++          description: Comma-separated list of fileStoreIds
++          schema:
++            type: string
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
++
++      responses:
++        '200':
++          description: List of signed download URLs with document types
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/DownloadFileDetail'
++        '400':
++          description: Bad request
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/BadRequest'
++
++
++
++
++  /{fileStoreId}:
++    get:
++      summary: Download file by fileStoreId (for direct download only)
++      operationId: downloadFile
++      tags:
++        - FileStore
++      parameters:
++        - name: fileStoreId
++          in: path
++          required: true
++          schema:
++            type: string
++        - $ref: '#/components/parameters/RequestIdHeader'
++        - $ref: '#/components/parameters/CorrelationIdHeader'
++        - $ref: '#/components/parameters/UserAgentHeader'
++        - $ref: '#/components/parameters/TenantIdHeader'
++        - $ref: '#/components/parameters/ForwardedForHeader'
++        - $ref: '#/components/parameters/ClientId'
++        - $ref: '#/components/parameters/ClientSecret'
++        - $ref: '#/components/parameters/TimeStamp'
+       responses:
+-        200:
+-          description: Return file binary.
+-          content: {}
+-        400:
+-          description: Error response in case of failures.
++        '200':
++          description: File download stream
++          headers:
++            X-Response-Time:
++              $ref: '#/components/headers/X-Response-Time'
++            X-Response-Timestamp:
++              $ref: '#/components/headers/X-Response-Timestamp'
++            X-Request-ID:
++              $ref: '#/components/headers/X-Request-ID'
++            X-Correlation-ID:
++              $ref: '#/components/headers/X-Correlation-ID'
++            X-Tenant-ID:
++              $ref: '#/components/headers/X-Tenant-ID'
++            X-Rate-Limit:
++              $ref: '#/components/headers/X-Rate-Limit'
++            X-Rate-Limit-Remaining:
++              $ref: '#/components/headers/X-Rate-Limit-Remaining'
++            X-Rate-Limit-Reset:
++              $ref: '#/components/headers/X-Rate-Limit-Reset'
+           content:
+             '*/*':
+               schema:
+-                $ref: '#/components/schemas/ErrorRes'
++                type: string
++                format: binary
++        '400':
++          description: Bad request
++          content:
++            application/json:
++              schema:
++                $ref: '#/components/schemas/BadRequest'
++
++  
++
++
+ components:
++  securitySchemes:
++    BearerAuth:
++      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
++  parameters:
++    RequestIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
++    CorrelationIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
++    UserAgentHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
++    TenantIdHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
++    ForwardedForHeader:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
++    ClientId:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
++    ClientSecret:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
++    TimeStamp:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
++  
++  headers:
++    X-Response-Time:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
++    X-Response-Timestamp:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
++    X-Request-ID:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
++    X-Correlation-ID:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
++    X-Tenant-ID:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
++    X-Rate-Limit:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
++    X-Rate-Limit-Remaining:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
++    X-Rate-Limit-Reset:
++        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
++    
+   schemas:
+-    FilestoreIdResponse:
+-      required:
+-      - filestoreId
+-      type: object
+-      properties:
+-        filestoreId:
+-          type: array
+-          items:
+-            type: string
+-      description: A list of values
++    Error:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
++    
++    AuditDetail:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
++    
++    Document:
++      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Document'
++    
++    BadRequest:
++        description: Bad Request
++        content:
++          application/json:
++            schema:
++              type: array
++              items:
++                $ref: '#/components/schemas/Error'
++    
++    NotFound:
++      description: Document type not found
++      content:
++        application/json:
++          schema:
++            type: object
++            properties:
++              message:
++                type: string
++
+     UploadFileResponse:
+       type: object
+       properties:
+-        files:
+-          type: array
+-          items:
+-            $ref: '#/components/schemas/UploadFile'
+-    TagFileResponse:
+-      type: object
+-      properties:
+-        files:
+-          type: array
+-          items:
+-            $ref: '#/components/schemas/TagFile'
+-    MetaDataResponse:
+-      type: object
+-      properties:
+-        fileName:
+-          type: string
+-          description: file name.
+-        contetntType:
+-          type: string
+-          description: contetnt type of file.
+-        tenantId:
+-          type: string
+-          description: Unique ulb identifier.
+-        resource:
+-          type: string
+-          description: resource.
+-        fileSize:
+-          type: string
+-          description: file size.
+-      description: Response data cobtains details of files.
+-    UploadFile:
+-      type: object
+-      properties:
+         fileStoreId:
+           type: string
+-          description: filestore id of the particular file.
+-        tenantId:
+-          type: string
+-          description: Unique ulb identifier.
+-      description: Upload file response data with filestoreid and tenantid.
+-    TagFile:
++        
++
++    DownloadFileDetail:
+       type: object
+       properties:
+-        url:
+-          type: string
+-          description: url to access the particular file belong to the tag.
+-        contetntType:
++        fileStoreId:
+           type: string
+-          description: contetnt type of file.
+-      description: Upload file response data with url and contetnt type of file.
+-    ErrorRes:
+-      required:
+-      - ResponseInfo
++          description: Unique identifier of the uploaded file
++          readOnly: true
++        downloadUrl:
++          type: string
++          format: uri
++          description: Presigned URL to download the file
++          readOnly: true
++        docType:
++          type: string
++          description: Document type associated with the file (e.g., AADHAR, DrivingLicense)
++          readOnly: true
++        isValidated:
++          type: boolean
++          default: true
++        isActive:
++          type: boolean
++          default: true
++    
++    DocumentCategory:
+       type: object
+-      properties:
+-        ResponseInfo:
+-          $ref: '#/components/schemas/ResponseInfo'
+-        Errors:
+-          type: array
+-          description: Error response array corresponding to Request Object array.
+-            In case of single object submission or _search related paths this may
+-            be an array of one error element
+-          items:
+-            $ref: '#/components/schemas/Error'
+-      description: All APIs will return ErrorRes in case of failure which will carry
+-        ResponseInfo as metadata and Error object as actual representation of error.
+-        In case of bulk apis, some apis may chose to return the array of Error objects
+-        to indicate individual failure.
+-    ResponseInfo:
+       required:
+-      - apiId
+-      - status
+-      - ts
+-      - ver
+-      type: object
++        - type
++        - code
++        - allowedFormats
++        - maxSize
++        - isSensitive
+       properties:
+-        apiId:
+-          maxLength: 128
+-          type: string
+-          description: unique API ID
+-        ver:
+-          maxLength: 32
+-          type: string
+-          description: API version
+-        ts:
+-          type: integer
+-          description: response time in epoch
+-          format: int64
+-        resMsgId:
+-          maxLength: 256
++        id:
+           type: string
+-          description: unique response message id (UUID) - will usually be the correlation
+-            id from the server
+-        msgId:
+-          maxLength: 256
++          description: System generated unique identifier of the category for internal referance
++          minLength: 2
++          maxLength: 64
++          readOnly: true
++        type:
+           type: string
+-          description: message id of the request
+-        status:
+-          type: string
+-          description: status of request processing - to be enhanced in futuer to
+-            include INPROGRESS
+-          enum:
+-          - SUCCESSFUL
+-          - FAILED
+-      description: ResponseInfo should be used to carry metadata information about
+-        the response from the server. apiId, ver and msgId in ResponseInfo should
+-        always correspond to the same values in respective request's RequestInfo.
+-    Error:
+-      required:
+-      - code
+-      - message
+-      type: object
+-      properties:
++          description: High-level category like "identity", "addressProof", etc.
+         code:
+           type: string
+-          description: Error Code will be module specific error label/code to identiffy
+-            the error. All modules should also publish the Error codes with their
+-            specific localized values in localization service to ensure clients can
+-            print locale specific error messages. Example for error code would be
+-            User.NotFound to indicate User Not Found by User/Authentication service.
+-            All services must declare their possible Error Codes with brief description
+-            in the error response section of their API path.
+-        message:
+-          type: string
+-          description: English locale message of the error code. Clients should make
+-            a separate call to get the other locale description if configured with
+-            the service. Clients may choose to cache these locale specific messages
+-            to enhance performance with a reasonable TTL (May be defined by the localization
+-            service based on tenant + module combination).
+-        description:
+-          type: string
+-          description: Optional long description of the error to help clients take
+-            remedial action. This will not be available as part of localization service.
+-        params:
++          description: Unique code for document like "AADHAR", "DrivingLicense"
++        allowedFormats:
+           type: array
+-          description: Some error messages may carry replaceable fields (say $1, $2)
+-            to provide more context to the message. E.g. Format related errors may
+-            want to indicate the actual field for which the format is invalid. Client's
+-            should use the values in the param array to replace those fields.
+           items:
+             type: string
+-      description: Error object will be returned as a part of reponse body in conjunction
+-        with ResponseInfo as part of ErrorResponse whenever the request processing
+-        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
+-        be HTTP 400.
++          description: Allowed file extensions like ["pdf", "jpg", "png"]
++        minSize:
++          type: string
++          description: Minimum allowed size (e.g., "1MB")
++        maxSize:
++          type: string
++          description: Maximum allowed size (e.g., "5MB")
++        isSensitive:
++          type: boolean
++          description: Marks if document contains PII or sensitive info
++        description:
++          type: string
++          description: Optional description
++        isActive:
++          type: boolean
++          default: true
++        auditDetail:
++          $ref: '#/components/schemas/AuditDetail'
++    
++
++    
