@@ -530,41 +530,64 @@ Common schemas with property changes: 5
 - State removed properties: actions, applicationStatus, auditDetails, businessServiceId, docUploadRequired, isStartState, isTerminateState, state, tenantId, uuid
 
 
-SUMMARY (service-by-service)
-----------------------------------
+SUMMARY 
+-----------------------------------
 
 Service: account
-Summary: The 3.0 spec introduces a dedicated Account Management API under `/account/v1` with CRUD-style endpoints and config endpoints. In 2.9, the closest spec is User Service with citizen/user/profile/password flows, so functionality is reorganized rather than a direct path upgrade. Expect account to be split out from user-centric APIs, with different schemas and request/response models.
+- 3.0 introduces a standalone Account Management API with `/account/v1` and `/account/v1/{id}` plus `/account/v1/config` endpoints, implying account entities and configurable account behavior are now first-class.
+- 2.9 doesn’t have an Account spec; the closest is User Service, which focuses on citizen/user/profile/password flows, so account data is likely split from user identity concerns.
+- Expect new account-specific schemas and request/response payloads that don’t map 1:1 to User Service structures.
 
 Service: billing-payment
-Summary: 3.0 consolidates billing-related workflows into a single Billing - Business Service API with resources like `/business-services`, `/tax-heads`, `/demands`, `/bills`, and `/payments`. In 2.9, these concerns are spread across Billing Service, Collection Management, and Payment Gateway. The 3.0 surface is more resource-oriented and appears to reduce legacy path prefixes while covering business services, demand, bill generation/cancel, and payment recording in a unified API.
+- 3.0 exposes resource-style endpoints for business services, tax heads, demands, bills, and payments under simpler paths like `/business-services`, `/tax-heads`, `/demands`, `/bills`, `/payments`.
+- 2.9 splits this across Billing Service, Collection Management, and Payment Gateway with older prefixed routes (`/billing-service/...`, `/payments/...`, `/pg-service/...`).
+- Expect consolidation and path normalization, plus schema changes due to merging of billing and payment concerns in one spec.
 
 Service: boundary
-Summary: 3.0 presents boundary operations at top-level paths like `/_create`, `/_search`, and `/_update`, plus hierarchy-definition and boundary-relationship endpoints and a shapefile upload path. In 2.9, Boundary V2 namespaces these under `/boundary/...`. The functionality is similar, but routing and path structure have shifted (likely to simplify or standardize).
+- 3.0 shifts to top-level operations (`/_create`, `/_search`, `/_update`) and keeps hierarchy-definition and boundary-relationships, plus a shapefile boundary create endpoint.
+- 2.9 Boundary V2 namespaces these under `/boundary/...` which means clients must update base paths.
+- Core concepts remain similar; biggest change is URL structure and likely request wrapper schemas.
 
 Service: common
-Summary: 3.0’s Common API specification is a reduced set of shared schemas compared to 2.9’s Common Object Definitions. This indicates a cleanup/realignment of shared models rather than new endpoints (no paths in either spec). Expect fewer or renamed shared schema definitions.
+- 3.0 Common spec is purely shared schemas and appears slimmer than 2.9 Common Object Definitions.
+- This implies shared types were renamed/removed or moved to service-specific specs.
 
 Service: filestore
-Summary: 3.0 moves to a document-oriented upload flow with `/upload`, `/upload-url`, `/confirm-upload`, and `/download-urls`, plus document categories. The 2.9 Filestore uses `/files` and related URL/metadata endpoints. The 3.0 API suggests a multi-step upload process and categorization not present in 2.9.
+- 3.0 introduces a multi-step upload lifecycle: request upload, confirm upload, fetch download URLs, and document categories.
+- 2.9 Filestore had `/files`, `/files/url`, `/files/metaData`, `/files/id` style endpoints with a more direct upload model.
+- Expect flow changes for clients: more steps and possibly pre-signed upload URL handling.
 
 Service: idgen
-Summary: 3.0 uses `/v1/template` and `/v1/generate` for ID generation, while 2.9 exposes a single `/id/_generate`. The functionality remains similar but is expanded to include templates and a clearer versioned route structure.
+- 3.0 adds template management with `/v1/template`, and generation via `/v1/generate`.
+- 2.9 has a single `/id/_generate` endpoint.
+- This indicates template-driven IDs are now explicit, with a versioned path format.
 
 Service: individual
-Summary: 3.0 introduces an Individual service with `/v1` CRUD-style endpoints and `/v1/bulk`, plus `/health`. In 2.9, the closest counterpart is User Service (citizen/user/profile). This indicates a domain split: individual entity management separated from user authentication/identity services.
+- 3.0 introduces an Individual Service (`/v1`, `/v1/{id}`, `/v1/bulk`, `/health`) focused on managing person/entity records.
+- 2.9’s closest spec is User Service, but it mixes identity/auth flows with user profile management.
+- Expect a separation of concerns: Individuals as domain entities vs users as auth/actor identities.
 
 Service: localization
-Summary: 3.0 defines `/messages`, `/messages/_upsert`, `/messages/_missing`, and `/cache/_bust`. The 2.9 spec is derived from the Postman collection and uses `/messages/v1/_search`, `/messages/v1/_create`, `/messages/v1/_update`, `/messages/v1/_upsert`, `/messages/v1/_delete`, `/messages/v1/_missing`, and `/cache/v1/_bust`. The 3.0 spec drops `_delete` and standardizes paths (version segment removed) while keeping core message CRUD and cache bust semantics.
+- 3.0 defines `/messages`, `/messages/_upsert`, `/messages/_missing`, `/cache/_bust`.
+- 2.9 (derived from Postman) uses `/messages/v1/_search`, `_create`, `_update`, `_upsert`, `_delete`, `_missing`, and `/cache/v1/_bust`.
+- 3.0 drops `_delete` and removes explicit `/v1` in the path; semantics remain similar but clients must update routing and possibly request bodies.
 
 Service: mdms
-Summary: 3.0 MDMS expands schema and data management with `/schemas` and `/data` endpoints, in addition to existing MDMS v1/v2 search and create/update routes. 2.9 splits MDMS into v1 and v2 specs; 3.0 consolidates and adds explicit schema/data resources for a more structured data lifecycle.
+- 3.0 combines MDMS v1/v2 into a single spec and adds explicit `/schemas` and `/data` resources.
+- 2.9 has separate `mdms.yaml` and `mdms-v2.yaml`, mostly focused on search/create/update routes.
+- 3.0 adds clearer schema lifecycle and data lifecycle APIs, suggesting more structured MDMS usage.
 
 Service: notification
-Summary: 3.0 provides explicit template creation/preview and direct email/SMS send endpoints. 2.9’s User Event service focuses on event creation/search/update and notification counts. This reflects a shift from event-based notifications to a dedicated notification API with template management and channel send actions.
+- 3.0 is template-centric and channel-centric: create templates, preview templates, send email, send SMS.
+- 2.9 User Event service is event-centric: create/update/search events and count notifications.
+- This is more than a rename: it’s a shift from event-driven notifications to explicit template and channel APIs.
 
 Service: otp
-Summary: 3.0 OTP APIs are namespaced as `/v3/otp/*` with generate/resend/verify/invalidate. 2.9 uses `/otp/v1/_create`, `/_validate`, and `/_search`. The 3.0 API adds resend and invalidate as first-class operations and changes path structure.
+- 3.0 uses `/v3/otp/generate`, `/resend`, `/verify`, `/invalidate`.
+- 2.9 uses `/otp/v1/_create`, `/_validate`, `/_search`.
+- 3.0 expands capabilities (resend/invalidate) and standardizes naming.
 
 Service: workflow
-Summary: 3.0 exposes detailed process/state/action endpoints under `/v1/process`, `/v1/state`, `/v1/action`, and escalation/transition operations. 2.9 provides process transition/search/count and businessservice CRUD under `/process` and `/businessservice`. The 3.0 spec appears to move toward more granular workflow primitives and a versioned, more REST-like model.
+- 3.0 exposes detailed primitives for process/state/action and escalation/transition, all versioned under `/v1/...`.
+- 2.9 focuses on process transition/search/count and businessservice CRUD under shorter paths.
+- 3.0 is more granular and likely requires client changes to call new endpoints for workflow definition and state/action management.
