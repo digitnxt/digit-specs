@@ -520,8 +520,44 @@ Endpoints removed from 3.0: 7
 Endpoints with method changes: 0
 
 
-HUMAN SUMMARY (service-by-service)
+SUMMARY FOR EACH SERVICE
 ----------------------------------
+
+Service: account
+Summary: The 3.0 spec introduces a dedicated Account Management API under /account/v1 with CRUD-style endpoints and config endpoints. The previous service is Tenant Management (TenantManagement.yml), so this is a re-scope from tenant-centric APIs to account-centric APIs. Sub-tenant has been removed; the equivalent capability should be handled via jurisdiction-based access control and MDMS client fallbacks. Expect renamed paths, different entity focus, and schema changes across tenant/config models vs account/config models.
+
+Service: billing-payment
+Summary: 3.0 consolidates billing, collection, and payment into a single resource-oriented API (/business-services, /tax-heads, /demands, /bills, /payments). 2.9 splits this across Billing Service, Collection Management, and Payment Gateway with different prefixes and schemas. Expect path normalization and merged request/response shapes.
+
+Service: boundary
+Summary: 3.0 uses top-level paths (/_create, /_search, /_update) plus hierarchy-definition and boundary-relationships, and adds shapefile boundary create. 2.9 is namespaced under /boundary. Behavior is similar, but routes and wrapper schemas differ.
+
+Service: common
+Summary: 3.0 Common is a smaller shared-schema set vs 2.9 Common Object Definitions. This is likely a cleanup or relocation of shared models, with no endpoints in either spec.
+
+Service: filestore
+Summary: 3.0 introduces a multi-step upload workflow (/upload, /upload-url, /confirm-upload, /download-urls) and document categories. 2.9 uses /files and related URL/metadata endpoints. Expect flow changes and different request/response shapes.
+
+Service: idgen
+Summary: 3.0 adds template handling (/v1/template) and generation (/v1/generate). 2.9 has a single /id/_generate. This is a structural expansion with versioned paths.
+
+Service: individual
+Summary: 3.0 Individual is compared to the previous Individual Registry spec (individual-2.9.yaml). Paths move from /individual/v1/* to /v1/* with a /health endpoint; bulk create/update/delete/search exist but wrappers and payload shapes may differ.
+
+Service: localization
+Summary: 3.0 standardizes paths (/messages, /messages/_upsert, /messages/_missing, /cache/_bust) and drops /v1 in the URL. 2.9 (from the provided spec) includes _create/_update/_delete/_search. Expect path shifts and a missing delete endpoint.
+
+Service: mdms
+Summary: 3.0 consolidates MDMS v1/v2 and adds explicit /schemas and /data resources. 2.9 splits MDMS across v1 and v2 specs focused on search/create/update. Expect a more structured schema/data lifecycle in 3.0.
+
+Service: notification
+Summary: 3.0 is template/channel centric (template create/preview, email send, SMS send). 2.9 User Event is event-centric (create/update/search events, notification counts). This is a functional shift, not just a rename.
+
+Service: otp
+Summary: 3.0 uses /v3/otp/* with generate/resend/verify/invalidate. 2.9 uses /otp/v1/_create/_validate/_search. 3.0 expands operations and renames paths.
+
+Service: workflow
+Summary: 3.0 exposes granular process/state/action endpoints under /v1/* and includes escalation/transition. 2.9 focuses on process transition/search/count and businessservice CRUD. Expect more granular calls and updated pathing.
 
 Service: hrms
 Summary: HRMS 3.0 (hrms.yaml) is compared against the provided 2.9 swagger. Expect path and schema modernization in 3.0, but core employee create/search/update/count operations remain the baseline. Validate endpoint paths and request/response wrapper shapes for breaking changes.
