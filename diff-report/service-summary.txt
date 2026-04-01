@@ -500,9 +500,6 @@ Common schemas with property changes: 5
 - State removed properties: actions, applicationStatus, auditDetails, businessServiceId, docUploadRequired, isStartState, isTerminateState, state, tenantId, uuid
 
 
-SUMMARY 
------------------------------------
-
 Service: individual
 Compared to: individual-2.9.yaml
 Endpoints added in 3.0: 3
