@@ -512,7 +512,7 @@ Endpoints removed from 3.0: 7
 Endpoints with method changes: 0
 
 
-SUMMARY FOR EACH SERVICE
+SUMMARY:
 ----------------------------------
 
 Service: account
