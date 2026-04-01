@@ -158,11 +158,6 @@ Schemas added in 3.0: 1
 Schemas removed from 3.0: 0
 Common schemas with property changes: 0
 
-Service: common
-Compared to: common-contract.yaml
-Endpoints added in 3.0: 0
-Endpoints removed from 3.0: 0
-Endpoints with method changes: 0
 Schemas added in 3.0: 3
 - + AuditDetail
 - + Document
@@ -528,9 +523,6 @@ Summary: 3.0 consolidates billing, collection, and payment into a single resourc
 
 Service: boundary
 Summary: 3.0 uses top-level paths (/_create, /_search, /_update) plus hierarchy-definition and boundary-relationships, and adds shapefile boundary create. 2.9 is namespaced under /boundary. Behavior is similar, but routes and wrapper schemas differ.
-
-Service: common
-Summary: 3.0 Common is a smaller shared-schema set vs 2.9 Common Object Definitions. This is likely a cleanup or relocation of shared models, with no endpoints in either spec.
 
 Service: filestore
 Summary: 3.0 introduces a multi-step upload workflow (/upload, /upload-url, /confirm-upload, /download-urls) and document categories. 2.9 uses /files and related URL/metadata endpoints. Expect flow changes and different request/response shapes.
