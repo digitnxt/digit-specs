@@ -1,0 +1,511 @@
+openapi: 3.0.1
+info:
+  title: location service
+  description: location service api - to create, search and update boundarie along with api for establishing relationship between boundarie. thi service support n-level hierarchical boundary data.
+  contact:
+    name: egov
+    email: info@egovernment.org
+  version: 2.0.0
+server:
+- url: /location/v2
+path:
+  /boundary/create:
+    post:
+      tag:
+      - boundary entitie
+      summary: api endpoint to create boundary.
+      description: |
+        provide functionality to create boundary data.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrequest"
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+  /boundary/search:
+    post:
+      tag:
+      - boundary entitie
+      summary: api endpoint to search boundary entitie.
+      description: |
+        provide a list of boundary entitie based on the provided search criteria.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          maxlength: 256
+          type: string
+          format: varchar
+      - name: code
+        in: query
+        description: unique list of boundary code.
+        style: form
+        explode: false
+        required: true
+        schema:
+          type: array
+          item:
+            type: string
+            format: varchar
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+  /boundary/update:
+    post:
+      tag:
+      - boundary entitie
+      summary: api endpoint to update boundary.
+      description: |
+        provide functionality to update boundary data.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrequest"
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+  /boundary/hierarchy-definition/create:
+    post:
+      tag:
+      - hierarchy definition
+      summary: api endpoint to define hierarchy.
+      description: |
+        provide functionality to define hierarchy.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundarytypehierarchyrequest"
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundarytypehierarchyresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+  /boundary/hierarchy-definition/search:
+    post:
+      tag:
+      - hierarchy definition
+      summary: api endpoint to search boundary entitie.
+      description: |
+        provide boundary type hierarchy based on the provided search criteria.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundarytypehierarchysearchrequest"
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundarytypehierarchyresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+  /boundary/boundary-relationship/create:
+    post:
+      tag:
+      - boundary relationship
+      summary: api endpoint to create relationship between boundarie.
+      description: |
+        provide functionality to establish relationship between boundarie.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrelationshiprequest"
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryrelationshipresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+  /boundary/boundary-relationship/search:
+    post:
+      tag:
+      - boundary relationship
+      summary: api endpoint to search linked boundarie.
+      description: |
+        provide functionality to search linked boundarie based on the provided search criteria
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          maxlength: 256
+          type: string
+          format: varchar
+      - name: boundarytype
+        in: query
+        description: boundary type within the tenant boundary structure.
+        schema:
+          maxlength: 64
+          type: string
+          format: varchar
+      - name: hierarchytype
+        in: query
+        description: type of the boundarytype like revenue, admin
+        schema:
+          maxlength: 128
+          type: string
+          format: varchar
+      - name: includechildren
+        in: query
+        description: boolean flag to inform the service if children need to be part of search.
+        required: false
+        schema:
+          type: boolean
+      - name: includeparent
+        in: query
+        description: boolean flag to inform the service if parent need to be part of search.
+        required: false
+        schema:
+          type: boolean
+      - name: code
+        in: query
+        description: unique list of boundary code.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+            format: varchar
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundarysearchresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+  /boundary/boundary-relationship/update:
+    post:
+      tag:
+      - boundary relationship
+      summary: api endpoint to update relationship between boundarie.
+      description: |
+        provide functionality to update relationship between boundarie.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrelationshiprequest"
+      response:
+        200:
+          description: successful response.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryrelationshipresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+      x-codegen-request-body-name: requestinfo
+component:
+  schema:
+    hierarchytype:
+      required:
+      - code
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique tenant identifier
+        id:
+          type: string
+          readonly: true
+          description: uuid
+        code:
+          type: string
+          description: unique hierarchy type code
+        active:
+          type: boolean
+          description: soft delete (true / false)
+    geometry:
+      type: object
+      propertie:
+        type:
+          type: string
+          enum:
+            - polygon
+            - point
+        coordinate:
+          type: array
+          item:
+            type: array
+            item:
+              type: array
+              item:
+                type: number
+    boundarytype:
+      required:
+      - code
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique tenant identifier
+        id:
+          type: string
+          readonly: true
+          description: uuid
+        code:
+          type: string
+          description: unique code for boundary type.
+        active:
+          type: boolean
+          description: attribute that define if the given boundary type i active or not.
+    boundary:
+      required:
+      - code
+      type: object
+      propertie:
+        id:
+          type: string
+          readonly: true
+          description: read-only db entity uuid.
+        tenantid:
+          type: string
+          description: unique tenant identifier.
+        code:
+          type: string
+          description: code of the boundary.
+        geometry:
+          $ref: '#/component/schema/geometry'
+        additionaldetail:
+          type: object
+    enrichedboundary:
+      required:
+      - code
+      type: object
+      propertie:
+        id:
+          type: string
+          readonly: true
+          description: read-only db entity uuid.
+        tenantid:
+          type: string
+          description: unique tenant identifier.
+        code:
+          type: string
+          description: code of the boundary.
+        boundarytype:
+          type: string
+          description: type of the boundary.
+        children:
+          type: array
+          item:
+            $ref: '#/component/schema/enrichedboundary'
+          description: children boundarie of the current boundary
+    boundaryrelation:
+      required:
+      - code
+      type: object
+      propertie:
+        id:
+          type: string
+          readonly: true
+          description: read-only db entity uuid.
+        code:
+          type: string
+          description: code of the boundary.
+        tenantid:
+          type: string
+          description: unique tenant identifier.
+        hierarchytype:
+          type: string
+          description: code of the hierarchy type for which boundary relationship i being created.
+        boundarytype:
+          type: string
+          description: boundary type from master data.
+        parent:
+          type: string
+          description: parent boundary code.
+    hierarchyrelation:
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique id of the boundary tenant.
+        hierarchytype:
+          type: string
+          description: hierarchy type from master data
+        boundary:
+          $ref: '#/component/schema/enrichedboundary'
+    boundaryrelationshiprequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        boundaryrelationship:
+          $ref: '#/component/schema/boundaryrelation'
+    boundaryrelationshipresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        tenantboundary:
+          type: array
+          item:
+            $ref: '#/component/schema/boundaryrelation'
+    boundarysearchresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        tenantboundary:
+          type: array
+          item:
+            $ref: '#/component/schema/hierarchyrelation'
+    boundarytypehierarchy:
+      required:
+      - boundarytype, parentboundarytype
+      type: object
+      propertie:
+        boundarytype:
+          type: string
+          description: boundary type code.
+        id:
+          type: string
+          readonly: true
+          description: uuid
+        parentboundarytype:
+          type: string
+          description: unique code for parent boundary.
+        active:
+          type: boolean
+          description: attribute that define if the given boundary hierarchy i active or not
+    boundarytypehierarchyrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        boundaryhierarchy:
+          $ref: '#/component/schema/boundarytypehierarchydefinition'
+    boundarytypehierarchyresponse:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        boundaryhierarchy:
+          $ref: '#/component/schema/boundarytypehierarchydefinition'
+    boundarytypehierarchydefinition:
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique id of the boundary tenant.
+        hierarchytype:
+          type: string
+          description: hierarchy type from master data
+        boundaryhierarchy:
+          type: array
+          item:
+            $ref: '#/component/schema/boundarytypehierarchy'
+    boundaryrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        boundary:
+          type: array
+          item:
+            $ref: '#/component/schema/boundary'
+    boundaryresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        boundary:
+          type: array
+          item:
+            $ref: '#/component/schema/boundary'
+    boundarytypehierarchysearchcriteria:
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for a tenant.
+        hierarchytype:
+          type: string
+          description: search by hierarchy type.
+    boundarytypehierarchysearchrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml#/definitions/RequestInfo'
+        boundarytypehierarchysearchcriteria:
+          $ref: '#/component/schema/boundarytypehierarchysearchcriteria'

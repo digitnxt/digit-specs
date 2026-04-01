@@ -1,5 +1,6 @@
-DIGIT 3.0 vs 2.9 detailed service summary
+DIGIT 3.0 vs 2.9 detailed service summary (normalized identifiers)
 ------------------------------------------------
+Notes: Summary is auto-derived from specs. Identifier normalization ignores pluralization, underscores, and capitalization.
 
 Service: account
 Compared to: TenantManagement.yml
@@ -10,34 +11,6 @@ Endpoints added in 3.0: 4
 - + /account/v1/{id}
 Endpoints removed from 3.0: 0
 Endpoints with method changes: 0
-Schemas added in 3.0: 9
-- + Account
-- + AccountConfig
-- + AccountConfigRequest
-- + AccountConfigResponse
-- + AccountRequest
-- + AccountResponse
-- + AuditDetail
-- + Document
-- + ErrorResponse
-Schemas removed from 3.0: 15
-- - AuditDetails
-- - ErrorRes
-- - PasswordRes
-- - RequestInfo
-- - ResponseInfo
-- - Role
-- - TenantRole
-- - TokenWrapper
-- - User
-- - UserDetails
-- - UserInfo
-- - UserReq
-- - UserRes
-- - resetpasswordreq
-- - updatePasswordReq
-Common schemas with property changes: 1
-- Error removed properties: code, description, message, params
 
 Service: billing-payment
 Compared to: billing.yaml, collection-management.yaml, payment-gateway.yaml
@@ -77,59 +50,6 @@ Endpoints removed from 3.0: 31
 - - /payments/_search
 - ... 11 more
 Endpoints with method changes: 0
-Schemas added in 3.0: 16
-- + AuditDetail
-- + BulkResponse
-- + BusinessService
-- + BusinessServiceCreate
-- + BusinessServicePatch
-- + BusinessServiceUpdateByCode
-- + DemandCreate
-- + DemandPatch
-- + DemandUpdate
-- + GenerateBillCriteria
-- + LineItem
-- + TaxHead
-- + TaxHeadCreate
-- + TaxHeadPatch
-- + TaxHeadUpdateByCode
-- + UpdateBillStatus
-Schemas removed from 3.0: 42
-- - Action
-- - Amendment
-- - AmendmentRequest
-- - AmendmentUpdate
-- - AmendmentUpdateRequest
-- - AuditDetails
-- - BankAccountServiceMapping
-- - BankAccountServiceMappingReq
-- - BillAccountDetailV2
-- - BillDetailV2
-- - BillRequestV2
-- - BillV2
-- - DemandDetail
-- - DemandRequest
-- - Document
-- - ErrorRes
-- - JsonNode
-- - PaymentRequest
-- - PaymentResponse
-- - PaymentWorkflow
-- ... 22 more
-Common schemas with property changes: 7
-- Bill added properties: auditDetail, billExpiryAt, billIssueAt, businessServiceCode, id, metadata, payerMobileNumber, totalCollectedAmount
-- Bill removed properties: additionalDetails, billDate, businessService, collectionModesNotAllowed, isAdvanceAllowed, isCancelled, minimumAmountToBePaid, mobileNumber, paidBy, partPaymentAllowed, reasonForCancellation
-- BillAccountDetail added properties: lineItemId, metadata
-- BillAccountDetail removed properties: additionalDetails, auditDetails, demandDetailId, purpose, tenantId
-- BillDetail added properties: metadata, periodFrom, periodTo
-- BillDetail removed properties: billDescription, boundary, cancellationRemarks, channel, collectionType, displayMessage, expiryDate, fromPeriod, manualReceiptDate, manualReceiptNumber, receiptDate, receiptType, tenantId, toPeriod, voucherHeader
-- Demand added properties: arrearDemandIds, auditDetail, billExpiryDays, businessServiceCode, isDemandPaid, lineItems, metadata, periodFrom, periodTo, totalAmount, totalCollectedAmount, version
-- Demand removed properties: additionalDetails, auditDetails, billExpiryTime, businessService, consumerType, demandDetails, taxPeriodFrom, taxPeriodTo, tenantId
-- Error removed properties: code, description, message, params
-- Payment added properties: auditDetail, fileStoreId, metadata, payerMobileNumber, totalAmountDue
-- Payment removed properties: additionalDetails, auditDetails, mobileNumber, tenantId, totalDue
-- PaymentDetail added properties: businessServiceCode, manualReceiptDate, metadata, paymentId, totalAmountDue
-- PaymentDetail removed properties: additionalDetails, auditDetails, businessService, tenantId, totalDue
 
 Service: boundary
 Compared to: Boundary-V2.yaml
@@ -153,25 +73,6 @@ Endpoints removed from 3.0: 8
 - - /boundary/hierarchy-definition/_create
 - - /boundary/hierarchy-definition/_search
 Endpoints with method changes: 0
-Schemas added in 3.0: 1
-- + Error
-Schemas removed from 3.0: 0
-Common schemas with property changes: 0
-
-Schemas added in 3.0: 3
-- + AuditDetail
-- + Document
-- + DocumentType
-Schemas removed from 3.0: 6
-- - AuditDetails
-- - ErrorRes
-- - RequestInfo
-- - ResponseInfo
-- - Role
-- - User
-Common schemas with property changes: 1
-- Address added properties: area, countryCode, geoLocation, state, streetAddress
-- Address removed properties: addressLine1, addressLine2, addressNumber, detail, latitude, longitude
 
 Service: filestore
 Compared to: filestore.yaml
@@ -190,25 +91,6 @@ Endpoints removed from 3.0: 5
 - - /files/tag
 - - /files/url
 Endpoints with method changes: 0
-Schemas added in 3.0: 6
-- + AuditDetail
-- + BadRequest
-- + Document
-- + DocumentCategory
-- + DownloadFileDetail
-- + NotFound
-Schemas removed from 3.0: 7
-- - ErrorRes
-- - FilestoreIdResponse
-- - MetaDataResponse
-- - ResponseInfo
-- - TagFile
-- - TagFileResponse
-- - UploadFile
-Common schemas with property changes: 2
-- Error removed properties: code, description, message, params
-- UploadFileResponse added properties: fileStoreId
-- UploadFileResponse removed properties: files
 
 Service: idgen
 Compared to: id-generation.yaml
@@ -218,62 +100,22 @@ Endpoints added in 3.0: 2
 Endpoints removed from 3.0: 1
 - - /id/_generate
 Endpoints with method changes: 0
-Schemas added in 3.0: 9
-- + AuditDetails
-- + GenerateIDRequest
-- + GenerateIDResponse
-- + IDGenTemplateConfig
-- + IDGenTemplateRequest
-- + IDGenTemplateResponse
-- + PaddingConfig
-- + RandomConfig
-- + SequenceConfig
-Schemas removed from 3.0: 11
-- - ErrorRes
-- - IDGenErrorRes
-- - IdGenerationRequest
-- - IdGenerationResponse
-- - IdRequest
-- - IdResponse
-- - RequestInfo
-- - ResponseInfo
-- - Role
-- - TenantRole
-- - UserInfo
-Common schemas with property changes: 1
-- Error removed properties: code, description, message, params
 
-Schemas added in 3.0: 13
-- + AdditionalFields
-- + Address
-- + ErrorInfo
-- + Field
-- + Identifier
-- + Individual
-- + IndividualRequest
-- + IndividualResponse
-- + IndividualSearchCriteria
-- + IndividualSearchResponse
-- + Locality
-- + Name
-- + Ward
-Schemas removed from 3.0: 14
-- - ErrorRes
-- - PasswordRes
-- - RequestInfo
-- - ResponseInfo
-- - Role
-- - TenantRole
-- - TokenWrapper
-- - User
-- - UserDetails
-- - UserInfo
-- - UserReq
-- - UserRes
-- - resetpasswordreq
-- - updatePasswordReq
-Common schemas with property changes: 1
-- Error removed properties: code, description, message, params
+Service: individual
+Compared to: individual-2.9.yaml
+Endpoints added in 3.0: 3
+- + /individual/v1
+- + /individual/v1/configs
+- + /individual/v1/{id}
+Endpoints removed from 3.0: 7
+- - /individual/v1/_create
+- - /individual/v1/_delete
+- - /individual/v1/_search
+- - /individual/v1/_update
+- - /individual/v1/bulk/_create
+- - /individual/v1/bulk/_delete
+- - /individual/v1/bulk/_update
+Endpoints with method changes: 0
 
 Service: localization
 Compared to: localization-2.9.openapi.yaml
@@ -291,23 +133,6 @@ Endpoints removed from 3.0: 7
 - - /api/localization/messages/v1/_update
 - - /api/localization/messages/v1/_upsert
 Endpoints with method changes: 0
-Schemas added in 3.0: 14
-- + CacheBustResponse
-- + CreateMessagesRequest
-- + CreateMessagesResponse
-- + DeleteMessagesResponse
-- + Error
-- + FindMissingMessagesRequest
-- + FindMissingMessagesResponse
-- + Message
-- + SearchMessagesResponse
-- + UpdateMessage
-- + UpdateMessagesRequest
-- + UpdateMessagesResponse
-- + UpsertMessagesRequest
-- + UpsertMessagesResponse
-Schemas removed from 3.0: 0
-Common schemas with property changes: 0
 
 Service: mdms
 Compared to: mdms.yaml, mdms-v2.yaml
@@ -321,23 +146,6 @@ Endpoints removed from 3.0: 3
 - - /egov-mdms-service/schema/v1/_search
 - - /egov-mdms-service/v1/_get
 Endpoints with method changes: 0
-Schemas added in 3.0: 2
-- + AuditDetail
-- + Document
-Schemas removed from 3.0: 9
-- - ErrorRes
-- - MDMSCreateRequest
-- - MasterMetaData
-- - MdmsCreateResponse
-- - RequestInfo
-- - ResponseInfo
-- - Role
-- - TenantRole
-- - UserInfo
-Common schemas with property changes: 2
-- Error removed properties: code, description, message, params
-- SchemaDefinition added properties: schema, unique, version
-- SchemaDefinition removed properties: definition
 
 Service: notification
 Compared to: user-event.yaml
@@ -353,33 +161,6 @@ Endpoints removed from 3.0: 5
 - - /v1/events/lat/_update
 - - /v1/events/notifications/_count
 Endpoints with method changes: 0
-Schemas added in 3.0: 6
-- + AuditDetail
-- + EmailRequest
-- + SMSRequest
-- + Template
-- + TemplatePreviewRequest
-- + TemplatePreviewResponse
-Schemas removed from 3.0: 17
-- - Action
-- - ActionItem
-- - AuditDetails
-- - ErrorRes
-- - ErrorRes_2
-- - Error_2
-- - Event
-- - EventDetails
-- - EventRequest
-- - EventResponse
-- - RequestInfo
-- - RequestInfoWrapper
-- - ResponseInfo
-- - ResponseInfo_2
-- - Role
-- - TenantRole
-- - UserInfo
-Common schemas with property changes: 1
-- Error removed properties: code, description, message, params
 
 Service: otp
 Compared to: otp.yaml
@@ -393,26 +174,6 @@ Endpoints removed from 3.0: 3
 - - /otp/v1/_search
 - - /otp/v1/_validate
 Endpoints with method changes: 0
-Schemas added in 3.0: 7
-- + GenerateOtpRequest
-- + GenerateOtpResponse
-- + InvalidateOtpRequest
-- + ResendOtpRequest
-- + ResendOtpResponse
-- + VerifyOtpRequest
-- + VerifyOtpResponse
-Schemas removed from 3.0: 9
-- - CreateOTPConfigReq
-- - Createotp
-- - ErrorRes
-- - OTPConfigRes
-- - RequestInfo
-- - ResponseInfo
-- - Role
-- - TenantRole
-- - UserInfo
-Common schemas with property changes: 1
-- Error removed properties: code, description, message, params
 
 Service: workflow
 Compared to: workflow.yaml
@@ -444,109 +205,33 @@ Endpoints removed from 3.0: 13
 - - /process/_transition
 - - /process/escalate/_search
 Endpoints with method changes: 0
-Schemas added in 3.0: 16
-- + ActionCreate
-- + ActionUpdate
-- + AttributeValidation
-- + AuditDetail
-- + EscalationConfig
-- + EscalationConfigCreate
-- + EscalationResult
-- + Process
-- + ProcessCreate
-- + ProcessDefinitionDetail
-- + ProcessInstanceListResponse
-- + ProcessUpdate
-- + StateCreate
-- + StateUpdate
-- + TransitionRequest
-- + TransitionResponse
-Schemas removed from 3.0: 21
-- - AuditDetails
-- - BusinessService
-- - BusinessServiceRequest
-- - BusinessServiceResponse
-- - ErrorRes
-- - ErrorRes_2
-- - Error_2
-- - ProcessCountResponse
-- - ProcessInstanceRequest
-- - ProcessInstanceSearchCriteria
-- - ProcessIntanceResponse
-- - RequestInfo
-- - ResponseEntity
-- - ResponseInfo
-- - ResponseInfo_2
-- - Role
-- - Role_2
-- - StatusCountReq
-- - TenantRole
-- - User
-- ... 1 more
-Common schemas with property changes: 5
-- Action added properties: attributeValidation, auditDetail, currentState, id, label, name, nextState
-- Action removed properties: action, auditDetails, nextStateId, roles, stateId, tenantId, uuid
-- Document added properties: additionalDetails
-- Document removed properties: auditDetails, id, tenantId
-- Error removed properties: code, description, message, params
-- ProcessInstance added properties: assignees, attributes, branchId, currentState, entityId, escalated, isLatest, isParallelBranch, parentInstanceId, processId, processSla, stateSla, status
-- ProcessInstance removed properties: assignes, businessId, businessService, currentStatus, entity, previousStatus, sla, state, tenantId
-- State added properties: auditDetail, branchStates, code, description, id, isInitial, isJoin, isParallel, name, processId, sla
-- State removed properties: actions, applicationStatus, auditDetails, businessServiceId, docUploadRequired, isStartState, isTerminateState, state, tenantId, uuid
-
-
-Service: individual
-Compared to: individual-2.9.yaml
-Endpoints added in 3.0: 3
-- + /individual/v1
-- + /individual/v1/configs
-- + /individual/v1/{id}
-Endpoints removed from 3.0: 7
-- - /individual/v1/_create
-- - /individual/v1/_delete
-- - /individual/v1/_search
-- - /individual/v1/_update
-- - /individual/v1/bulk/_create
-- - /individual/v1/bulk/_delete
-- - /individual/v1/bulk/_update
-Endpoints with method changes: 0
-
-
-SUMMARY:
-----------------------------------
-
-Service: account
-Summary: The 3.0 spec introduces a dedicated Account Management API under /account/v1 with CRUD-style endpoints and config endpoints. The previous service is Tenant Management (TenantManagement.yml), so this is a re-scope from tenant-centric APIs to account-centric APIs. Sub-tenant has been removed; the equivalent capability should be handled via jurisdiction-based access control and MDMS client fallbacks. Expect renamed paths, different entity focus, and schema changes across tenant/config models vs account/config models.
-
-Service: billing-payment
-Summary: 3.0 consolidates billing, collection, and payment into a single resource-oriented API (/business-services, /tax-heads, /demands, /bills, /payments). 2.9 splits this across Billing Service, Collection Management, and Payment Gateway with different prefixes and schemas. Expect path normalization and merged request/response shapes.
-
-Service: boundary
-Summary: 3.0 uses top-level paths (/_create, /_search, /_update) plus hierarchy-definition and boundary-relationships, and adds shapefile boundary create. 2.9 is namespaced under /boundary. Behavior is similar, but routes and wrapper schemas differ.
-
-Service: filestore
-Summary: 3.0 introduces a multi-step upload workflow (/upload, /upload-url, /confirm-upload, /download-urls) and document categories. 2.9 uses /files and related URL/metadata endpoints. Expect flow changes and different request/response shapes.
-
-Service: idgen
-Summary: 3.0 adds template handling (/v1/template) and generation (/v1/generate). 2.9 has a single /id/_generate. This is a structural expansion with versioned paths.
-
-Service: individual
-Summary: 3.0 Individual is compared to the previous Individual Registry spec (individual-2.9.yaml). Paths move from /individual/v1/* to /v1/* with a /health endpoint; bulk create/update/delete/search exist but wrappers and payload shapes may differ.
-
-Service: localization
-Summary: 3.0 standardizes paths (/messages, /messages/_upsert, /messages/_missing, /cache/_bust) and drops /v1 in the URL. 2.9 (from the provided spec) includes _create/_update/_delete/_search. Expect path shifts and a missing delete endpoint.
-
-Service: mdms
-Summary: 3.0 consolidates MDMS v1/v2 and adds explicit /schemas and /data resources. 2.9 splits MDMS across v1 and v2 specs focused on search/create/update. Expect a more structured schema/data lifecycle in 3.0.
-
-Service: notification
-Summary: 3.0 is template/channel centric (template create/preview, email send, SMS send). 2.9 User Event is event-centric (create/update/search events, notification counts). This is a functional shift, not just a rename.
-
-Service: otp
-Summary: 3.0 uses /v3/otp/* with generate/resend/verify/invalidate. 2.9 uses /otp/v1/_create/_validate/_search. 3.0 expands operations and renames paths.
-
-Service: workflow
-Summary: 3.0 exposes granular process/state/action endpoints under /v1/* and includes escalation/transition. 2.9 focuses on process transition/search/count and businessservice CRUD. Expect more granular calls and updated pathing.
 
 Service: hrms
-Summary: HRMS 3.0 (hrms.yaml) is compared against the provided 2.9 swagger. Expect path and schema modernization in 3.0, but core employee create/search/update/count operations remain the baseline. Validate endpoint paths and request/response wrapper shapes for breaking changes.
+Compared to: hrms-2.9.yaml
+Endpoints added in 3.0: 6
+- + /employees/v3
+- + /employees/v3/jurisdictions
+- + /employees/v3/jurisdictions/{uuid}
+- + /employees/v3/{id}
+- + /employees/v3/{id}/deactivate
+- + /employees/v3/{id}/reactivate
+Endpoints removed from 3.0: 4
+- - /employees/_count
+- - /employees/_create
+- - /employees/_search
+- - /employees/_update
+Endpoints with method changes: 0
+
+HEADERS (3.0)
+-------------
+All headers found in 3.0 specs (request + response). Services listed where each header appears.
+- Authorization: Bearer token for Keycloak user validation (services: hrms)
+- X-Client-Id: Client/user identifier captured for audit;
+- X-Correlation-ID: Correlation ID to track requests across services (services: account, billing-payment, boundary, filestore, localization, mdms, notification, otp)
+- X-Rate-Limit: Rate limit for the API (services: account, billing-payment, boundary, filestore, localization, mdms, notification, otp)
+- X-Rate-Limit-Remaining: Number of requests remaining in the current window (services: account, billing-payment, boundary, filestore, localization, mdms, notification, otp)
+- X-Rate-Limit-Reset: Time (in seconds) until rate limit resets (services: account, billing-payment, boundary, filestore, localization, mdms, notification, otp)
+- X-Request-ID: Unique request identifier (services: account, billing-payment, boundary, filestore, localization, mdms, notification, otp)
+- X-Response-Time: Time taken to generate the response (in ms) (services: account, billing-payment, boundary, filestore, localization, mdms, notification, otp)
+- X-Response-Timestamp: Timestamp when the response was generated (services: account, billing-payment, boundary, filestore, localization, mdms, notification, otp)
+- X-Tenant-ID: The tenant ID for the request. (services: billing-payment, boundary, filestore, localization, mdms, notification, otp, workflow)

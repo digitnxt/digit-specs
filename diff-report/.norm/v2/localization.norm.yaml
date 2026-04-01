@@ -1,0 +1,136 @@
+openapi: 3.0.0
+info:
+  title: localization service api (derived from postman 2.9)
+  version: 2.9.0
+path:
+  /api/localization/message/v1/search:
+    get:
+      summary: search message
+      parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: module
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: locale
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: string
+  /api/localization/message/v1/create:
+    post:
+      summary: create message
+      parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - $ref: '#/component/parameter/userheader'
+      - name: content-type
+        in: header
+        required: false
+        schema:
+          type: string
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/localization/message/v1/update:
+    put:
+      summary: update message
+      parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - $ref: '#/component/parameter/userheader'
+      - name: content-type
+        in: header
+        required: false
+        schema:
+          type: string
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/localization/message/v1/upsert:
+    put:
+      summary: upsert message
+      parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - $ref: '#/component/parameter/userheader'
+      - name: content-type
+        in: header
+        required: false
+        schema:
+          type: string
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/localization/message/v1/delete:
+    delete:
+      summary: delete message
+      parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: uuid[]
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: uuid[]
+        in: query
+        required: false
+        schema:
+          type: string
+  /api/localization/message/v1/missing:
+    get:
+      summary: find missing message
+      parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: module
+        in: query
+        required: false
+        schema:
+          type: string
+  /api/localization/cache/v1/bust:
+    delete:
+      summary: bust cache
+      parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: module
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: locale
+        in: query
+        required: false
+        schema:
+          type: string
+component:
+  schema: {}
+  parameter:
+    tenantheader:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+    userheader:
+      name: x-user-id
+      in: header
+      required: false
+      schema:
+        type: string

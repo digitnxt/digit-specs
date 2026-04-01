@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: "localization service api"
+  description: "a go-based service for managing and retrieving localization message for application."
+  version: "3.0.0"
+server:
+  - url: http://localhost:8088/localization/
+component:
+  header:
+    x-response-time:
+      description: time taken to generate the response (in m)
+      schema:
+        type: string
+    x-response-timestamp:
+      description: timestamp when the response wa generated
+      schema:
+        type: string
+        format: date-time
+    x-request-id:
+      description: unique request identifier
+      schema:
+        type: string
+    x-correlation-id:
+      description: correlation id to track request acros service
+      schema:
+        type: string
+    x-tenant-id:
+      description: tenant identifier
+      schema:
+        type: string
+    x-rate-limit:
+      description: rate limit for the api
+      schema:
+        type: integer
+    x-rate-limit-remaining:
+      description: number of request remaining in the current window
+      schema:
+        type: integer
+    x-rate-limit-reset:
+      description: time (in second) until rate limit reset
+      schema:
+        type: integer
+  parameter:
+    tenantheader:
+      name: x-tenant-id
+      in: header
+      description: "the tenant id for the request."
+      required: true
+      schema:
+        type: string
+  schema:
+    message:
+      type: object
+      propertie:
+        uuid:
+          type: string
+          description: unique identifier of the record
+        module:
+          type: string
+          description: tag associated with the message (used for grouping)
+        locale:
+          description: the language code for which the message i added
+          type: string
+        code:
+          description: the code of the message
+          type: string
+        message:
+          type: string
+          description: the text to display
+    updatemessage:
+      type: object
+      propertie:
+        uuid:
+          type: string
+          description: unique identifier of the record
+        code:
+          description: the code of the message
+          type: string
+        message:
+          type: string
+    createmessagesrequest:
+      type: object
+      propertie:
+        message:
+          type: array
+          item:
+            $ref: '#/component/schema/message'
+    upsertmessagesrequest:
+      type: object
+      propertie:
+        message:
+          type: array
+          item:
+            $ref: '#/component/schema/message'
+    updatemessagesrequest:
+      type: object
+      propertie:
+        uuid:
+          type: string
+          description: unique identifier of the record      
+        locale:
+          description: the language code for which the message i added
+          type: string
+        module:
+          type: string
+        message:
+          type: array
+          item:
+            $ref: '#/component/schema/updatemessage'
+    findmissingmessagesrequest:
+      type: object
+      propertie:
+        locale:
+          type: array
+          description: the language code for which the message i added
+          item:
+            type: string
+    createmessagesresponse:
+      type: object
+      propertie:
+        message:
+          type: array
+          item:
+            $ref: '#/component/schema/message'
+    upsertmessagesresponse:
+      type: object
+      propertie:
+        message:
+          type: array
+          item:
+            $ref: '#/component/schema/message'
+    updatemessagesresponse:
+      type: object
+      propertie:
+        message:
+          type: array
+          item:
+            $ref: '#/component/schema/message'
+    deletemessagesresponse:
+      type: object
+      propertie:
+        succes:
+          type: boolean
+    searchmessagesresponse:
+      type: object
+      propertie:
+        message:
+          type: array
+          item:
+            $ref: '#/component/schema/message'
+    findmissingmessagesresponse:
+      type: object
+      additionalpropertie:
+        type: array
+        item:
+          type: string
+      example:
+        enin:
+          - "welcomemessage"
+          - "logoutbutton"
+        frfr:
+          - "welcomemessage"
+    cachebustresponse:
+      type: object
+      propertie:
+        message:
+          type: string
+        succes:
+          type: boolean
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+tag:
+  - name: message
+    description: "core endpoint for managing localization message."
+  - name: cache
+    description: "endpoint for cache management."
+path:
+  /message:
+    get:
+      tag:
+        - message
+      summary: "search for localization message"
+      description: "searche for localization message using url query parameter."
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - name: module
+          in: query
+          description: "the module to filter by."
+          required: false
+          schema:
+            type: string
+        - name: locale
+          in: query
+          description: "the locale to filter by."
+          required: false
+          schema:
+            type: string
+        - name: code
+          in: query
+          description: "comma-separated list of message code to search for."
+          required: false
+          schema:
+            type: string
+      response:
+        '200':
+          description: "a list of found message"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/searchmessagesresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'                        
+        '400':
+          description: "bad request - invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+    post:
+      tag:
+        - message
+      summary: "create new localization message"
+      description: "create one or more new localization message."
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+      requestbody:
+        description: "request body to create message"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/createmessagesrequest'
+      response:
+        '200':
+          description: "message created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/createmessagesresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: "bad request - invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+    put:
+      tag:
+        - message
+      summary: "update existing localization message"
+      description: "update one or more existing localization message for a specific tenant, module, and locale."
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+      requestbody:
+        description: "request body to update message"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/updatemessagesrequest'
+      response:
+        '200':
+          description: "message updated successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/updatemessagesresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: "bad request - invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+  
+    delete:
+      tag:
+        - message
+      summary: "delete localization message"
+      description: "delete one or more localization message based on their identifier."
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - name: uuid
+          in: query
+          description: "the unique identifier of the record"
+          required: false
+          schema:
+            type: string
+      response:
+        '200':
+          description: "message deleted successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/deletemessagesresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: "bad request - invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'              
+                
+  /message/upsert:
+    put:
+      tag:
+        - message
+      summary: "create or update localization message"
+      description: "create or update one or more localization message. if a message with the same unique identifier already exist, it will be updated; otherwise, a new one will be created."
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+      requestbody:
+        description: "request body to upsert message"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/upsertmessagesrequest'
+      response:
+        '200':
+          description: "message upserted successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/upsertmessagesresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: "bad request - invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+  /message/missing:
+    post:
+      tag:
+        - message
+      summary: "find missing localization code for a tenant in the given locale"
+      description: "find all message code that are missing for one or more locale within a tenant. the api first determine the intersection of all key defined in the tenant (acros all locale), and then identifie which of these key are missing in each specified locale. if the request body i empty, it check all locale in the tenant; otherwise, it check only the provided locale."
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+      requestbody:
+        description: "an optional list of locale to check. if omitted, all locale for the tenant are checked."
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/findmissingmessagesrequest'
+      response:
+        '200':
+          description: "a map of locale to their list of missing code."
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/findmissingmessagesresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '404':
+          description: "not found - tenant ha no message"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+  /cache/bust:
+    delete:
+      tag:
+        - cache
+      summary: "clear the redi cache"
+      description: "invalidate and clear the entire redi cache for the search api."
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - name: locale
+          in: query
+          description: "the locale to cache burst"
+          required: false
+          schema:
+            type: string
+        - name: module
+          in: query
+          description: "the module to cache burst"
+          required: false
+          schema:
+            type: string            
+      response:
+        '200':
+          description: "cache cleared successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/cachebustresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '500':
+          description: "internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'

@@ -1,216 +1,212 @@
-
-
-==================== notification.diff ====================
-
---- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/user-event.yaml"	2026-03-23 10:50:25.034727301 +0530
-+++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/notification.yaml	2026-03-23 10:51:46.198660142 +0530
+--- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v2/notification.norm.yaml	2026-04-01 13:55:53.532322957 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v3/notification.norm.yaml	2026-04-01 13:55:53.532322957 +0530
 @@ -1,905 +1,733 @@
 -openapi: 3.0.1
 +openapi: 3.0.0
  info:
--  title: eGov User Event System.
--  description: "APIs for Events information. This module handles Below functionality.\
--    \ \n1. Create/Update new event\n2. Search existing event\n3. An event in the system\
--    \ includes -\n   a. System generated events like changes in state of a complaint,\
--    \ PT or TL etc.\n   b. Public Message broadcast\n   c. Events that happen within\
--    \ an ULB and are published on mSeva.\n   d. any other events that are to be notified\
+-  title: egov user event system.
+-  description: "api for event information. thi module handle below functionality.\
+-    \ \n1. create/update new event\n2. search existing event\n3. an event in the system\
+-    \ include -\n   a. system generated event like change in state of a complaint,\
+-    \ pt or tl etc.\n   b. public message broadcast\n   c. event that happen within\
+-    \ an ulb and are published on mseva.\n   d. any other event that are to be notified\
 -    \ to the user.\n"
-+  title: Notification
++  title: notification
 +  version: 3.0.0
 +  description: |
-+    APIs to manage notification templates with dynamic placeholder rendering, and to send notifications via Email and SMS.
++    api to manage notification template with dynamic placeholder rendering, and to send notification via email and sm.
    contact:
-     name: eGovernments Foundation
--    email: contacts@egovernments.org
+     name: egovernment foundation
+-    email: contact@egovernment.org
 -  version: 1.0.0
 +
- servers:
+ server:
 -- url: /user-event
 +  - url: https://prod-api.example.com/notification
-+    description: Production server
++    description: production server
 +  - url: https://staging-api.example.com/notification
-+    description: Staging server
++    description: staging server
 +
 +security:
-+  - BearerAuth: []
++  - bearerauth: []
 +
- tags:
--- name: Events
--  description: APIs required for Event handling.
-+  - name: Templates
-+    description: Endpoints for managing notification templates
-+  - name: Notifications
-+    description: Endpoints for sending notifications
+ tag:
+-- name: event
+-  description: api required for event handling.
++  - name: template
++    description: endpoint for managing notification template
++  - name: notification
++    description: endpoint for sending notification
 +
- paths:
--  /v1/events/_search:
+ path:
+-  /v1/event/search:
 +  /template:
      post:
-       tags:
--        - Events
+       tag:
+-        - event
 -      summary: search
--      operationId: searchUsingPOST
-+        - Templates
-+      summary: Create a notification template
-+      requestBody:
+-      operationid: searchusingpost
++        - template
++      summary: create a notification template
++      requestbody:
 +        required: true
 +        content:
 +          'application/json':
 +            schema:
-+              $ref: '#/components/schemas/Template'
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-+      responses:
++              $ref: '#/component/schema/template'
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
++      response:
 +        '201':
-+          description: Template Created
++          description: template created
 +          content:
 +            'application/json':
 +              schema:
-+                $ref: '#/components/schemas/Template'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Tenant-ID:
-+              $ref: '#/components/headers/X-Tenant-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/template'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-tenant-id:
++              $ref: '#/component/header/x-tenant-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            'application/json':
 +              schema:
 +                type: array
-+                items: 
-+                  $ref: '#/components/schemas/Error'
++                item: 
++                  $ref: '#/component/schema/error'
 +        '409':
-+          description: Conflict
++          description: conflict
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +
 +    put:
-+      tags:
-+        - Templates
-+      summary: Update a notification template
-+      requestBody:
++      tag:
++        - template
++      summary: update a notification template
++      requestbody:
 +        required: true
 +        content:
 +          'application/json':
 +            schema:
-+              $ref: '#/components/schemas/Template'
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-+      responses:
++              $ref: '#/component/schema/template'
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
++      response:
 +        '200':
-+          description: Template Updated
++          description: template updated
 +          content:
 +            'application/json':
 +              schema:
-+                $ref: '#/components/schemas/Template'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Tenant-ID:
-+              $ref: '#/components/headers/X-Tenant-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/template'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-tenant-id:
++              $ref: '#/component/header/x-tenant-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            'application/json':
 +              schema:
 +                type: array
-+                items: 
-+                  $ref: '#/components/schemas/Error'
++                item: 
++                  $ref: '#/component/schema/error'
 +        '404':
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +
 +    get:
-+      tags:
-+        - Templates
-+      summary: Search notification templates
-       parameters:
--        - name: eventTypes
++      tag:
++        - template
++      summary: search notification template
+       parameter:
+-        - name: eventtype
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: fromDate
+-        - name: fromdate
 -          in: query
 -          required: false
 -          style: form
 -          schema:
 -            type: integer
 -            format: int64
--        - name: ids
+-        - name: id
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: isCitizenSearch
+-        - name: iscitizensearch
 -          in: query
 -          required: false
 -          style: form
 -          schema:
 -            type: boolean
--        - name: isEventsCountCall
+-        - name: iseventscountcall
 -          in: query
 -          required: false
 -          style: form
@@ -226,10 +222,10 @@
 -        - name: name
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
 -        - name: offset
 -          in: query
@@ -238,57 +234,57 @@
 -          schema:
 -            type: integer
 -            format: int32
--        - name: postedBy
+-        - name: postedby
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: recepients
+-        - name: recepient
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: referenceIds
+-        - name: referenceid
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: roles
+-        - name: role
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
 -        - name: source
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: status
-+       - name: ids
+-        - name: statu
++       - name: id
 +         in: query
-+         description: Comma-separated list of uuids
++         description: comma-separated list of uuid
 +         schema:
 +          type: string
-+       - name: templateId
++       - name: templateid
 +         in: query
 +         schema:
 +          type: string
-+       - name: tenantId
++       - name: tenantid
 +         in: query
 +         required: true
 +         schema:
@@ -301,402 +297,402 @@
 +         in: query
 +         schema:
 +          type: string
-+          enum: [EMAIL, SMS]
-+       - name: isHtml
++          enum: [email, sm]
++       - name: ishtml
 +         in: query
 +         schema:
 +          type: boolean
-+       - $ref: '#/components/parameters/RequestIdHeader'
-+       - $ref: '#/components/parameters/CorrelationIdHeader'
-+       - $ref: '#/components/parameters/UserAgentHeader'
-+       - $ref: '#/components/parameters/TenantIdHeader'
-+       - $ref: '#/components/parameters/ForwardedForHeader'
-+       - $ref: '#/components/parameters/ClientId'
-+       - $ref: '#/components/parameters/ClientSecret'
-+       - $ref: '#/components/parameters/TimeStamp'
-+      responses:
++       - $ref: '#/component/parameter/requestidheader'
++       - $ref: '#/component/parameter/correlationidheader'
++       - $ref: '#/component/parameter/useragentheader'
++       - $ref: '#/component/parameter/tenantidheader'
++       - $ref: '#/component/parameter/forwardedforheader'
++       - $ref: '#/component/parameter/clientid'
++       - $ref: '#/component/parameter/clientsecret'
++       - $ref: '#/component/parameter/timestamp'
++      response:
 +        '200':
-+          description: List of Templates
++          description: list of template
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/Template'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Tenant-ID:
-+              $ref: '#/components/headers/X-Tenant-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                item:
++                  $ref: '#/component/schema/template'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-tenant-id:
++              $ref: '#/component/header/x-tenant-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '404':
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            'application/json':
 +              schema:
 +                type: array
-+                items: 
-+                  $ref: '#/components/schemas/Error'
++                item: 
++                  $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +
 +    delete:
-+      tags:
-+        - Templates
-+      summary: Delete a notification template
-+      parameters:
-+        - name: templateId
++      tag:
++        - template
++      summary: delete a notification template
++      parameter:
++        - name: templateid
            in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
            schema:
 -            type: array
--            items:
+-            item:
 -              type: string
 +            type: string
 +          required: true
-         - name: tenantId
+         - name: tenantid
            in: query
 -          required: true
 -          style: form
            schema:
              type: string
--        - name: toDate
+-        - name: todate
 -          in: query
 -          required: false
 -          style: form
 -          schema:
 -            type: integer
 -            format: int64
--        - name: userids
+-        - name: userid
 +          required: true
 +        - name: version
            in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
            schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--      requestBody:
+-      requestbody:
 -        content:
 -          application/json:
 -            schema:
--              $ref: '#/components/schemas/RequestInfoWrapper'
+-              $ref: '#/component/schema/requestinfowrapper'
 +            type: string
 +          required: true
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-       responses:
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
+       response:
          '200':
--          description: OK
+-          description: ok
 -          content:
 -            '*/*':
 -              schema:
 -                type: object
 -        '201':
--          description: Created
+-          description: created
 -        '401':
--          description: Unauthorized
+-          description: unauthorized
 -        '403':
--          description: Forbidden
-+          description: Template Deleted
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Tenant-ID:
-+              $ref: '#/components/headers/X-Tenant-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+-          description: forbidden
++          description: template deleted
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-tenant-id:
++              $ref: '#/component/header/x-tenant-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
          '404':
-           description: Not Found
--  /v1/events/_create:
+           description: not found
+-  /v1/event/create:
 -    post:
--      tags:
--      - Events
--      summary: Create new Event
--      requestBody:
--        description: Details for the new Events + RequestInfo meta data.
+-      tag:
+-      - event
+-      summary: create new event
+-      requestbody:
+-        description: detail for the new event + requestinfo meta data.
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/EventRequest'
+-              $ref: '#/component/schema/eventrequest'
 -        required: true
--      responses:
+-      response:
 -        201:
--          description: ReponseInfo with Events created successfully
+-          description: reponseinfo with event created successfully
            content:
 -            '*/*':
 +            application/json:
                schema:
--                $ref: '#/components/schemas/EventResponse'
+-                $ref: '#/component/schema/eventresponse'
 -        400:
--          description: Events creation failed
-+                $ref: '#/components/schemas/Error'
+-          description: event creation failed
++                $ref: '#/component/schema/error'
 +        '400':
-+          description: Bad Request
++          description: bad request
            content:
 -            '*/*':
 +            'application/json':
                schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: EventRequest
--  /v1/events/_update:
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: eventrequest
+-  /v1/event/update:
 +                type: array
-+                items: 
-+                  $ref: '#/components/schemas/Error'
++                item: 
++                  $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +
 +  /template/preview:
      post:
-       tags:
--      - Events
--      summary: Update existing events
--      description: This API is used to update existing events in the system.
-+        - Templates
-+      summary: Preview a notification template with sample or actual data
-       requestBody:
--        description: Details for the new Events + RequestInfo meta data.
+       tag:
+-      - event
+-      summary: update existing event
+-      description: thi api i used to update existing event in the system.
++        - template
++      summary: preview a notification template with sample or actual data
+       requestbody:
+-        description: detail for the new event + requestinfo meta data.
 +        required: true
          content:
 -          '*/*':
 +          application/json:
              schema:
--              $ref: '#/components/schemas/EventRequest'
+-              $ref: '#/component/schema/eventrequest'
 -        required: true
-+              $ref: '#/components/schemas/TemplatePreviewRequest'
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-       responses:
++              $ref: '#/component/schema/templatepreviewrequest'
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
+       response:
 -        201:
--          description: ReponseInfo with Events updated sudcessfully
+-          description: reponseinfo with event updated sudcessfully
 +        '200':
-+          description: Rendered template preview
++          description: rendered template preview
 +          content:
 +            'application/json':
 +              schema:
-+                $ref: '#/components/schemas/TemplatePreviewResponse'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Tenant-ID:
-+              $ref: '#/components/headers/X-Tenant-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/templatepreviewresponse'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-tenant-id:
++              $ref: '#/component/header/x-tenant-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
-           content:
--            '*/*':
++          description: bad request
++          content:
 +            'application/json':
-               schema:
--                $ref: '#/components/schemas/EventResponse'
--        400:
--          description: Events(s) updation failed
++              schema:
 +                type: array
-+                items: 
-+                  $ref: '#/components/schemas/Error'
++                item: 
++                  $ref: '#/component/schema/error'
 +        '404':
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '422':
-+          description: Unprocessable Entity
++          description: unprocessable entity
            content:
 -            '*/*':
 +            application/json:
                schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: EventRequest
--  /v1/events/lat/_update:
-+                $ref: '#/components/schemas/Error'
+-                $ref: '#/component/schema/eventresponse'
+-        400:
+-          description: event(s) updation failed
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal Server Error
-+          content:
++          description: internal server error
+           content:
+-            '*/*':
 +            application/json:
-+              schema:
-+                $ref: '#/components/schemas/Error'
+               schema:
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: eventrequest
+-  /v1/event/lat/update:
++                $ref: '#/component/schema/error'
 +
 +
 +  /email/send:
      post:
-       tags:
--        - Events
+       tag:
+-        - event
 -      summary: updatellt
--      operationId: updatelltUsingPOST
-+        - Notifications
-+      summary: Send an email notification
-       requestBody:
+-      operationid: updatelltusingpost
++        - notification
++      summary: send an email notification
+       requestbody:
 +        required: true
          content:
            application/json:
              schema:
--              $ref: '#/components/schemas/RequestInfoWrapper'
-+              $ref: '#/components/schemas/EmailRequest'
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-       responses:
+-              $ref: '#/component/schema/requestinfowrapper'
++              $ref: '#/component/schema/emailrequest'
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
+       response:
          '200':
--          description: OK
-+          description: Email sent successfully
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Tenant-ID:
-+              $ref: '#/components/headers/X-Tenant-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+-          description: ok
++          description: email sent successfully
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-tenant-id:
++              $ref: '#/component/header/x-tenant-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
            content:
 -            '*/*':
 +            'application/json':
                schema:
 -                type: object
 -        '201':
--          description: Created
+-          description: created
 -        '401':
--          description: Unauthorized
+-          description: unauthorized
 -        '403':
--          description: Forbidden
+-          description: forbidden
 +                type: array
-+                items: 
-+                  $ref: '#/components/schemas/Error'
++                item: 
++                  $ref: '#/component/schema/error'
          '404':
--          description: Not Found    
--  /v1/events/notifications/_count:
-+          description: Not Found
+-          description: not found    
+-  /v1/event/notification/count:
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '422':
-+          description: Unprocessable Entity
++          description: unprocessable entity
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +
-+  /sms/send:
++  /sm/send:
      post:
-       tags:
--        - Events
+       tag:
+-        - event
 -      summary: count
--      operationId: countUsingPOST
--      parameters:
--        - name: eventTypes
+-      operationid: countusingpost
+-      parameter:
+-        - name: eventtype
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: fromDate
+-        - name: fromdate
 -          in: query
 -          required: false
 -          style: form
 -          schema:
 -            type: integer
 -            format: int64
--        - name: ids
+-        - name: id
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: isCitizenSearch
+-        - name: iscitizensearch
 -          in: query
 -          required: false
 -          style: form
 -          schema:
 -            type: boolean
--        - name: isEventsCountCall
+-        - name: iseventscountcall
 -          in: query
 -          required: false
 -          style: form
@@ -712,10 +708,10 @@
 -        - name: name
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
 -        - name: offset
 -          in: query
@@ -724,832 +720,831 @@
 -          schema:
 -            type: integer
 -            format: int32
--        - name: postedBy
+-        - name: postedby
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: recepients
+-        - name: recepient
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: referenceIds
+-        - name: referenceid
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: roles
+-        - name: role
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
 -        - name: source
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: status
+-        - name: statu
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
--        - name: tenantId
+-        - name: tenantid
 -          in: query
 -          required: true
 -          style: form
 -          schema:
 -            type: string
--        - name: toDate
+-        - name: todate
 -          in: query
 -          required: false
 -          style: form
 -          schema:
 -            type: integer
 -            format: int64
--        - name: userids
+-        - name: userid
 -          in: query
 -          required: false
--          style: pipeDelimited
+-          style: pipedelimited
 -          schema:
 -            type: array
--            items:
+-            item:
 -              type: string
-+        - Notifications
-+      summary: Send a SMS notification
-       requestBody:
++        - notification
++      summary: send a sm notification
+       requestbody:
 +        required: true
          content:
            application/json:
              schema:
--              $ref: '#/components/schemas/RequestInfoWrapper'
-+              $ref: '#/components/schemas/SMSRequest'
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-       responses:
+-              $ref: '#/component/schema/requestinfowrapper'
++              $ref: '#/component/schema/smsrequest'
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
+       response:
          '200':
--          description: OK
-+          description: SMS sent successfully
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Tenant-ID:
-+              $ref: '#/components/headers/X-Tenant-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+-          description: ok
++          description: sm sent successfully
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-tenant-id:
++              $ref: '#/component/header/x-tenant-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
            content:
 -            '*/*':
 +            'application/json':
                schema:
 -                type: object
 -        '201':
--          description: Created
+-          description: created
 -        '401':
--          description: Unauthorized
+-          description: unauthorized
 -        '403':
--          description: Forbidden
+-          description: forbidden
 +                type: array
-+                items: 
-+                  $ref: '#/components/schemas/Error'
++                item: 
++                  $ref: '#/component/schema/error'
          '404':
--          description: Not Found        
-+          description: Not Found
+-          description: not found        
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '422':
-+          description: Unprocessable Entity
++          description: unprocessable entity
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +
- components:
-+  securitySchemes:
-+    BearerAuth:
+ component:
++  securityscheme:
++    bearerauth:
 +      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
 +
-+  parameters:
-+    RequestIdHeader:
++  parameter:
++    requestidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
-+    CorrelationIdHeader:
++    correlationidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
-+    UserAgentHeader:
++    useragentheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
-+    TenantIdHeader:
++    tenantidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
-+    ForwardedForHeader:
++    forwardedforheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
-+    ClientId:
++    clientid:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
-+    ClientSecret:
++    clientsecret:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
-+    TimeStamp:
++    timestamp:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
 +  
-+  headers:
-+    X-Response-Time:
++  header:
++    x-response-time:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
-+    X-Response-Timestamp:
++    x-response-timestamp:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
-+    X-Request-ID:
++    x-request-id:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
-+    X-Correlation-ID:
++    x-correlation-id:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
-+    X-Tenant-ID:
++    x-tenant-id:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
-+    X-Rate-Limit:
++    x-rate-limit:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
-+    X-Rate-Limit-Remaining:
++    x-rate-limit-remaining:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
-+    X-Rate-Limit-Reset:
++    x-rate-limit-reset:
 +        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
 +
-   schemas:
--    RequestInfoWrapper:
--      title: RequestInfoWrapper
-+    Template:
+   schema:
+-    requestinfowrapper:
+-      title: requestinfowrapper
++    template:
        type: object
--      properties:
--        RequestInfo:
--          $ref: '#/components/schemas/RequestInfo'
--    Action:
+-      propertie:
+-        requestinfo:
+-          $ref: '#/component/schema/requestinfo'
+-    action:
        required:
--      - tenantId
+-      - tenantid
 -      type: object
-+        - templateId
++        - templateid
 +        - version
-+        - tenantId
++        - tenantid
 +        - type
 +        - content
-       properties:
--        tenantId:
--          maxLength: 128
--          minLength: 2
+       propertie:
+-        tenantid:
+-          maxlength: 128
+-          minlength: 2
 -          type: string
--          description: Unique Identifier of ULB
+-          description: unique identifier of ulb
          id:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
            type: string
--          description: Unique Identifier of the action (UUID)
--        eventId:
--          maxLength: 64
--          minLength: 2
+-          description: unique identifier of the action (uuid)
+-        eventid:
+-          maxlength: 64
+-          minlength: 2
 +          format: uuid
-+          description: System-generated unique identifier for the notification template.
++          description: system-generated unique identifier for the notification template.
 +          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"  
-+        templateId:
++        templateid:
 +          type: string
-+          description: Unique code or identifier for the template, used to reference it in notification APIs.
++          description: unique code or identifier for the template, used to reference it in notification api.
 +          example: "user-notify"
 +        version:
            type: string
--          description: Event Id for which this action is applicable.
--        actionUrls:
+-          description: event id for which thi action i applicable.
+-        actionurl:
 -          type: array
--          description: Array of action urls and labels.
--          items:
--            $ref: '#/components/schemas/ActionItem'
--        auditDetails:
--          $ref: '#/components/schemas/AuditDetails'
--      description: Object holds that holds basic data for actions associated to an
+-          description: array of action url and label.
+-          item:
+-            $ref: '#/component/schema/actionitem'
+-        auditdetail:
+-          $ref: '#/component/schema/auditdetail'
+-      description: object hold that hold basic data for action associated to an
 -        event.
--    Event:
+-    event:
 -      required:
--      - tenantId
+-      - tenantid
 -      type: object
--      properties:
-+          description: Semantic version of the template. Used for version control and template evolution.
+-      propertie:
++          description: semantic version of the template. used for version control and template evolution.
 +          example: "1.0.0"
-         tenantId:
--          maxLength: 128
--          minLength: 2
+         tenantid:
+-          maxlength: 128
+-          minlength: 2
            type: string
--          description: Unique Identifier of ULB
+-          description: unique identifier of ulb
 -        id:
--          maxLength: 64
--          minLength: 2
-+          description: Identifier for the tenant or client using the template.
+-          maxlength: 64
+-          minlength: 2
++          description: identifier for the tenant or client using the template.
 +          example: "pg"
 +        type:
 +          type: string
-+          enum: [EMAIL, SMS]
-+          description: Type of notification template. Can be 'EMAIL' or 'SMS'.
-+          example: "EMAIL"
++          enum: [email, sm]
++          description: type of notification template. can be 'email' or 'sm'.
++          example: "email"
 +        subject:
            type: string
--          description: Unique Identifier of the Event (UUID)
--        eventType:
--          maxLength: 32
--          minLength: 2
+-          description: unique identifier of the event (uuid)
+-        eventtype:
+-          maxlength: 32
+-          minlength: 2
 -          type: string
--          description: This MDMS master data to diffrenciate the category of event
--            which is namespaced.
+-          description: thi mdm master data to diffrenciate the category of event
+-            which i namespaced.
 -        description:
--          maxLength: 1024
--          minLength: 2
+-          maxlength: 1024
+-          minlength: 2
 -          type: string
--          description: Description of the event
--        status:
+-          description: description of the event
+-        statu:
 -          type: string
--          description: Status of the event in the system. Can hold one of the following
--            enum values.
+-          description: statu of the event in the system. can hold one of the following
+-            enum value.
 -          enum:
--          - Active
--          - Inactive
--          - Canceled
--        toRoles:
+-          - active
+-          - inactive
+-          - canceled
+-        torole:
 -          type: array
--          description: Array of roles of the receipients of this notification.
--          items:
+-          description: array of role of the receipient of thi notification.
+-          item:
 -            type: string
--        toUsers:
+-        touser:
 -          type: array
--          description: Array of ids (uuids) of the receipients of this notification.
--          items:
+-          description: array of id (uuid) of the receipient of thi notification.
+-          item:
 -            type: string
--        actions:
--          $ref: '#/components/schemas/Action'
--        eventDetails:
--          $ref: '#/components/schemas/EventDetails'
-+          description: Subject line of the email. Applicable only if type is 'EMAIL'.
-+          example: "Welcome to DIGIT"
+-        action:
+-          $ref: '#/component/schema/action'
+-        eventdetail:
+-          $ref: '#/component/schema/eventdetail'
++          description: subject line of the email. applicable only if type i 'email'.
++          example: "welcome to digit"
 +        content:
 +          type: string
-+          description: The actual template body, written using Go template syntax.
-+          example: "Hello {{ .name }}, your account is ready."
-+        isHTML:
++          description: the actual template body, written using go template syntax.
++          example: "hello {{ .name }}, your account i ready."
++        ishtml:
 +          type: boolean
-+          description: Indicates whether the email content is HTML-formatted. Applicable for email templates only.
++          description: indicate whether the email content i html-formatted. applicable for email template only.
 +          example: true
 +          default: false
-         auditDetails:
--          $ref: '#/components/schemas/AuditDetails'
--      description: A Object holds the basic data for an Event.
--    ActionItem:
+         auditdetail:
+           $ref: '#/component/schema/auditdetail'
+-      description: a object hold the basic data for an event.
+-    actionitem:
 -      type: object
--      properties:
--        actionUrl:
--          maxLength: 128
--          minLength: 2
+-      propertie:
+-        actionurl:
+-          maxlength: 128
+-          minlength: 2
 -          type: string
--          description: This is redirection url.
+-          description: thi i redirection url.
 -        code:
--          maxLength: 32
--          minLength: 2
+-          maxlength: 32
+-          minlength: 2
 -          type: string
--          description: Code is to fetch localisation name for each action. This is
--            applicable only if there are more then one actions are available for single
+-          description: code i to fetch localisation name for each action. thi i
+-            applicable only if there are more then one action are available for single
 -            event.
--      description: Object that holds basic data for actionable url associated to an
+-      description: object that hold basic data for actionable url associated to an
 -        action.
--    EventDetails:
+-    eventdetail:
 -      type: object
--      properties:
--        fromDate:
--          maxLength: 32
--          minLength: 2
+-      propertie:
+-        fromdate:
+-          maxlength: 32
+-          minlength: 2
 -          type: string
--          description: Start date of event.
--        toDate:
--          maxLength: 32
--          minLength: 2
+-          description: start date of event.
+-        todate:
+-          maxlength: 32
+-          minlength: 2
 -          type: string
--          description: End date of event.
+-          description: end date of event.
 -        latitude:
 -          type: number
 -          description: latitude value of the location.
 -        longitude:
 -          type: number
 -          description: longitude value of the location.
--        documents:
+-        document:
 -          type: array
--          description: List of file store ids.
--          items:
+-          description: list of file store id.
+-          item:
 -            type: string
--      description: Object that holds details such as time, venue etc of an event.
--    EventRequest:
+-      description: object that hold detail such a time, venue etc of an event.
+-    eventrequest:
 -      type: object
--      properties:
--        RequestInfo:
--          $ref: '#/components/schemas/RequestInfo'
--        Events:
+-      propertie:
+-        requestinfo:
+-          $ref: '#/component/schema/requestinfo'
+-        event:
 -          type: array
--          description: Array of events to be created in the system.
--          items:
--            $ref: '#/components/schemas/Event'
--      description: Contract class to receive request. Array of Event items are used
+-          description: array of event to be created in the system.
+-          item:
+-            $ref: '#/component/schema/event'
+-      description: contract clas to receive request. array of event item are used
 -        in case of create and update
--    EventResponse:
+-    eventresponse:
 -      type: object
--      properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo_2'
--        Events:
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo2'
+-        event:
 -          type: array
--          description: Array of events to be received from the system.
--          items:
--            $ref: '#/components/schemas/Event'
--      description: Contract class to send response. Array of Event items are used
--        in case of search results or response for create and update
--    ErrorRes:
+-          description: array of event to be received from the system.
+-          item:
+-            $ref: '#/component/schema/event'
+-      description: contract clas to send response. array of event item are used
+-        in case of search result or response for create and update
+-    errorre:
 -      required:
--      - ResponseInfo
-+          $ref: '#/components/schemas/AuditDetail'
+-      - responseinfo
 +
-+    EmailRequest:
++    emailrequest:
        type: object
--      properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo'
--        Errors:
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo'
+-        error:
 -          type: array
--          description: Error response array corresponding to Request Object array.
--            In case of single object submission or _search related paths this may
+-          description: error response array corresponding to request object array.
+-            in case of single object submission or search related path thi may
 -            be an array of one error element
--          items:
--            $ref: '#/components/schemas/Error'
--      description: All APIs will return ErrorRes in case of failure which will carry
--        ResponseInfo as metadata and Error object as actual representation of error.
--        In case of bulk apis, some apis may chose to return the array of Error objects
+-          item:
+-            $ref: '#/component/schema/error'
+-      description: all api will return errorre in case of failure which will carry
+-        responseinfo a metadata and error object a actual representation of error.
+-        in case of bulk api, some api may chose to return the array of error object
 -        to indicate individual failure.
--    ResponseInfo:
+-    responseinfo:
        required:
--      - apiId
--      - status
--      - ts
+-      - apiid
+-      - statu
+-      - t
 -      - ver
 -      type: object
-+        - templateId
++        - templateid
 +        - version
-+        - tenantId
-+        - emailIds
-       properties:
--        apiId:
--          maxLength: 128
-+        templateId:
++        - tenantid
++        - emailid
+       propertie:
+-        apiid:
+-          maxlength: 128
++        templateid:
            type: string
--          description: unique API ID
+-          description: unique api id
 -        ver:
--          maxLength: 32
+-          maxlength: 32
 -          type: string
--          description: API version
--        ts:
+-          description: api version
+-        t:
 -          type: integer
 -          description: response time in epoch
 -          format: int64
--        resMsgId:
--          maxLength: 256
+-        resmsgid:
+-          maxlength: 256
 -          type: string
--          description: unique response message id (UUID) - will usually be the correlation
+-          description: unique response message id (uuid) - will usually be the correlation
 -            id from the server
--        msgId:
--          maxLength: 256
+-        msgid:
+-          maxlength: 256
 -          type: string
 -          description: message id of the request
--        status:
+-        statu:
 -          type: string
--          description: status of request processing - to be enhanced in futuer to
--            include INPROGRESS
+-          description: statu of request processing - to be enhanced in futuer to
+-            include inprogres
 -          enum:
--          - SUCCESSFUL
--          - FAILED
--      description: ResponseInfo should be used to carry metadata information about
--        the response from the server. apiId, ver and msgId in ResponseInfo should
--        always correspond to the same values in respective request's RequestInfo.
--    Error:
+-          - successful
+-          - failed
+-      description: responseinfo should be used to carry metadata information about
+-        the response from the server. apiid, ver and msgid in responseinfo should
+-        alway correspond to the same value in respective request's requestinfo.
+-    error:
 -      required:
 -      - code
 -      - message
 -      type: object
--      properties:
+-      propertie:
 -        code:
-+          description: Unique code or identifier for the template, used to reference it in notification APIs.
++          description: unique code or identifier for the template, used to reference it in notification api.
 +          example: "user-notify"
 +        version:
-           type: string
--          description: Error Code will be module specific error label/code to identiffy
--            the error. All modules should also publish the Error codes with their
--            specific localized values in localization service to ensure clients can
--            print locale specific error messages. Example for error code would be
--            User.NotFound to indicate User Not Found by User/Authentication service.
--            All services must declare their possible Error Codes with brief description
--            in the error response section of their API path.
--        message:
--          type: string
--          description: English locale message of the error code. Clients should make
--            a separate call to get the other locale description if configured with
--            the service. Clients may choose to cache these locale specific messages
--            to enhance performance with a reasonable TTL (May be defined by the localization
--            service based on tenant + module combination).
--        description:
--          type: string
--          description: Optional long description of the error to help clients take
--            remedial action. This will not be available as part of localization service.
--        params:
-+          description: Semantic version of the template. Used for version control and template evolution.
-+          example: "1.0.0"
-+        tenantId:
 +          type: string
-+          description: Identifier for the tenant or client using the template.
-+          example: "pg"
-+        emailIds:
-           type: array
--          description: Some error messages may carry replaceable fields (say $1, $2)
--            to provide more context to the message. E.g. Format related errors may
--            want to indicate the actual field for which the format is invalid. Client's
--            should use the values in the param array to replace those fields.
-           items:
-             type: string
--      description: Error object will be returned as a part of reponse body in conjunction
--        with ResponseInfo as part of ErrorResponse whenever the request processing
--        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
--        be HTTP 400.
--    ErrorRes_2:
--      required:
--      - ResponseInfo
--      type: object
--      properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo_2'
--        Errors:
--          type: array
--          description: Error response array corresponding to Request Object array.
--            In case of single object submission or _search related paths this may
--            be an array of one error element
--          items:
--            $ref: '#/components/schemas/Error_2'
--      description: All APIs will return ErrorRes in case of failure which will carry
--        ResponseInfo as metadata and Error object as actual representation of error.
--        In case of bulk apis, some apis may chose to return the array of Error objects
--        to indicate individual failure.
--    ResponseInfo_2:
--      required:
--      - apiId
--      - status
--      - ts
--      - ver
--      type: object
--      properties:
--        apiId:
--          maxLength: 128
--          type: string
--          description: unique API ID
--        ver:
--          maxLength: 32
--          type: string
--          description: API version
--        ts:
--          type: integer
--          description: response time in epoch
--          format: int64
--        resMsgId:
--          maxLength: 256
--          type: string
--          description: unique response message id (UUID) - will usually be the correlation
--            id from the server
--        msgId:
--          maxLength: 256
--          type: string
--          description: message id of the request
--        status:
--          type: string
--          description: status of request processing - to be enhanced in futuer to
--            include INPROGRESS
--          enum:
--          - SUCCESSFUL
--          - FAILED
--      description: ResponseInfo should be used to carry metadata information about
--        the response from the server. apiId, ver and msgId in ResponseInfo should
--        always correspond to the same values in respective request's RequestInfo.
--    Error_2:
--      required:
--      - code
--      - message
--      type: object
--      properties:
--        code:
--          type: string
--          description: Error Code will be module specific error label/code to identiffy
--            the error. All modules should also publish the Error codes with their
--            specific localized values in localization service to ensure clients can
--            print locale specific error messages. Example for error code would be
--            User.NotFound to indicate User Not Found by User/Authentication service.
--            All services must declare their possible Error Codes with brief description
--            in the error response section of their API path.
++          description: semantic version of the template. used for version control and template evolution.
++          example: "1.0.0"
++        tenantid:
+           type: string
+-          description: error code will be module specific error label/code to identiffy
+-            the error. all module should also publish the error code with their
+-            specific localized value in localization service to ensure client can
+-            print locale specific error message. example for error code would be
+-            user.notfound to indicate user not found by user/authentication service.
+-            all service must declare their possible error code with brief description
+-            in the error response section of their api path.
 -        message:
 -          type: string
--          description: English locale message of the error code. Clients should make
+-          description: english locale message of the error code. client should make
 -            a separate call to get the other locale description if configured with
--            the service. Clients may choose to cache these locale specific messages
--            to enhance performance with a reasonable TTL (May be defined by the localization
+-            the service. client may choose to cache these locale specific message
+-            to enhance performance with a reasonable ttl (may be defined by the localization
 -            service based on tenant + module combination).
 -        description:
 -          type: string
--          description: Optional long description of the error to help clients take
--            remedial action. This will not be available as part of localization service.
--        params:
+-          description: optional long description of the error to help client take
+-            remedial action. thi will not be available a part of localization service.
+-        param:
++          description: identifier for the tenant or client using the template.
++          example: "pg"
++        emailid:
+           type: array
+-          description: some error message may carry replaceable field (say $1, $2)
+-            to provide more context to the message. e.g. format related error may
+-            want to indicate the actual field for which the format i invalid. client's
+-            should use the value in the param array to replace those field.
+           item:
+             type: string
+-      description: error object will be returned a a part of reponse body in conjunction
+-        with responseinfo a part of errorresponse whenever the request processing
+-        statu in the responseinfo i failed. http return in thi scenario will usually
+-        be http 400.
+-    errorres2:
+-      required:
+-      - responseinfo
+-      type: object
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo2'
+-        error:
 +            format: email
-+            maxLength: 320
-+            description: Valid email address (e.g., user@example.com)
++            maxlength: 320
++            description: valid email addres (e.g., user@example.com)
 +        enrich:
 +          type: boolean
-+          description: Whether to enrich the payload using external data sources.
++          description: whether to enrich the payload using external data source.
 +          example: true
 +          default: false
 +        payload:
 +          type: object
-+        attachments:
++        attachment:
            type: array
--          description: Some error messages may carry replaceable fields (say $1, $2)
--            to provide more context to the message. E.g. Format related errors may
--            want to indicate the actual field for which the format is invalid. Client's
--            should use the values in the param array to replace those fields.
-           items:
-             type: string
--      description: Error object will be returned as a part of reponse body in conjunction
--        with ResponseInfo as part of ErrorResponse whenever the request processing
--        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
--        be HTTP 400.
--    AuditDetails:
+-          description: error response array corresponding to request object array.
+-            in case of single object submission or search related path thi may
+-            be an array of one error element
+-          item:
+-            $ref: '#/component/schema/error2'
+-      description: all api will return errorre in case of failure which will carry
+-        responseinfo a metadata and error object a actual representation of error.
+-        in case of bulk api, some api may chose to return the array of error object
+-        to indicate individual failure.
+-    responseinfo2:
+-      required:
+-      - apiid
+-      - statu
+-      - t
+-      - ver
 -      type: object
--      properties:
--        createdBy:
+-      propertie:
+-        apiid:
+-          maxlength: 128
+-          type: string
+-          description: unique api id
+-        ver:
+-          maxlength: 32
+-          type: string
+-          description: api version
+-        t:
+-          type: integer
+-          description: response time in epoch
+-          format: int64
+-        resmsgid:
+-          maxlength: 256
+-          type: string
+-          description: unique response message id (uuid) - will usually be the correlation
+-            id from the server
+-        msgid:
+-          maxlength: 256
+-          type: string
+-          description: message id of the request
+-        statu:
+-          type: string
+-          description: statu of request processing - to be enhanced in futuer to
+-            include inprogres
+-          enum:
+-          - successful
+-          - failed
+-      description: responseinfo should be used to carry metadata information about
+-        the response from the server. apiid, ver and msgid in responseinfo should
+-        alway correspond to the same value in respective request's requestinfo.
+-    error2:
+-      required:
+-      - code
+-      - message
+-      type: object
+-      propertie:
+-        code:
+-          type: string
+-          description: error code will be module specific error label/code to identiffy
+-            the error. all module should also publish the error code with their
+-            specific localized value in localization service to ensure client can
+-            print locale specific error message. example for error code would be
+-            user.notfound to indicate user not found by user/authentication service.
+-            all service must declare their possible error code with brief description
+-            in the error response section of their api path.
+-        message:
+-          type: string
+-          description: english locale message of the error code. client should make
+-            a separate call to get the other locale description if configured with
+-            the service. client may choose to cache these locale specific message
+-            to enhance performance with a reasonable ttl (may be defined by the localization
+-            service based on tenant + module combination).
+-        description:
+-          type: string
+-          description: optional long description of the error to help client take
+-            remedial action. thi will not be available a part of localization service.
+-        param:
+-          type: array
+-          description: some error message may carry replaceable field (say $1, $2)
+-            to provide more context to the message. e.g. format related error may
+-            want to indicate the actual field for which the format i invalid. client's
+-            should use the value in the param array to replace those field.
+           item:
+             type: string
+-      description: error object will be returned a a part of reponse body in conjunction
+-        with responseinfo a part of errorresponse whenever the request processing
+-        statu in the responseinfo i failed. http return in thi scenario will usually
+-        be http 400.
+-    auditdetail:
+-      type: object
+-      propertie:
+-        createdby:
 -          type: string
 -          description: username (preferred) or userid of the user that created the
 -            object
--        lastModifiedBy:
+-        lastmodifiedby:
 -          type: string
 -          description: username (preferred) or userid of the user that last modified
 -            the object
--        createdTime:
+-        createdtime:
 -          type: integer
--          description: epoch of the time object is created
+-          description: epoch of the time object i created
 -          format: int64
--        lastModifiedTime:
+-        lastmodifiedtime:
 -          type: integer
--          description: epoch of the time object is last modified
+-          description: epoch of the time object i last modified
 -          format: int64
--      description: Collection of audit related fields used by most models
--    RequestInfo:
+-      description: collection of audit related field used by most model
+-    requestinfo:
 -      required:
 -      - action
--      - apiId
--      - msgId
--      - ts
+-      - apiid
+-      - msgid
+-      - t
 -      - ver
-+            description: Filestore file reference IDs
++            description: filestore file reference id
 +
-+    SMSRequest:
++    smsrequest:
        type: object
--      properties:
--        apiId:
--          maxLength: 128
+-      propertie:
+-        apiid:
+-          maxlength: 128
 -          type: string
--          description: unique API ID
+-          description: unique api id
 -        ver:
--          maxLength: 32
+-          maxlength: 32
 -          type: string
--          description: API version - for HTTP based request this will be same as used
+-          description: api version - for http based request thi will be same a used
 -            in path
--        ts:
+-        t:
 -          type: integer
 -          description: time in epoch
 -          format: int64
 -        action:
--          maxLength: 32
+-          maxlength: 32
 -          type: string
--          description: API action to be performed like _create, _update, _search (denoting
--            POST, PUT, GET) or _oauth etc
+-          description: api action to be performed like create, update, search (denoting
+-            post, put, get) or oauth etc
 -        did:
--          maxLength: 1024
+-          maxlength: 1024
 -          type: string
--          description: Device ID from which the API is called
+-          description: device id from which the api i called
 -        key:
--          maxLength: 256
+-          maxlength: 256
 -          type: string
--          description: API key (API key provided to the caller in case of server to
+-          description: api key (api key provided to the caller in case of server to
 -            server communication)
--        msgId:
--          maxLength: 256
+-        msgid:
+-          maxlength: 256
 -          type: string
--          description: Unique request message id from the caller
--        requesterId:
--          maxLength: 256
+-          description: unique request message id from the caller
+-        requesterid:
+-          maxlength: 256
 -          type: string
--          description: UserId of the user calling
--        authToken:
+-          description: userid of the user calling
+-        authtoken:
 -          type: string
 -          description: //session/jwt/saml token/oauth token - the usual value that
--            would go into HTTP bearer token
--        userInfo:
--          $ref: '#/components/schemas/UserInfo'
--        correlationId:
+-            would go into http bearer token
+-        userinfo:
+-          $ref: '#/component/schema/userinfo'
+-        correlationid:
 -          type: string
--          readOnly: true
--      description: RequestInfo should be used to carry meta information about the
--        requests to the server as described in the fields below. All eGov APIs will
--        use requestinfo as a part of the request body to carry this meta information.
--        Some of this information will be returned back from the server as part of
--        the ResponseInfo in the response body to ensure correlation.
--    UserInfo:
+-          readonly: true
+-      description: requestinfo should be used to carry meta information about the
+-        request to the server a described in the field below. all egov api will
+-        use requestinfo a a part of the request body to carry thi meta information.
+-        some of thi information will be returned back from the server a part of
+-        the responseinfo in the response body to ensure correlation.
+-    userinfo:
        required:
 -      - primaryrole
--      - tenantId
--      - userName
+-      - tenantid
+-      - username
 -      type: object
-+        - templateId
++        - templateid
 +        - version
-+        - tenantId
-+        - mobileNumbers
-       properties:
--        tenantId:
++        - tenantid
++        - mobilenumber
+       propertie:
+-        tenantid:
 -          type: string
--          description: Unique Identifier of the tenant to which user primarily belongs
+-          description: unique identifier of the tenant to which user primarily belong
 -        uuid:
--          type: string
--          description: System Generated User id of the authenticated user.
--        userName:
--          type: string
--          description: Unique user name of the authenticated user
--        password:
--          type: string
--          description: password of the user.
--        idToken:
-+        templateId:
++        templateid:
            type: string
--          description: This will be the OTP.
--        mobile:
-+          description: Unique code or identifier for the template, used to reference it in notification APIs.
+-          description: system generated user id of the authenticated user.
+-        username:
++          description: unique code or identifier for the template, used to reference it in notification api.
 +          example: "user-notify"
 +        version:
            type: string
+-          description: unique user name of the authenticated user
+-        password:
+-          type: string
+-          description: password of the user.
+-        idtoken:
+-          type: string
+-          description: thi will be the otp.
+-        mobile:
+-          type: string
 -          description: mobile number of the autheticated user
 -        email:
-+          description: Semantic version of the template. Used for version control and template evolution.
++          description: semantic version of the template. used for version control and template evolution.
 +          example: "1.0.0"
-+        tenantId:
++        tenantid:
            type: string
--          description: email address of the authenticated user
+-          description: email addres of the authenticated user
 -        primaryrole:
--          type: array
--          description: List of all the roles for the primary tenant
--          items:
--            $ref: '#/components/schemas/Role'
--        additionalroles:
-+          description: Identifier for the tenant or client using the template.
++          description: identifier for the tenant or client using the template.
 +          example: "pg"
-+        mobileNumbers:
++        mobilenumber:
            type: array
--          description: array of additional tenantids authorized for the authenticated
+-          description: list of all the role for the primary tenant
+           item:
+-            $ref: '#/component/schema/role'
+-        additionalrole:
+-          type: array
+-          description: array of additional tenantid authorized for the authenticated
 -            user
-           items:
--            $ref: '#/components/schemas/TenantRole'
--      description: This is acting ID token of the authenticated user on the server.
--        Any value provided by the clients will be ignored and actual user based on
+-          item:
+-            $ref: '#/component/schema/tenantrole'
+-      description: thi i acting id token of the authenticated user on the server.
+-        any value provided by the client will be ignored and actual user based on
 -        authtoken will be used on the server.
--    Role:
+-    role:
 -      required:
 -      - name
 -      type: object
--      properties:
+-      propertie:
 -        name:
--          maxLength: 64
+-          maxlength: 64
 +            type: string
 +            pattern: '^\\+?[0-9]{10,15}$'
-+            description: Mobile number with optional '+' prefix. Should be 10 to 15 digits (e.g., +919876543210)
++            description: mobile number with optional '+' prefix. should be 10 to 15 digit (e.g., +919876543210)
 +        enrich:
 +          type: boolean
-+          description: Whether to enrich the payload using external data sources.
++          description: whether to enrich the payload using external data source.
 +          example: true
 +          default: false
 +        payload:
 +          type: object
 +        category:
 +          type: string
-+          enum: [OTP, TRANSACTION, PROMOTION, NOTIFICATION, OTHERS]
-+          description: Classification of the SMS notification.
++          enum: [otp, transaction, promotion, notification, other]
++          description: classification of the sm notification.
 +
-+    TemplatePreviewRequest:
++    templatepreviewrequest:
 +      type: object
 +      required:
-+        - templateId
++        - templateid
 +        - version
-+        - tenantId
-+      properties:
-+        templateId:
++        - tenantid
++      propertie:
++        templateid:
 +          type: string
-+          description: Unique code or identifier for the template, used to reference it in notification APIs.
++          description: unique code or identifier for the template, used to reference it in notification api.
 +          example: "user-notify"
 +        version:
            type: string
--          description: Unique name of the role
+-          description: unique name of the role
 -        code:
--          maxLength: 64
+-          maxlength: 64
 -          type: string
--          description: Unique code of the role
+-          description: unique code of the role
 -        description:
 -          type: string
 -          description: brief description of the role
 -      description: |
--        minimal representation of the Roles in the system to be carried along in UserInfo with RequestInfo meta data. Actual authorization service to extend this to have more role related attributes
--    TenantRole:
+-        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+-    tenantrole:
 -      required:
--      - roles
--      - tenantId
+-      - role
+-      - tenantid
 -      type: object
--      properties:
-+          description: Semantic version of the template. Used for version control and template evolution.
+-      propertie:
++          description: semantic version of the template. used for version control and template evolution.
 +          example: "1.0.0"
-         tenantId:
+         tenantid:
            type: string
 -          description: tenantid for the tenant
--        roles:
+-        role:
 -          type: array
--          description: Roles assigned for a particular tenant - array of role codes/names
--          items:
--            $ref: '#/components/schemas/Role'
--      description: User role carries the tenant related role information for the user.
--        A user can have multiple roles per tenant based on the need of the tenant.
--        A user may also have multiple roles for multiple tenants.
+-          description: role assigned for a particular tenant - array of role code/name
+-          item:
+-            $ref: '#/component/schema/role'
+-      description: user role carrie the tenant related role information for the user.
+-        a user can have multiple role per tenant based on the need of the tenant.
+-        a user may also have multiple role for multiple tenant.
 -x-api-id: org.egov.user.event
 -x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml
-+          description: Identifier for the tenant or client using the template.
++          description: identifier for the tenant or client using the template.
 +          example: "pg"
 +        enrich:
 +          type: boolean
-+          description: Whether to enrich the payload using external data sources.
++          description: whether to enrich the payload using external data source.
 +          example: true
 +          default: false
 +        payload:
 +          type: object
 +    
-+    TemplatePreviewResponse:
++    templatepreviewresponse:
 +      type: object
-+      properties:
++      propertie:
 +        type:
 +          type: string
-+          enum: [EMAIL, SMS]
-+          description: Type of notification template. Can be 'EMAIL' or 'SMS'.
-+          example: "EMAIL"
-+        isHTML:
++          enum: [email, sm]
++          description: type of notification template. can be 'email' or 'sm'.
++          example: "email"
++        ishtml:
 +          type: boolean
-+          description: Indicates whether the email content is HTML-formatted. Applicable for email templates only.
++          description: indicate whether the email content i html-formatted. applicable for email template only.
 +          example: true
 +          default: false
-+        renderedSubject:
++        renderedsubject:
 +          type: string
-+        renderedContent:
++        renderedcontent:
 +          type: string
 +        
-+    Error:
++    error:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
 +    
-+    AuditDetail:
++    auditdetail:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
 \ No newline at end of file

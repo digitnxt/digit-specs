@@ -1,0 +1,545 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: individual registry
+  description: >
+    thi module facilitate maintenance of an individual registry.
+  contact:
+    name: digit
+    email: info@egovernment.org
+scheme:
+  - http
+x-common-path: >-
+  https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml
+path:
+  /individual/v1/create:
+    post:
+      summary: >-
+        create/add a new individual
+      description: >-
+        create a new individual
+      parameter:
+        - name: individual
+          in: body
+          description: capture detail of individual.
+          required: true
+          schema:
+            $ref: '#/definition/individualrequest'
+        - $ref: '#/parameter/echoresource'
+      tag:
+        - individual
+      response:
+        '202':
+          description: accepted
+          schema:
+            $ref: '#/definition/individualresponse'
+        '400':
+          description: bad request
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+        '500':
+          description: internal server error
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+
+  /individual/v1/bulk/create:
+    post:
+      summary: >-
+        create/add individual
+      description: >-
+        create a new individual
+      parameter:
+        - name: individual
+          in: body
+          description: capture detail of individual.
+          required: true
+          schema:
+            $ref: '#/definition/individualbulkrequest'
+        - $ref: '#/parameter/echoresource'
+      tag:
+        - individual
+      response:
+        '202':
+          description: accepted
+          schema:
+            $ref: '#/definition/individualbulkresponse'
+        '400':
+          description: bad request
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+        '500':
+          description: internal server error
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+
+  /individual/v1/update:
+    post:
+      summary: >-
+        update the detail of a existing individual
+      description: >-
+        update the detail of a existing individual
+      parameter:
+        - name: individual
+          in: body
+          description: detail for the individual.
+          required: true
+          schema:
+            $ref: '#/definition/individualrequest'
+        - $ref: '#/parameter/echoresource'
+      tag:
+        - individual
+      response:
+        '202':
+          description: accepted
+          schema:
+            $ref: '#/definition/individualresponse'
+        '400':
+          description: bad request
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+        '500':
+          description: internal server error
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+
+  /individual/v1/bulk/update:
+    post:
+      summary: >-
+        update the detail of existing individual
+      description: >-
+        update the detail of existing individual
+      parameter:
+        - name: individual
+          in: body
+          description: detail for the individual.
+          required: true
+          schema:
+            $ref: '#/definition/individualbulkrequest'
+        - $ref: '#/parameter/echoresource'
+      tag:
+        - individual
+      response:
+        '202':
+          description: accepted
+          schema:
+            $ref: '#/definition/individualbulkresponse'
+        '400':
+          description: bad request
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+        '500':
+          description: internal server error
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+
+  /individual/v1/delete:
+    post:
+      summary: >-
+        soft delete the detail of a existing individual and nested entitie
+      description: >-
+        soft delete the detail of a existing individual and nested entitie
+      parameter:
+        - name: individual
+          in: body
+          description: detail for the individual.
+          required: true
+          schema:
+            $ref: '#/definition/individualrequest'
+        - $ref: '#/parameter/echoresource'
+      tag:
+        - individual
+      response:
+        '202':
+          description: accepted
+          schema:
+            $ref: '#/definition/individualresponse'
+        '400':
+          description: bad request
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+        '500':
+          description: internal server error
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+
+  /individual/v1/bulk/delete:
+    post:
+      summary: >-
+        soft delete the detail of a existing individual and nested entitie in bulk
+      description: >-
+        soft delete the detail of a existing individual and nested entitie in bulk
+      parameter:
+        - name: individual
+          in: body
+          description: detail for the individual.
+          required: true
+          schema:
+            $ref: '#/definition/individualbulkrequest'
+        - $ref: '#/parameter/echoresource'
+      tag:
+        - individual
+      response:
+        '202':
+          description: accepted
+          schema:
+            $ref: '#/definition/individualbulkresponse'
+        '400':
+          description: bad request
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+        '500':
+          description: internal server error
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+
+  /individual/v1/search:
+    post:
+      summary: >-
+        search existing individual
+      description: >-
+        search existing individual
+      parameter:
+        - name: individual
+          in: body
+          description: individual detail.
+          required: true
+          schema:
+            $ref: '#/definition/individualsearchrequest'
+        - $ref: '#/parameter/limit'
+        - $ref: '#/parameter/offset'
+        - $ref: '#/parameter/tenantid'
+        - $ref: '#/parameter/lastchangedsince'
+        - $ref: '#/parameter/includedeleted'
+      tag:
+        - individual
+      response:
+        '200':
+          description: ok
+          schema:
+            $ref: '#/definition/individualbulksearchresponse'
+        '400':
+          description: bad request
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+        '500':
+          description: internal server error
+          schema:
+            $ref: >-
+              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+
+parameter:
+  tenantid:
+    name: tenantid
+    in: query
+    description: unique id for a tenant.
+    required: true
+    type: string
+    format: varchar
+  lastchangedsince:
+    name: lastchangedsince
+    description: |
+      epoch of the time since when the change on the object should be picked up. search result from thi parameter should include both newly created object since thi time a well a any modified object since thi time. thi criterion i included to help polling client to get the change in system since a last time they synchronized with the platform.
+    in: query
+    required: false
+    type: integer
+    format: int64
+  echoresource:
+    name: echoresource
+    in: query
+    type: boolean
+    required: false
+    default: true
+    description: client can specify if the resource in request body need to be sent back in the response. thi i being used to limit amount of data that need to flow back from the server to the client in low bandwidth scenario. server will alway send the server generated id for validated request.
+  serverhandleserror:
+    name: serverhandleserror
+    in: query
+    type: boolean
+    required: false
+    default: false
+    description: client can specify that it i incapable of handling any error with the request and server should route these for manual intervention if required.
+  limit:
+    name: limit
+    description: pagination - limit record in response
+    in: query
+    type: integer
+    minimum: 0
+    maximum: 1000
+    required: true
+  offset:
+    name: offset
+    description: pagination - offset from which record should be returned in response
+    in: query
+    type: integer
+    minimum: 0
+    required: true
+  includedeleted:
+    name: includedeleted
+    description: used in search api to specify if (soft) deleted record should be included in search result.
+    in: query
+    type: boolean
+    default: false
+    required: false
+
+definition:
+  boundarycode:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/boundaryCode'
+  id:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/id'
+  idforsearch:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/idForSearch'
+  clientreferenceidforsearch:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/clientReferenceIdForSearch'
+  clientreferenceid:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/clientReferenceId'
+  gender:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/gender'
+  dateofbirth:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/dateDDMMYYYY'
+  tenantid:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/tenantId'
+  eventtimestamp:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/eventTimestamp'
+  isdeleted:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/isDeleted'
+  rowversion:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/rowVersion'
+  apioperation:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/apiOperation'
+  additionalfield:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/additionalFields'
+  addres:
+    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/Address'
+  name:
+    type: object
+    propertie:
+      givenname:
+        type: string
+        minlength: 2
+        maxlength: 200
+        description: given name of individual
+      familyname:
+        type: string
+        minlength: 2
+        maxlength: 200
+        description: family name of individual
+      othername:
+        type: string
+        minlength: 0
+        maxlength: 200
+        description: other name of individual
+  individual:
+    description: a representation of an individual.
+    type: object
+    required:
+      - name
+    propertie:
+      id:
+        $ref: '#/definition/id'
+      tenantid:
+        $ref: '#/definition/tenantid'
+      clientreferenceid:
+        $ref: '#/definition/clientreferenceid'
+      userid:
+        $ref: '#/definition/id'
+      name:
+        $ref: '#/definition/name'
+      dateofbirth:
+        $ref: '#/definition/dateofbirth'
+      gender:
+        $ref: '#/definition/gender'
+      bloodgroup:
+        type: string
+        description: blood group of the user.
+        maxlength: 3
+        item:
+          type: string
+          enum:
+            - a+
+            - b+
+            - o+
+            - ab+
+            - a-
+            - b-
+            - ab-
+            - o-
+          example: ab+
+      mobilenumber:
+        type: string
+        description: mobile number of the user
+        maxlength: 20
+      altcontactnumber:
+        type: string
+        description: alternate contact number of the user
+        maxlength: 16
+      email:
+        type: string
+        format: email
+        minlength: 5
+        maxlength: 200
+      addres:
+        type: array
+        item:
+          $ref: '#/definition/addres'
+      fathername:
+        type: string
+        description: individual's father's name - if available
+        maxlength: 100
+      husbandname:
+        type: string
+        description: individual's husband's name - if applicable
+        maxlength: 100
+      identifier:
+        type: array
+        item:
+          $ref: '#/definition/identifier'
+      skill:
+        type: array
+        item:
+          $ref: '#/definition/skill'
+      photo:
+        type: string
+        description: filestore service uuid holding individual's photograph
+      additionalfield:
+        $ref: '#/definition/additionalfield'
+      isdeleted:
+        $ref: '#/definition/isdeleted'
+      rowversion:
+        $ref: '#/definition/rowversion'
+      auditdetail:
+        $ref: 'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/AuditDetails'
+  individualsearch:
+    description: a representation of an individual.
+    type: object
+    propertie:
+      id:
+        $ref: '#/definition/idforsearch'
+      clientreferenceid:
+        $ref: '#/definition/clientreferenceidforsearch'
+      name:
+        $ref: '#/definition/name'
+      dateofbirth:
+        $ref: '#/definition/dateofbirth'
+      gender:
+        $ref: '#/definition/gender'
+      identifier:
+        $ref: '#/definition/identifier'
+      boundarycode:
+        $ref: '#/definition/boundarycode'
+  identifier:
+    type: object
+    required:
+      - type
+      - id
+    propertie:
+      identifiertype:
+        type: string
+        example: 'systemgenerated'
+        minlength: 2
+        maxlength: 64
+      identifierid:
+        type: string
+        example: 'abcd-1212'
+        minlength: 2
+        maxlength: 64
+  individualrequest:
+    type: object
+    propertie:
+      requestinfo:
+        $ref: >-
+          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
+      individual:
+        type: object
+        $ref: '#/definition/individual'
+    required:
+      - requestinfo
+      - individual
+  individualbulkrequest:
+    type: object
+    propertie:
+      requestinfo:
+        $ref: >-
+          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
+      individual:
+        type: array
+        minitem: 1
+        item:
+          $ref: '#/definition/individual'
+    required:
+      - requestinfo
+      - individual
+  individualsearchrequest:
+    type: object
+    propertie:
+      requestinfo:
+        $ref: >-
+          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
+      individual:
+        $ref: '#/definition/individualsearch'
+    required:
+      - requestinfo
+      - individual
+  individualresponse:
+    type: object
+    propertie:
+      responseinfo:
+        $ref: >-
+          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ResponseInfo
+      individual:
+        type: object
+        $ref: '#/definition/individual'
+    required:
+      - responseinfo
+  individualbulkresponse:
+    type: object
+    propertie:
+      responseinfo:
+        $ref: >-
+          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ResponseInfo
+    required:
+      - responseinfo
+  individualbulksearchresponse:
+    type: object
+    propertie:
+      responseinfo:
+        $ref: >-
+          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ResponseInfo
+      individual:
+        type: array
+        item:
+          $ref: '#/definition/individual'
+    required:
+      - responseinfo
+  skill:
+    type: object
+    required: [type]
+    propertie:
+      id:
+        $ref: '#/definition/id'
+      type:
+        type: string
+        description: skill type of the individual
+        minlength: 2
+        maxlength: 64
+      level:
+        type: string
+        description: skill level of the individual
+        minlength: 2
+        maxlength: 64
+      experience:
+        type: string
+        description: experience of the individual
+        minlength: 2
+        maxlength: 64

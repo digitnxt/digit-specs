@@ -1,0 +1,733 @@
+openapi: 3.0.0
+info:
+  title: notification
+  version: 3.0.0
+  description: |
+    api to manage notification template with dynamic placeholder rendering, and to send notification via email and sm.
+  contact:
+    name: egovernment foundation
+
+server:
+  - url: https://prod-api.example.com/notification
+    description: production server
+  - url: https://staging-api.example.com/notification
+    description: staging server
+
+security:
+  - bearerauth: []
+
+tag:
+  - name: template
+    description: endpoint for managing notification template
+  - name: notification
+    description: endpoint for sending notification
+
+path:
+  /template:
+    post:
+      tag:
+        - template
+      summary: create a notification template
+      requestbody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/component/schema/template'
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '201':
+          description: template created
+          content:
+            'application/json':
+              schema:
+                $ref: '#/component/schema/template'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            'application/json':
+              schema:
+                type: array
+                item: 
+                  $ref: '#/component/schema/error'
+        '409':
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    put:
+      tag:
+        - template
+      summary: update a notification template
+      requestbody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/component/schema/template'
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: template updated
+          content:
+            'application/json':
+              schema:
+                $ref: '#/component/schema/template'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            'application/json':
+              schema:
+                type: array
+                item: 
+                  $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    get:
+      tag:
+        - template
+      summary: search notification template
+      parameter:
+       - name: id
+         in: query
+         description: comma-separated list of uuid
+         schema:
+          type: string
+       - name: templateid
+         in: query
+         schema:
+          type: string
+       - name: tenantid
+         in: query
+         required: true
+         schema:
+          type: string
+       - name: version
+         in: query
+         schema:
+          type: string
+       - name: type
+         in: query
+         schema:
+          type: string
+          enum: [email, sm]
+       - name: ishtml
+         in: query
+         schema:
+          type: boolean
+       - $ref: '#/component/parameter/requestidheader'
+       - $ref: '#/component/parameter/correlationidheader'
+       - $ref: '#/component/parameter/useragentheader'
+       - $ref: '#/component/parameter/tenantidheader'
+       - $ref: '#/component/parameter/forwardedforheader'
+       - $ref: '#/component/parameter/clientid'
+       - $ref: '#/component/parameter/clientsecret'
+       - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: list of template
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/template'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '400':
+          description: bad request
+          content:
+            'application/json':
+              schema:
+                type: array
+                item: 
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    delete:
+      tag:
+        - template
+      summary: delete a notification template
+      parameter:
+        - name: templateid
+          in: query
+          schema:
+            type: string
+          required: true
+        - name: tenantid
+          in: query
+          schema:
+            type: string
+          required: true
+        - name: version
+          in: query
+          schema:
+            type: string
+          required: true
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: template deleted
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '400':
+          description: bad request
+          content:
+            'application/json':
+              schema:
+                type: array
+                item: 
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /template/preview:
+    post:
+      tag:
+        - template
+      summary: preview a notification template with sample or actual data
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/templatepreviewrequest'
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: rendered template preview
+          content:
+            'application/json':
+              schema:
+                $ref: '#/component/schema/templatepreviewresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            'application/json':
+              schema:
+                type: array
+                item: 
+                  $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '422':
+          description: unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+
+  /email/send:
+    post:
+      tag:
+        - notification
+      summary: send an email notification
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/emailrequest'
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: email sent successfully
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            'application/json':
+              schema:
+                type: array
+                item: 
+                  $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '422':
+          description: unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /sm/send:
+    post:
+      tag:
+        - notification
+      summary: send a sm notification
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/smsrequest'
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: sm sent successfully
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            'application/json':
+              schema:
+                type: array
+                item: 
+                  $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '422':
+          description: unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+component:
+  securityscheme:
+    bearerauth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+
+  parameter:
+    requestidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+    correlationidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+    useragentheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+    tenantidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    forwardedforheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+    clientid:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+    clientsecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+    timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+  
+  header:
+    x-response-time:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+    x-response-timestamp:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+    x-request-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+    x-correlation-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+    x-tenant-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+    x-rate-limit:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+    x-rate-limit-remaining:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+    x-rate-limit-reset:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+
+  schema:
+    template:
+      type: object
+      required:
+        - templateid
+        - version
+        - tenantid
+        - type
+        - content
+      propertie:
+        id:
+          type: string
+          format: uuid
+          description: system-generated unique identifier for the notification template.
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"  
+        templateid:
+          type: string
+          description: unique code or identifier for the template, used to reference it in notification api.
+          example: "user-notify"
+        version:
+          type: string
+          description: semantic version of the template. used for version control and template evolution.
+          example: "1.0.0"
+        tenantid:
+          type: string
+          description: identifier for the tenant or client using the template.
+          example: "pg"
+        type:
+          type: string
+          enum: [email, sm]
+          description: type of notification template. can be 'email' or 'sm'.
+          example: "email"
+        subject:
+          type: string
+          description: subject line of the email. applicable only if type i 'email'.
+          example: "welcome to digit"
+        content:
+          type: string
+          description: the actual template body, written using go template syntax.
+          example: "hello {{ .name }}, your account i ready."
+        ishtml:
+          type: boolean
+          description: indicate whether the email content i html-formatted. applicable for email template only.
+          example: true
+          default: false
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+
+    emailrequest:
+      type: object
+      required:
+        - templateid
+        - version
+        - tenantid
+        - emailid
+      propertie:
+        templateid:
+          type: string
+          description: unique code or identifier for the template, used to reference it in notification api.
+          example: "user-notify"
+        version:
+          type: string
+          description: semantic version of the template. used for version control and template evolution.
+          example: "1.0.0"
+        tenantid:
+          type: string
+          description: identifier for the tenant or client using the template.
+          example: "pg"
+        emailid:
+          type: array
+          item:
+            type: string
+            format: email
+            maxlength: 320
+            description: valid email addres (e.g., user@example.com)
+        enrich:
+          type: boolean
+          description: whether to enrich the payload using external data source.
+          example: true
+          default: false
+        payload:
+          type: object
+        attachment:
+          type: array
+          item:
+            type: string
+            description: filestore file reference id
+
+    smsrequest:
+      type: object
+      required:
+        - templateid
+        - version
+        - tenantid
+        - mobilenumber
+      propertie:
+        templateid:
+          type: string
+          description: unique code or identifier for the template, used to reference it in notification api.
+          example: "user-notify"
+        version:
+          type: string
+          description: semantic version of the template. used for version control and template evolution.
+          example: "1.0.0"
+        tenantid:
+          type: string
+          description: identifier for the tenant or client using the template.
+          example: "pg"
+        mobilenumber:
+          type: array
+          item:
+            type: string
+            pattern: '^\\+?[0-9]{10,15}$'
+            description: mobile number with optional '+' prefix. should be 10 to 15 digit (e.g., +919876543210)
+        enrich:
+          type: boolean
+          description: whether to enrich the payload using external data source.
+          example: true
+          default: false
+        payload:
+          type: object
+        category:
+          type: string
+          enum: [otp, transaction, promotion, notification, other]
+          description: classification of the sm notification.
+
+    templatepreviewrequest:
+      type: object
+      required:
+        - templateid
+        - version
+        - tenantid
+      propertie:
+        templateid:
+          type: string
+          description: unique code or identifier for the template, used to reference it in notification api.
+          example: "user-notify"
+        version:
+          type: string
+          description: semantic version of the template. used for version control and template evolution.
+          example: "1.0.0"
+        tenantid:
+          type: string
+          description: identifier for the tenant or client using the template.
+          example: "pg"
+        enrich:
+          type: boolean
+          description: whether to enrich the payload using external data source.
+          example: true
+          default: false
+        payload:
+          type: object
+    
+    templatepreviewresponse:
+      type: object
+      propertie:
+        type:
+          type: string
+          enum: [email, sm]
+          description: type of notification template. can be 'email' or 'sm'.
+          example: "email"
+        ishtml:
+          type: boolean
+          description: indicate whether the email content i html-formatted. applicable for email template only.
+          example: true
+          default: false
+        renderedsubject:
+          type: string
+        renderedcontent:
+          type: string
+        
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+    
+    auditdetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'

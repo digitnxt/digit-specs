@@ -1,2208 +1,2198 @@
-
-
-==================== workflow.diff ====================
-
---- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/workflow.yaml"	2026-03-23 10:50:25.034727301 +0530
-+++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/workflow.yaml	2026-03-23 10:51:46.198660142 +0530
+--- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v2/workflow.norm.yaml	2026-04-01 13:55:53.538322885 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v3/workflow.norm.yaml	2026-04-01 13:55:53.538322885 +0530
 @@ -1,1812 +1,1082 @@
 -openapi: 3.0.1
 +openapi: 3.0.3
  info:
--  title: eGov Workflow Engine.
--  description: "APIs for Workflow engine. This modules handles Below functionality.\
--    \ \n1. Start workflow \n2. Validate documents and action on each step of workflow\n\
--    3. Calculate state wise SLA as well as overall SLA of the application\n4. Search\
--    \ existing workflow applications \n"
+-  title: egov workflow engine.
+-  description: "api for workflow engine. thi module handle below functionality.\
+-    \ \n1. start workflow \n2. validate document and action on each step of workflow\n\
+-    3. calculate state wise sla a well a overall sla of the application\n4. search\
+-    \ existing workflow application \n"
 -  contact:
--    name: eGovernments Foundation
--    email: contacts@egovernments.org
+-    name: egovernment foundation
+-    email: contact@egovernment.org
 -  version: 1.0.0
-+  title: Workflow Service API
++  title: workflow service api
 +  version: 3.0.0
 +  description: |
-+    OpenAPI contract for the DIGIT Workflow service. All endpoints are relative to the
-+    configured context path (for example, `/workflow`). Each request must include
-+    the `X-Tenant-ID` header to scope operations to a tenant unless explicitly noted.
- servers:
++    openapi contract for the digit workflow service. all endpoint are relative to the
++    configured context path (for example, `/workflow`). each request must include
++    the `x-tenant-id` header to scope operation to a tenant unles explicitly noted.
+ server:
 -- url: /egov-wf
--paths:
--  /process/_transition:
+-path:
+-  /proces/transition:
 -    post:
--      tags:
--      - WorkFlow
--      summary: Create new workflow entry for a given application number(businessId).
--      description: "To create new workflow applicationin the system. API supports\
--        \ bulk creation with max limit as defined in the Trade License Request. Please\
--        \ note that either whole batch succeeds or fails, there's no partial batch\
--        \ success. To create one workflow(ProcessInstance) instance, please pass array\
--        \ with one workflow(ProcessInstance) object. \n  \n\nFollowing Conditions\
--        \ are applied -\n  1. Valid action is send according to workflow configuration\
--        \ defined\n  2. supportDocuments to perform workflow action will created.\
--        \ In case of not attaching the Mandatory Supported Documents creation of workflow\
--        \ Fails.\n  3. Application will move to next state if valid action is passes.\n"
--      requestBody:
--        description: Details for the new Workflow(s) + RequestInfo meta data.
+-      tag:
+-      - workflow
+-      summary: create new workflow entry for a given application number(businessid).
+-      description: "to create new workflow applicationin the system. api support\
+-        \ bulk creation with max limit a defined in the trade license request. please\
+-        \ note that either whole batch succeed or fail, there's no partial batch\
+-        \ succes. to create one workflow(processinstance) instance, please pas array\
+-        \ with one workflow(processinstance) object. \n  \n\nfollowing condition\
+-        \ are applied -\n  1. valid action i send according to workflow configuration\
+-        \ defined\n  2. supportdocument to perform workflow action will created.\
+-        \ in case of not attaching the mandatory supported document creation of workflow\
+-        \ fail.\n  3. application will move to next state if valid action i passe.\n"
+-      requestbody:
+-        description: detail for the new workflow(s) + requestinfo meta data.
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/ProcessInstanceRequest'
+-              $ref: '#/component/schema/processinstancerequest'
 -        required: true
--      responses:
+-      response:
 -        201:
--          description: ReponseInfo with Workflow(s) created successfully
+-          description: reponseinfo with workflow(s) created successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ProcessIntanceResponse'
+-                $ref: '#/component/schema/processintanceresponse'
 -        400:
--          description: Workflow(s) creation failed
+-          description: workflow(s) creation failed
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes'
--      x-codegen-request-body-name: ProcessInstanceRequest
--  /process/_search:
+-                $ref: '#/component/schema/errorre'
+-      x-codegen-request-body-name: processinstancerequest
+-  /proces/search:
 -    post:
--      tags:
--      - WorkFlow
--      summary: Get the list of workflow applications defined in the system.
+-      tag:
+-      - workflow
+-      summary: get the list of workflow application defined in the system.
 -      description: |-
--        1. Search and get Application(s)  based on defined search criteria.
--        2. In case multiple parameters are passed Application(s) will be searched as an AND combination of all the parameters.
--      parameters:
--      - name: tenantId
+-        1. search and get application(s)  based on defined search criteria.
+-        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+-      parameter:
+-      - name: tenantid
 -        in: query
--        description: Unique id for a tenant.
+-        description: unique id for a tenant.
 -        required: true
 -        schema:
 -          type: string
 -          format: varchar
--      - name: ids
+-      - name: id
 -        in: query
--        description: unique identifier of Application
+-        description: unique identifier of application
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: integer
 -            format: int64
--      - name: businessService
+-      - name: businessservice
 -        in: query
--        description: Name of the workflow confguration.
+-        description: name of the workflow confguration.
 -        schema:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--      - name: moduleName
+-      - name: modulename
 -        in: query
--        description: Module name to which workflow application belongs
+-        description: module name to which workflow application belong
 -        schema:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--      - name: businessIds
+-      - name: businessid
 -        in: query
--        description: The list of businessIds
+-        description: the list of businessid
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: string
 -      - name: assignee
 -        in: query
--        description: The unique  Old license number for a Application.
+-        description: the unique  old license number for a application.
 -        schema:
--          maxLength: 64
--          minLength: 2
-+  - url: /workflow
-+    description: Base context path (override per environment).
-+tags:
-+  - name: Process
-+    description: Manage workflow processes.
-+  - name: State
-+    description: Manage states within a workflow process.
-+  - name: Action
-+    description: Manage actions/transitions between states.
-+  - name: EscalationConfig
-+    description: Manage escalation configurations.
-+  - name: Transition
-+    description: Execute and search workflow transitions.
-+  - name: AutoEscalation
-+    description: Trigger or search auto-escalation runs.
-+components:
-+  parameters:
-+    TenantHeader:
-+      name: X-Tenant-ID
-+      in: header
-+      required: true
-+      schema:
-+        type: string
-+      description: Tenant identifier used to scope the request.
-+    ClientHeader:
-+      name: X-Client-Id
-+      in: header
-+      required: false
-+      schema:
-+        type: string
-+      description: Client/user identifier captured for audit; required by some endpoints.
-+  responses:
-+    ErrorResponse:
-+      description: API error response
-+      content:
-+        application/json:
-+          schema:
-+            $ref: '#/components/schemas/Error'
-+    NoContent:
-+      description: Operation completed successfully with no body.
-+  schemas:
-+    AuditDetail:
-+      type: object
-+      properties:
-+        createdBy:
-           type: string
+-          maxlength: 64
+-          minlength: 2
+-          type: string
 -      - name: history
 -        in: query
--        description: Boolean flag to return history of the workflow
+-        description: boolean flag to return history of the workflow
 -        schema:
 -          type: boolean
 -      - name: limit
 -        in: query
--        description: Number of records to be returned
+-        description: number of record to be returned
 -        schema:
 -          type: integer
 -      - name: offset
 -        in: query
--        description: Starting offset for returning search response
+-        description: starting offset for returning search response
 -        schema:
-+        createdTime:
-           type: integer
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
+-          type: integer
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/RequestInfo'
+-              $ref: '#/component/schema/requestinfo'
 -        required: false
--      responses:
+-      response:
 -        200:
--          description: Application(s) Retrived Successfully
+-          description: application(s) retrived successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ProcessIntanceResponse'
+-                $ref: '#/component/schema/processintanceresponse'
 -        400:
--          description: Invalid input.
+-          description: invalid input.
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: requestInfo
--  /process/_count:
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: requestinfo
+-  /proces/count:
 -    post:
--      tags:
--      - WorkFlow
--      summary: Get the count of applications satisfying the given criteria
+-      tag:
+-      - workflow
+-      summary: get the count of application satisfying the given criteria
 -      description: |-
--        1. Returns the total number of application in the system based on the criteria given
--        2. Primarily used to shoe total count in inbox
--      parameters:
--      - name: tenantId
+-        1. return the total number of application in the system based on the criteria given
+-        2. primarily used to shoe total count in inbox
+-      parameter:
+-      - name: tenantid
 -        in: query
--        description: Unique id for a tenant.
+-        description: unique id for a tenant.
 -        required: true
 -        schema:
 -          type: string
 -          format: varchar
--      - name: ids
+-      - name: id
 -        in: query
 -        description: unique identifier of trade licence
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: integer
 -            format: int64
--      - name: businessService
+-      - name: businessservice
 -        in: query
--        description: Unique application number for a trade license application.
+-        description: unique application number for a trade license application.
 -        schema:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--      - name: businessIds
+-      - name: businessid
 -        in: query
--        description: The list of businessIds
+-        description: the list of businessid
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: integer
 -            format: int64
 -      - name: assignee
 -        in: query
--        description: The unique  Old license number for a Trade license.
+-        description: the unique  old license number for a trade license.
 -        schema:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
 -      - name: history
 -        in: query
--        description: Boolean flag to return history of the workflow
+-        description: boolean flag to return history of the workflow
 -        schema:
 -          type: boolean
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/RequestInfo'
+-              $ref: '#/component/schema/requestinfo'
 -        required: false
--      responses:
+-      response:
 -        200:
--          description: Trade License(s) Retrived Successfully
+-          description: trade license(s) retrived successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ProcessIntanceResponse'
+-                $ref: '#/component/schema/processintanceresponse'
 -        400:
--          description: Invalid input.
+-          description: invalid input.
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: requestInfo
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: requestinfo
 -      
--  /process/_nearingslacount:
+-  /proces/nearingslacount:
 -    post:
--      tags:
--      - WorkFlow
--      summary: Get the nearing sla count of workflow applications defined in the system.
+-      tag:
+-      - workflow
+-      summary: get the nearing sla count of workflow application defined in the system.
 -      description: |-
--        1. Search and get Application(s)  based on defined search criteria.
--        2. In case multiple parameters are passed Application(s) will be searched as an AND combination of all the parameters.
--      parameters:
--      - name: tenantId
+-        1. search and get application(s)  based on defined search criteria.
+-        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+-      parameter:
+-      - name: tenantid
 -        in: query
--        description: Unique id for a tenant.
+-        description: unique id for a tenant.
 -        required: true
 -        schema:
 -          type: string
 -          format: varchar
--      - name: ids
+-      - name: id
 -        in: query
--        description: unique identifier of Application
+-        description: unique identifier of application
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: integer
 -            format: int64
--      - name: businessService
+-      - name: businessservice
 -        in: query
--        description: Name of the workflow confguration.
+-        description: name of the workflow confguration.
 -        schema:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--      - name: moduleName
+-      - name: modulename
 -        in: query
--        description: Module name to which workflow application belongs
+-        description: module name to which workflow application belong
 -        schema:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--      - name: businessIds
+-      - name: businessid
 -        in: query
--        description: The list of businessIds
+-        description: the list of businessid
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: string
 -      - name: assignee
 -        in: query
--        description: The unique  Old license number for a Application.
+-        description: the unique  old license number for a application.
 -        schema:
--          maxLength: 64
--          minLength: 2
-+          format: int64
-+        modifiedBy:
-           type: string
+-          maxlength: 64
+-          minlength: 2
+-          type: string
 -      - name: history
 -        in: query
--        description: Boolean flag to return history of the workflow
+-        description: boolean flag to return history of the workflow
 -        schema:
 -          type: boolean
 -      - name: limit
 -        in: query
--        description: Number of records to be returned
+-        description: number of record to be returned
 -        schema:
-+        modifiedTime:
+-          type: integer
+-      - name: offset
+-        in: query
+-        description: starting offset for returning search response
+-        schema:
+-          type: integer
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/component/schema/requestinfo'
+-        required: false
+-      response:
+-        200:
+-          description: application(s) retrived successfully
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/component/schema/processcountresponse'
+-        400:
+-          description: invalid input.
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: requestinfo   
+-  /proces/statuscount:
+-    post:
+-      tag:
+-      - workflow
+-      summary: get the list of statu count workflow application defined in the system.
+-      description: |-
+-        1. search and get application(s)  based on defined search criteria.
+-        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+-      parameter:
+-      - name: tenantid
+-        in: query
+-        description: unique id for a tenant.
+-        required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: id
+-        in: query
+-        description: unique identifier of application
+-        style: form
+-        explode: false
+-        schema:
+-          maxitem: 50
+-          type: array
+-          item:
+-            type: integer
+-            format: int64
+-      - name: businessservice
+-        in: query
+-        description: name of the workflow confguration.
+-        schema:
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-      - name: modulename
+-        in: query
+-        description: module name to which workflow application belong
+-        schema:
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-      - name: businessid
+-        in: query
+-        description: the list of businessid
+-        style: form
+-        explode: false
+-        schema:
+-          maxitem: 50
+-          type: array
+-          item:
+-            type: string
+-      - name: assignee
+-        in: query
+-        description: the unique  old license number for a application.
+-        schema:
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-      - name: history
+-        in: query
+-        description: boolean flag to return history of the workflow
+-        schema:
+-          type: boolean
+-      - name: limit
+-        in: query
+-        description: number of record to be returned
+-        schema:
+-          type: integer
+-      - name: offset
+-        in: query
+-        description: starting offset for returning search response
+-        schema:
+-          type: integer
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
+-        content:
+-          '*/*':
+-            schema:
+-              $ref: '#/component/schema/statuscountreq'
+-        required: false
+-      response:
+-        200:
+-          description: application(s) retrived successfully
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/component/schema/responseentity'
+-        400:
+-          description: invalid input.
+-          content:
+-            '*/*':
+-              schema:
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: statuscountreq       
+-  /proces/escalate/search:
+-    post:
+-      tag:
+-      - escalate
+-      summary: get the list of escalate workflow application defined in the system.
+-      description: |-
+-        1. search and get application(s)  based on defined search criteria.
+-        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+-      parameter:
+-      - name: tenantid
+-        in: query
+-        description: unique id for a tenant.
+-        required: true
+-        schema:
+-          type: string
+-          format: varchar
+-      - name: id
+-        in: query
+-        description: unique identifier of application
+-        style: form
+-        explode: false
+-        schema:
+-          maxitem: 50
+-          type: array
+-          item:
+-            type: integer
+-            format: int64
+-      - name: businessservice
+-        in: query
+-        description: name of the workflow confguration.
+-        schema:
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-      - name: modulename
+-        in: query
+-        description: module name to which workflow application belong
+-        schema:
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-      - name: businessid
+-        in: query
+-        description: the list of businessid
+-        style: form
+-        explode: false
+-        schema:
+-          maxitem: 50
+-          type: array
+-          item:
+-            type: string
+-      - name: assignee
+-        in: query
+-        description: the unique  old license number for a application.
+-        schema:
+-          maxlength: 64
+-          minlength: 2
++  - url: /workflow
++    description: base context path (override per environment).
++tag:
++  - name: proces
++    description: manage workflow processe.
++  - name: state
++    description: manage state within a workflow proces.
++  - name: action
++    description: manage action/transition between state.
++  - name: escalationconfig
++    description: manage escalation configuration.
++  - name: transition
++    description: execute and search workflow transition.
++  - name: autoescalation
++    description: trigger or search auto-escalation run.
++component:
++  parameter:
++    tenantheader:
++      name: x-tenant-id
++      in: header
++      required: true
++      schema:
++        type: string
++      description: tenant identifier used to scope the request.
++    clientheader:
++      name: x-client-id
++      in: header
++      required: false
++      schema:
++        type: string
++      description: client/user identifier captured for audit; required by some endpoint.
++  response:
++    errorresponse:
++      description: api error response
++      content:
++        application/json:
++          schema:
++            $ref: '#/component/schema/error'
++    nocontent:
++      description: operation completed successfully with no body.
++  schema:
++    auditdetail:
++      type: object
++      propertie:
++        createdby:
+           type: string
+-      - name: history
+-        in: query
+-        description: boolean flag to return history of the workflow
+-        schema:
+-          type: boolean
+-      - name: limit
+-        in: query
+-        description: number of record to be returned
+-        schema:
+-          type: integer
+-      - name: offset
+-        in: query
+-        description: starting offset for returning search response
+-        schema:
++        createdtime:
            type: integer
--      - name: offset
--        in: query
--        description: Starting offset for returning search response
--        schema:
--          type: integer
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/RequestInfo'
+-              $ref: '#/component/schema/requestinfo'
 -        required: false
--      responses:
+-      response:
 -        200:
--          description: Application(s) Retrived Successfully
+-          description: application(s) retrived successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ProcessCountResponse'
+-                $ref: '#/component/schema/processintanceresponse'
 -        400:
--          description: Invalid input.
+-          description: invalid input.
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: requestInfo   
--  /process/_statuscount:
--    post:
--      tags:
--      - WorkFlow
--      summary: Get the list of status count workflow applications defined in the system.
--      description: |-
--        1. Search and get Application(s)  based on defined search criteria.
--        2. In case multiple parameters are passed Application(s) will be searched as an AND combination of all the parameters.
--      parameters:
--      - name: tenantId
--        in: query
--        description: Unique id for a tenant.
--        required: true
--        schema:
-+          format: int64
-+    Document:
-+      type: object
-+      properties:
-+        documentType:
-           type: string
--          format: varchar
--      - name: ids
--        in: query
--        description: unique identifier of Application
--        style: form
--        explode: false
--        schema:
--          maxItems: 50
--          type: array
--          items:
--            type: integer
--            format: int64
--      - name: businessService
--        in: query
--        description: Name of the workflow confguration.
--        schema:
--          maxLength: 64
--          minLength: 2
-+        fileStoreId:
-           type: string
--      - name: moduleName
--        in: query
--        description: Module name to which workflow application belongs
--        schema:
--          maxLength: 64
--          minLength: 2
-+        documentUid:
-           type: string
--      - name: businessIds
--        in: query
--        description: The list of businessIds
--        style: form
--        explode: false
--        schema:
--          maxItems: 50
--          type: array
--          items:
--            type: string
--      - name: assignee
--        in: query
--        description: The unique  Old license number for a Application.
--        schema:
--          maxLength: 64
--          minLength: 2
-+        additionalDetails:
-+          type: object
-+          additionalProperties: {}
-+    AttributeValidation:
-+      type: object
-+      properties:
-+        id:
-           type: string
--      - name: history
--        in: query
--        description: Boolean flag to return history of the workflow
--        schema:
-+          format: uuid
-+        attributes:
-+          type: object
-+          additionalProperties:
-+            type: array
-+            items:
-+              type: string
-+        assigneeCheck:
-           type: boolean
--      - name: limit
--        in: query
--        description: Number of records to be returned
--        schema:
--          type: integer
--      - name: offset
--        in: query
--        description: Starting offset for returning search response
--        schema:
--          type: integer
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
--        content:
--          '*/*':
--            schema:
--              $ref: '#/components/schemas/StatusCountReq'
--        required: false
--      responses:
--        200:
--          description: Application(s) Retrived Successfully
--          content:
--            '*/*':
--              schema:
--                $ref: '#/components/schemas/ResponseEntity'
--        400:
--          description: Invalid input.
--          content:
--            '*/*':
--              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: StatusCountReq       
--  /process/escalate/_search:
--    post:
--      tags:
--      - Escalate
--      summary: Get the list of escalate workflow applications defined in the system.
--      description: |-
--        1. Search and get Application(s)  based on defined search criteria.
--        2. In case multiple parameters are passed Application(s) will be searched as an AND combination of all the parameters.
--      parameters:
--      - name: tenantId
--        in: query
--        description: Unique id for a tenant.
--        required: true
--        schema:
--          type: string
--          format: varchar
--      - name: ids
--        in: query
--        description: unique identifier of Application
--        style: form
--        explode: false
--        schema:
--          maxItems: 50
--          type: array
--          items:
--            type: integer
--            format: int64
--      - name: businessService
--        in: query
--        description: Name of the workflow confguration.
--        schema:
--          maxLength: 64
--          minLength: 2
--          type: string
--      - name: moduleName
--        in: query
--        description: Module name to which workflow application belongs
--        schema:
--          maxLength: 64
--          minLength: 2
--          type: string
--      - name: businessIds
--        in: query
--        description: The list of businessIds
--        style: form
--        explode: false
--        schema:
--          maxItems: 50
--          type: array
--          items:
--            type: string
--      - name: assignee
--        in: query
--        description: The unique  Old license number for a Application.
--        schema:
--          maxLength: 64
--          minLength: 2
-+        auditDetail:
-+          $ref: '#/components/schemas/AuditDetail'
-+    Process:
-+      type: object
-+      properties:
-+        id:
-           type: string
--      - name: history
--        in: query
--        description: Boolean flag to return history of the workflow
--        schema:
--          type: boolean
--      - name: limit
--        in: query
--        description: Number of records to be returned
--        schema:
--          type: integer
--      - name: offset
--        in: query
--        description: Starting offset for returning search response
--        schema:
--          type: integer
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
--        content:
--          '*/*':
--            schema:
--              $ref: '#/components/schemas/RequestInfo'
--        required: false
--      responses:
--        200:
--          description: Application(s) Retrived Successfully
--          content:
--            '*/*':
--              schema:
--                $ref: '#/components/schemas/ProcessIntanceResponse'
--        400:
--          description: Invalid input.
--          content:
--            '*/*':
--              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: requestInfo    
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: requestinfo    
 -      
--  /auto/{businessService}/_escalate:
+-  /auto/{businessservice}/escalate:
 -    post:
--      tags:
--      - Escalate
--      summary: Get the list of workflow applications defined in the system.
+-      tag:
+-      - escalate
+-      summary: get the list of workflow application defined in the system.
 -      description: |-
--        1. Search and get Application(s)  based on defined search criteria.
--        2. In case multiple parameters are passed Application(s) will be searched as an AND combination of all the parameters.
--      parameters:
+-        1. search and get application(s)  based on defined search criteria.
+-        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+-      parameter:
 -      - in: path
--        name: businessService
+-        name: businessservice
 -        required: true
--        description: Name of the workflow confguration.
+-        description: name of the workflow confguration.
 -        schema:
--          maxLength: 64
--          minLength: 2
-+          format: uuid
-+        name:
-           type: string
--      - name: tenantId
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-      - name: tenantid
 -        in: query
--        description: Unique id for a tenant.
+-        description: unique id for a tenant.
 -        required: true
 -        schema:
-+        code:
-           type: string
+-          type: string
 -          format: varchar
--      - name: ids
+-      - name: id
 -        in: query
--        description: unique identifier of Application
+-        description: unique identifier of application
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: integer
 -            format: int64
--      - name: moduleName
+-      - name: modulename
 -        in: query
--        description: Module name to which workflow application belongs
+-        description: module name to which workflow application belong
 -        schema:
--          maxLength: 64
--          minLength: 2
-+        description:
-           type: string
--      - name: businessIds
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-      - name: businessid
 -        in: query
--        description: The list of businessIds
+-        description: the list of businessid
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: string
 -      - name: assignee
 -        in: query
--        description: The unique  Old license number for a Application.
+-        description: the unique  old license number for a application.
 -        schema:
--          maxLength: 64
--          minLength: 2
-+        version:
+-          maxlength: 64
+-          minlength: 2
++          format: int64
++        modifiedby:
            type: string
 -      - name: history
 -        in: query
--        description: Boolean flag to return history of the workflow
+-        description: boolean flag to return history of the workflow
 -        schema:
 -          type: boolean
 -      - name: limit
 -        in: query
--        description: Number of records to be returned
+-        description: number of record to be returned
 -        schema:
--          type: integer
++        modifiedtime:
+           type: integer
 -      - name: offset
 -        in: query
--        description: Starting offset for returning search response
+-        description: starting offset for returning search response
 -        schema:
-+        sla:
-           type: integer
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
+-          type: integer
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/RequestInfo'
+-              $ref: '#/component/schema/requestinfo'
 -        required: false
--      responses:
+-      response:
 -        200:
--          description: Application(s) Retrived Successfully
+-          description: application(s) retrived successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ProcessIntanceResponse'
+-                $ref: '#/component/schema/processintanceresponse'
 -        400:
--          description: Invalid input.
+-          description: invalid input.
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: requestInfo    
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: requestinfo    
 -      
--  /businessservice/v2/_create:
+-  /businessservice/v2/create:
 -    post:
--      tags:
--      - BusinessServiceV2
--      summary: Create new v2 BuinessService.
--      description: "To create new workflow configuration(BuinessService) in the system.\
--        \ API supports bulk creation with max limit as defined in the BuinessService\
--        \ Request. Please note that either whole batch succeeds or fails, there's\
--        \ no partial batch success. To create one BuinessService, please pass array\
--        \ with one BuinessService object. \n  \n\nFollowing Conditions are applied\
--        \ -\n  1. All actions have valid next state i.e next state should be present\
--        \ in the system\n  2. uuids will be auto generated and assigned to all sub\
--        \ objects\n  3. For end states isTerminateState should be true\n"
--      requestBody:
--        description: Details for the new BusinessService(s) + RequestInfo meta data.
+-      tag:
+-      - businessservicev2
+-      summary: create new v2 buinessservice.
+-      description: "to create new workflow configuration(buinessservice) in the system.\
+-        \ api support bulk creation with max limit a defined in the buinessservice\
+-        \ request. please note that either whole batch succeed or fail, there's\
+-        \ no partial batch succes. to create one buinessservice, please pas array\
+-        \ with one buinessservice object. \n  \n\nfollowing condition are applied\
+-        \ -\n  1. all action have valid next state i.e next state should be present\
+-        \ in the system\n  2. uuid will be auto generated and assigned to all sub\
+-        \ object\n  3. for end state isterminatestate should be true\n"
+-      requestbody:
+-        description: detail for the new businessservice(s) + requestinfo meta data.
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/BusinessServiceRequest'
+-              $ref: '#/component/schema/businessservicerequest'
 -        required: true
--      responses:
+-      response:
 -        201:
--          description: ReponseInfo withBusinessService(s) created successfully
+-          description: reponseinfo withbusinessservice(s) created successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/BusinessServiceResponse'
+-                $ref: '#/component/schema/businessserviceresponse'
 -        400:
--          description: BusinessService(s) creation failed
+-          description: businessservice(s) creation failed
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes'
--      x-codegen-request-body-name: BusinessServiceRequest    
--  /businessservice/v2/_update:
+-                $ref: '#/component/schema/errorre'
+-      x-codegen-request-body-name: businessservicerequest    
+-  /businessservice/v2/update:
 -    post:
--      tags:
--      - BusinessServiceV2
--      summary: Updates a existing v2 BuinessService.
--      description: "Can be used only to add new state or action in the workflow. Can\
--        \ update any existing field. Removing of any state is not allowed as applications\
--        \ in that state will be in invalid state \n  \n\nFollowing Conditions are\
--        \ applied -\n  1. can add states and actions\n  2. can update roles in action,\
--        \ SLA etc.\n"
--      requestBody:
--        description: Details for the new BusinessService(s) + RequestInfo meta data.
+-      tag:
+-      - businessservicev2
+-      summary: update a existing v2 buinessservice.
+-      description: "can be used only to add new state or action in the workflow. can\
+-        \ update any existing field. removing of any state i not allowed a application\
+-        \ in that state will be in invalid state \n  \n\nfollowing condition are\
+-        \ applied -\n  1. can add state and action\n  2. can update role in action,\
+-        \ sla etc.\n"
+-      requestbody:
+-        description: detail for the new businessservice(s) + requestinfo meta data.
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/BusinessServiceRequest'
+-              $ref: '#/component/schema/businessservicerequest'
 -        required: true
--      responses:
+-      response:
 -        201:
--          description: ReponseInfo withBusinessService(s) created successfully
+-          description: reponseinfo withbusinessservice(s) created successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/BusinessServiceResponse'
+-                $ref: '#/component/schema/businessserviceresponse'
 -        400:
--          description: BusinessService(s) creation failed
+-          description: businessservice(s) creation failed
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes'
--      x-codegen-request-body-name: BusinessServiceRequest    
--  /businessservice/v2/_search:
+-                $ref: '#/component/schema/errorre'
+-      x-codegen-request-body-name: businessservicerequest    
+-  /businessservice/v2/search:
 -    post:
--      tags:
--      - BusinessServiceV2
--      summary: Get the list of v2 BusinessServices defined in the system.
+-      tag:
+-      - businessservicev2
+-      summary: get the list of v2 businessservice defined in the system.
 -      description: |-
--        1. Search and get BusinessServices(s)  based on defined search criteria.
--        2. In case multiple parameters are passed BusinessService(s) will be searched as an AND combination of all the parameters.
--      parameters:
--      - name: businessServices
+-        1. search and get businessservice(s)  based on defined search criteria.
+-        2. in case multiple parameter are passed businessservice(s) will be searched a an and combination of all the parameter.
+-      parameter:
+-      - name: businessservice
 -        in: query
--        description: BusinessService code of the businessService
+-        description: businessservice code of the businessservice
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: integer
 -            format: int64
--      - name: tenantId
+-      - name: tenantid
 -        in: query
--        description: Unique id for a tenant.
+-        description: unique id for a tenant.
 -        required: true
 -        schema:
 -          type: string
 -          format: varchar
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/RequestInfo'
+-              $ref: '#/component/schema/requestinfo'
 -        required: false
--      responses:
+-      response:
 -        200:
--          description: Trade License(s) Retrived Successfully
+-          description: trade license(s) retrived successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/BusinessServiceResponse'
+-                $ref: '#/component/schema/businessserviceresponse'
 -        400:
--          description: Invalid input.
+-          description: invalid input.
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: requestInfo    
--  /businessservice/_create:
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: requestinfo    
+-  /businessservice/create:
 -    post:
--      tags:
--      - BusinessService
--      summary: Create new BuinessService.
--      description: "To create new workflow configuration(BuinessService) in the system.\
--        \ API supports bulk creation with max limit as defined in the BuinessService\
--        \ Request. Please note that either whole batch succeeds or fails, there's\
--        \ no partial batch success. To create one BuinessService, please pass array\
--        \ with one BuinessService object. \n  \n\nFollowing Conditions are applied\
--        \ -\n  1. All actions have valid next state i.e next state should be present\
--        \ in the system\n  2. uuids will be auto generated and assigned to all sub\
--        \ objects\n  3. For end states isTerminateState should be true\n"
--      requestBody:
--        description: Details for the new BusinessService(s) + RequestInfo meta data.
+-      tag:
+-      - businessservice
+-      summary: create new buinessservice.
+-      description: "to create new workflow configuration(buinessservice) in the system.\
+-        \ api support bulk creation with max limit a defined in the buinessservice\
+-        \ request. please note that either whole batch succeed or fail, there's\
+-        \ no partial batch succes. to create one buinessservice, please pas array\
+-        \ with one buinessservice object. \n  \n\nfollowing condition are applied\
+-        \ -\n  1. all action have valid next state i.e next state should be present\
+-        \ in the system\n  2. uuid will be auto generated and assigned to all sub\
+-        \ object\n  3. for end state isterminatestate should be true\n"
+-      requestbody:
+-        description: detail for the new businessservice(s) + requestinfo meta data.
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/BusinessServiceRequest'
+-              $ref: '#/component/schema/businessservicerequest'
 -        required: true
--      responses:
+-      response:
 -        201:
--          description: ReponseInfo withBusinessService(s) created successfully
+-          description: reponseinfo withbusinessservice(s) created successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/BusinessServiceResponse'
+-                $ref: '#/component/schema/businessserviceresponse'
 -        400:
--          description: BusinessService(s) creation failed
+-          description: businessservice(s) creation failed
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes'
--      x-codegen-request-body-name: BusinessServiceRequest
--  /businessservice/_update:
+-                $ref: '#/component/schema/errorre'
+-      x-codegen-request-body-name: businessservicerequest
+-  /businessservice/update:
 -    post:
--      tags:
--      - BusinessService
--      summary: Updates a existing BuinessService.
--      description: "Can be used only to add new state or action in the workflow. Can\
--        \ update any existing field. Removing of any state is not allowed as applications\
--        \ in that state will be in invalid state \n  \n\nFollowing Conditions are\
--        \ applied -\n  1. can add states and actions\n  2. can update roles in action,\
--        \ SLA etc.\n"
--      requestBody:
--        description: Details for the new BusinessService(s) + RequestInfo meta data.
+-      tag:
+-      - businessservice
+-      summary: update a existing buinessservice.
+-      description: "can be used only to add new state or action in the workflow. can\
+-        \ update any existing field. removing of any state i not allowed a application\
+-        \ in that state will be in invalid state \n  \n\nfollowing condition are\
+-        \ applied -\n  1. can add state and action\n  2. can update role in action,\
+-        \ sla etc.\n"
+-      requestbody:
+-        description: detail for the new businessservice(s) + requestinfo meta data.
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/BusinessServiceRequest'
+-              $ref: '#/component/schema/businessservicerequest'
 -        required: true
--      responses:
+-      response:
 -        201:
--          description: ReponseInfo withBusinessService(s) created successfully
+-          description: reponseinfo withbusinessservice(s) created successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/BusinessServiceResponse'
+-                $ref: '#/component/schema/businessserviceresponse'
 -        400:
--          description: BusinessService(s) creation failed
+-          description: businessservice(s) creation failed
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes'
--      x-codegen-request-body-name: BusinessServiceRequest
--  /businessservice/_search:
+-                $ref: '#/component/schema/errorre'
+-      x-codegen-request-body-name: businessservicerequest
+-  /businessservice/search:
 -    post:
--      tags:
--      - BusinessService
--      summary: Get the list of BusinessServices defined in the system.
+-      tag:
+-      - businessservice
+-      summary: get the list of businessservice defined in the system.
 -      description: |-
--        1. Search and get BusinessServices(s)  based on defined search criteria.
--        2. In case multiple parameters are passed BusinessService(s) will be searched as an AND combination of all the parameters.
--      parameters:
--      - name: businessServices
+-        1. search and get businessservice(s)  based on defined search criteria.
+-        2. in case multiple parameter are passed businessservice(s) will be searched a an and combination of all the parameter.
+-      parameter:
+-      - name: businessservice
 -        in: query
--        description: BusinessService code of the businessService
+-        description: businessservice code of the businessservice
 -        style: form
 -        explode: false
 -        schema:
--          maxItems: 50
+-          maxitem: 50
 -          type: array
--          items:
+-          item:
 -            type: integer
 -            format: int64
--      - name: tenantId
+-      - name: tenantid
 -        in: query
--        description: Unique id for a tenant.
+-        description: unique id for a tenant.
 -        required: true
 -        schema:
 -          type: string
 -          format: varchar
--      requestBody:
--        description: Parameter to carry Request metadata in the request body
+-      requestbody:
+-        description: parameter to carry request metadata in the request body
 -        content:
 -          '*/*':
 -            schema:
--              $ref: '#/components/schemas/RequestInfo'
+-              $ref: '#/component/schema/requestinfo'
 -        required: false
--      responses:
+-      response:
 -        200:
--          description: Trade License(s) Retrived Successfully
+-          description: trade license(s) retrived successfully
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/BusinessServiceResponse'
+-                $ref: '#/component/schema/businessserviceresponse'
 -        400:
--          description: Invalid input.
+-          description: invalid input.
 -          content:
 -            '*/*':
 -              schema:
--                $ref: '#/components/schemas/ErrorRes_2'
--      x-codegen-request-body-name: requestInfo
--components:
--  schemas:
--    Document:
--      required:
--      - documentType
--      - fileStoreId
--      - tenantId
--      type: object
+-                $ref: '#/component/schema/errorres2'
+-      x-codegen-request-body-name: requestinfo
+-component:
+-  schema:
 +          format: int64
-+        auditDetail:
-+          $ref: '#/components/schemas/AuditDetail'
-+    ProcessCreate:
-+      allOf:
-+        - $ref: '#/components/schemas/Process'
-+      required: [name, code]
-       properties:
-         id:
--          maxLength: 64
--          minLength: 2
+     document:
+-      required:
+-      - documenttype
+-      - filestoreid
+-      - tenantid
+       type: object
+       propertie:
+-        id:
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--          description: State Unique Identifier uuid
--        tenantId:
--          maxLength: 128
--          minLength: 2
-+          readOnly: true
-+    ProcessUpdate:
-+      type: object
-+      properties:
-+        name:
+-          description: state unique identifier uuid
+-        tenantid:
+-          maxlength: 128
+-          minlength: 2
+-          type: string
+-          description: unique identifier of ulb
+         documenttype:
+-          maxlength: 64
+-          minlength: 2
            type: string
--          description: Unique Identifier of ULB
--        documentType:
--          maxLength: 64
--          minLength: 2
-+        code:
-           type: string
--          description: 1.Unique document type code from common master. 2. This is
--            defined under mdms common master. 3. Object defination is defined under
+-          description: 1.unique document type code from common master. 2. thi i
+-            defined under mdm common master. 3. object defination i defined under
 -            'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/DocumentType'
--        fileStoreId:
--          maxLength: 64
--          minLength: 2
-+        description:
+         filestoreid:
+-          maxlength: 64
+-          minlength: 2
            type: string
--          description: Unique file store id of uploaded document.
--        documentUid:
--          maxLength: 64
--          minLength: 2
-+        version:
+-          description: unique file store id of uploaded document.
+         documentuid:
+-          maxlength: 64
+-          minlength: 2
            type: string
--          description: document number(eg.Pan number, aadhar number).
--        auditDetails:
--          $ref: '#/components/schemas/AuditDetails'
--      description: A Object holds the basic data for a Trade License
--    ProcessInstance:
+-          description: document number(eg.pan number, aadhar number).
++        additionaldetail:
++          type: object
++          additionalpropertie: {}
++    attributevalidation:
++      type: object
++      propertie:
++        id:
++          type: string
++          format: uuid
++        attribute:
++          type: object
++          additionalpropertie:
++            type: array
++            item:
++              type: string
++        assigneecheck:
++          type: boolean
+         auditdetail:
+           $ref: '#/component/schema/auditdetail'
+-      description: a object hold the basic data for a trade license
+-    processinstance:
 -      required:
 -      - action
--      - businessId
--      - businessService
--      - tenantId
-+        sla:
-+          type: integer
-+          format: int64
-+    State:
+-      - businessid
+-      - businessservice
+-      - tenantid
++    proces:
        type: object
-       properties:
+       propertie:
          id:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
            type: string
--          description: Unique process instance id (UUID)
--          readOnly: true
--        tenantId:
--          maxLength: 128
--          minLength: 2
+-          description: unique proces instance id (uuid)
+-          readonly: true
+-        tenantid:
+-          maxlength: 128
+-          minlength: 2
 -          type: string
--          description: Unique Identifier of ULB
--        businessService:
--          maxLength: 256
--          minLength: 2
+-          description: unique identifier of ulb
+-        businessservice:
+-          maxlength: 256
+-          minlength: 2
 -          type: string
--          description: Business service key.
--        businessId:
--          maxLength: 64
--          minLength: 2
+-          description: busines service key.
+-        businessid:
+-          maxlength: 64
+-          minlength: 2
 +          format: uuid
-+        processId:
-           type: string
--          description: "Business id is a unique identifier of a task. eg(Propertyid,\
--            \ \nTLid, ServiceRequestid) \n"
--        action:
--          maxLength: 64
--          minLength: 2
-+          format: uuid
-+        code:
-           type: string
--          description: Actions are define for each business service.
--        state:
--          maxLength: 64
--          minLength: 2
 +        name:
            type: string
--          description: Status will be populate by efengine for each action, if it
--            is configured.
--          readOnly: true
--        comment:
--          maxLength: 64
--          minLength: 2
+-          description: "busines id i a unique identifier of a task. eg(propertyid,\
+-            \ \ntlid, servicerequestid) \n"
+-        action:
+-          maxlength: 64
+-          minlength: 2
++        code:
+           type: string
+-          description: action are define for each busines service.
+-        state:
+-          maxlength: 64
+-          minlength: 2
 +        description:
            type: string
--          description: consumer can pass the comment on each action.
--        documents:
+-          description: statu will be populate by efengine for each action, if it
+-            i configured.
+-          readonly: true
+-        comment:
+-          maxlength: 64
+-          minlength: 2
++        version:
+           type: string
+-          description: consumer can pas the comment on each action.
+-        document:
 -          type: array
--          description: Documents can be attached with each of the action.
--          items:
--            $ref: '#/components/schemas/Document'
+-          description: document can be attached with each of the action.
+-          item:
+-            $ref: '#/component/schema/document'
 -        assigner:
--          $ref: '#/components/schemas/User'
--        assignes:
+-          $ref: '#/component/schema/user'
+-        assigne:
 -          type: array
--          items:
--            $ref: '#/components/schemas/User'
--        nextActions:
+-          item:
+-            $ref: '#/component/schema/user'
+-        nextaction:
 -          type: array
--          description: Wf will return next possible action based on .
--          readOnly: true
--          items:
+-          description: wf will return next possible action based on .
+-          readonly: true
+-          item:
 -            type: string
          sla:
            type: integer
--          description: Date from when license is valid as epoch.
+-          description: date from when license i valid a epoch.
            format: int64
--        currentStatus:
+-        currentstatu:
 -          type: string
--          description: Status after action performed
--        previousStatus:
+-          description: statu after action performed
+-        previousstatu:
 -          type: string
--          description: Status before action performed
+-          description: statu before action performed
 -        entity:
 -          type: object
--          properties: {}
--        auditDetails:
--          $ref: '#/components/schemas/AuditDetails'
--      description: A Object holds the basic data for a Trade License
--    StatusCountReq:
+-          propertie: {}
+         auditdetail:
+           $ref: '#/component/schema/auditdetail'
+-      description: a object hold the basic data for a trade license
+-    statuscountreq:
 -      type: object
--      properties:
--        RequestInfo:
--          $ref: '#/components/schemas/RequestInfo'
--        ProcessInstanceSearchCriteria:
--          $ref: '#/components/schemas/ProcessInstanceSearchCriteria'
--    BusinessService:
++    processcreate:
++      allof:
++        - $ref: '#/component/schema/proces'
++      required: [name, code]
+       propertie:
+-        requestinfo:
+-          $ref: '#/component/schema/requestinfo'
+-        processinstancesearchcriteria:
+-          $ref: '#/component/schema/processinstancesearchcriteria'
+-    businessservice:
 -      required:
--      - businessService
--      - tenantId
--      type: object
--      properties:
--        tenantId:
--          maxLength: 128
--          minLength: 2
--          type: string
--          description: Unique Identifier of ULB
--        uuid:
--          maxLength: 64
--          minLength: 2
--          type: string
--          description: Unique Identifier uuid
--        businessService:
--          maxLength: 64
--          minLength: 2
--          type: string
--          description: Unique Identifier of the Trade License (UUID)
--        getUri:
--          maxLength: 32
--          minLength: 2
--          type: string
--          description: Unique License Number of the Trade. This is  unique in system
--            for a tenant. This is mandatory but always be generated on the final approval.
--            In Case of Legacy License User will enter the Old License Number.
--        postUri:
--          maxLength: 32
--          minLength: 2
--          type: string
--          description: Unique License Number of the Trade. This is  unique in system
--            for a tenant. This is mandatory but always be generated on the final approval.
--            In Case of Legacy License User will enter the Old License Number.
--        states:
-+        isInitial:
-+          type: boolean
-+        isParallel:
-+          type: boolean
-+        isJoin:
-+          type: boolean
-+        branchStates:
-           type: array
-           items:
--            $ref: '#/components/schemas/State'
--        auditDetails:
--          $ref: '#/components/schemas/AuditDetails'
--      description: A Object holds the
--    State:
-+            type: string
-+        auditDetail:
-+          $ref: '#/components/schemas/AuditDetail'
-+    StateCreate:
-+      allOf:
-+        - $ref: '#/components/schemas/State'
-+      required: [code, name]
-+      properties:
+-      - businessservice
+-      - tenantid
 +        id:
-+          readOnly: true
-+        processId:
-+          readOnly: true
-+    StateUpdate:
++          readonly: true
++    processupdate:
        type: object
-       properties:
+       propertie:
+-        tenantid:
+-          maxlength: 128
+-          minlength: 2
+-          type: string
+-          description: unique identifier of ulb
 -        uuid:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--          description: State Unique Identifier uuid
--        tenantId:
--          maxLength: 128
--          minLength: 2
+-          description: unique identifier uuid
+-        businessservice:
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--          description: Unique Identifier of ULB
--        businessServiceId:
--          maxLength: 64
--          minLength: 2
+-          description: unique identifier of the trade license (uuid)
+-        geturi:
+-          maxlength: 32
+-          minlength: 2
 -          type: string
--          description: Unique Identifier of the Trade License (UUID)
+-          description: unique license number of the trade. thi i  unique in system
+-            for a tenant. thi i mandatory but alway be generated on the final approval.
+-            in case of legacy license user will enter the old license number.
+-        posturi:
+-          maxlength: 32
+-          minlength: 2
+-          type: string
+-          description: unique license number of the trade. thi i  unique in system
+-            for a tenant. thi i mandatory but alway be generated on the final approval.
+-            in case of legacy license user will enter the old license number.
 -        state:
--          maxLength: 32
--          minLength: 2
--          type: string
--          description: Unique License Number of the Trade. This is  unique in system
--            for a tenant. This is mandatory but always be generated on the final approval.
--            In Case of Legacy License User will enter the Old License Number.
--        applicationStatus:
-+        code:
-           type: string
--          description: Application status as in module
--        docUploadRequired:
+-          type: array
+-          item:
+-            $ref: '#/component/schema/state'
+-        auditdetail:
+-          $ref: '#/component/schema/auditdetail'
+-      description: a object hold the
 +        name:
 +          type: string
++        code:
++          type: string
 +        description:
++          type: string
++        version:
 +          type: string
 +        sla:
 +          type: integer
 +          format: int64
-+        isInitial:
-           type: boolean
--          description: Boolean to describe if documents are mandatory
--        isStartState:
-+        isParallel:
-           type: boolean
--          description: Boolean to describe if the workflow can be started from this
--            state
--        isTerminateState:
-+        isJoin:
-           type: boolean
--          description: Boolean to describe if the state is the last state of workflow
--        actions:
-+        branchStates:
-           type: array
-           items:
--            $ref: '#/components/schemas/Action'
--        auditDetails:
--          $ref: '#/components/schemas/AuditDetails'
--      description: A Object holds the basic data for a Trade License
-+            type: string
-     Action:
+     state:
        type: object
-       properties:
+       propertie:
 -        uuid:
--          maxLength: 64
--          minLength: 2
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--          description: State Unique Identifier uuid
--        tenantId:
--          maxLength: 128
--          minLength: 2
+-          description: state unique identifier uuid
+-        tenantid:
+-          maxlength: 128
+-          minlength: 2
 -          type: string
--          description: TenantId of the ULB
--        stateId:
--          maxLength: 64
--          minLength: 2
+-          description: unique identifier of ulb
+-        businessserviceid:
+-          maxlength: 64
+-          minlength: 2
 +        id:
            type: string
--          description: The uuid of the state on which action is to performed
--        action:
+-          description: unique identifier of the trade license (uuid)
+-        state:
+-          maxlength: 32
+-          minlength: 2
 +          format: uuid
-+        name:
-           type: string
--          description: The action to be performed
--        nextStateId:
--          maxLength: 64
--          minLength: 2
-+        label:
-           type: string
--          description: The uuid of the resultant state
--        roles:
--          type: array
--          description: Used for search result and create only
--          items:
--            type: string
--        auditDetails:
--          $ref: '#/components/schemas/AuditDetails'
--      description: A Object holds the basic data for a Trade License
--    ProcessInstanceRequest:
-+        currentState:
++        processid:
 +          type: string
 +          format: uuid
-+        nextState:
-+          type: string
-+        attributeValidation:
-+          $ref: '#/components/schemas/AttributeValidation'
-+        auditDetail:
-+          $ref: '#/components/schemas/AuditDetail'
-+    ActionCreate:
-       type: object
-+      required: [name, nextState]
-       properties:
--        RequestInfo:
--          $ref: '#/components/schemas/RequestInfo'
--        ProcessInstances:
--          type: array
--          description: Used for search result and create only
--          items:
--            $ref: '#/components/schemas/ProcessInstance'
--      description: Contract class to receive request. Array of TradeLicense items
--        are used in case of create, whereas single TradeLicense item is used for update
--    ProcessCountResponse:
++        code:
+           type: string
+-          description: unique license number of the trade. thi i  unique in system
+-            for a tenant. thi i mandatory but alway be generated on the final approval.
+-            in case of legacy license user will enter the old license number.
+-        applicationstatu:
 +        name:
 +          type: string
-+        label:
-+          type: string
-+        nextState:
-+          type: string
-+          description: State code or UUID for the next state.
-+        attributeValidation:
-+          $ref: '#/components/schemas/AttributeValidation'
-+    ActionUpdate:
-+      allOf:
-+        - $ref: '#/components/schemas/ActionCreate'
-+    EscalationConfig:
-       type: object
-       properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo'
--        Count: 
-+        id:
-+          type: string
-+          format: uuid
-+        processId:
-+          type: string
-+          format: uuid
-+        stateCode:
-+          type: string
-+        escalationAction:
-+          type: string
-+        stateSlaMinutes:
-           type: integer
--        ProcessInstances:
--          type: array
--          description: Used for search result and create only
--          items:
--            $ref: '#/components/schemas/ProcessIntanceResponse'
--      description: Contract class to send response. Array of TradeLicense items are
--        used in case of search results or response for create, whereas single TradeLicense
--        item is used for update
--    ProcessIntanceResponse:
-+        processSlaMinutes:
++        description:
+           type: string
+-          description: application statu a in module
+-        docuploadrequired:
++        sla:
 +          type: integer
-+        auditDetail:
-+          $ref: '#/components/schemas/AuditDetail'
-+    EscalationConfigCreate:
-+      allOf:
-+        - $ref: '#/components/schemas/EscalationConfig'
-+      required: [stateCode, escalationAction]
-+      properties:
-+        id:
-+          readOnly: true
-+    ProcessDefinitionDetail:
-       type: object
-       properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo'
--        ProcessInstances:
-+        process:
-+          $ref: '#/components/schemas/Process'
-+        states:
++          format: int64
++        isinitial:
+           type: boolean
+-          description: boolean to describe if document are mandatory
+-        isstartstate:
++        isparallel:
+           type: boolean
+-          description: boolean to describe if the workflow can be started from thi
+-            state
+-        isterminatestate:
++        isjoin:
+           type: boolean
+-          description: boolean to describe if the state i the last state of workflow
+-        action:
++        branchstate:
            type: array
--          description: Used for search result and create only
-           items:
--            $ref: '#/components/schemas/ProcessInstance'
--      description: Contract class to send response. Array of TradeLicense items are
--        used in case of search results or response for create, whereas single TradeLicense
--        item is used for update
--    ProcessInstanceSearchCriteria:
-+            type: object
-+            properties:
-+              state:
-+                $ref: '#/components/schemas/State'
-+              actions:
-+                type: array
-+                items:
-+                  $ref: '#/components/schemas/Action'
-+    ProcessInstance:
+           item:
+-            $ref: '#/component/schema/action'
++            type: string
+         auditdetail:
+           $ref: '#/component/schema/auditdetail'
+-      description: a object hold the basic data for a trade license
+-    action:
++    statecreate:
++      allof:
++        - $ref: '#/component/schema/state'
++      required: [code, name]
++      propertie:
++        id:
++          readonly: true
++        processid:
++          readonly: true
++    stateupdate:
        type: object
-       properties:
--        tenantId:
+       propertie:
+-        uuid:
+-          maxlength: 64
+-          minlength: 2
+-          type: string
+-          description: state unique identifier uuid
+-        tenantid:
+-          maxlength: 128
+-          minlength: 2
+-          type: string
+-          description: tenantid of the ulb
+-        stateid:
+-          maxlength: 64
+-          minlength: 2
++        code:
+           type: string
+-          description: the uuid of the state on which action i to performed
+-        action:
++        name:
+           type: string
+-          description: the action to be performed
+-        nextstateid:
+-          maxlength: 64
+-          minlength: 2
++        description:
+           type: string
+-          description: the uuid of the resultant state
+-        role:
++        sla:
++          type: integer
++          format: int64
++        isinitial:
++          type: boolean
++        isparallel:
++          type: boolean
++        isjoin:
++          type: boolean
++        branchstate:
+           type: array
+-          description: used for search result and create only
+           item:
+             type: string
++    action:
++      type: object
++      propertie:
 +        id:
 +          type: string
 +          format: uuid
-+        processId:
++        name:
 +          type: string
-+        entityId:
++        label:
++          type: string
++        currentstate:
++          type: string
++          format: uuid
++        nextstate:
++          type: string
++        attributevalidation:
++          $ref: '#/component/schema/attributevalidation'
+         auditdetail:
+           $ref: '#/component/schema/auditdetail'
+-      description: a object hold the basic data for a trade license
+-    processinstancerequest:
++    actioncreate:
+       type: object
++      required: [name, nextstate]
+       propertie:
+-        requestinfo:
+-          $ref: '#/component/schema/requestinfo'
+-        processinstance:
+-          type: array
+-          description: used for search result and create only
+-          item:
+-            $ref: '#/component/schema/processinstance'
+-      description: contract clas to receive request. array of tradelicense item
+-        are used in case of create, wherea single tradelicense item i used for update
+-    processcountresponse:
++        name:
++          type: string
++        label:
++          type: string
++        nextstate:
++          type: string
++          description: state code or uuid for the next state.
++        attributevalidation:
++          $ref: '#/component/schema/attributevalidation'
++    actionupdate:
++      allof:
++        - $ref: '#/component/schema/actioncreate'
++    escalationconfig:
+       type: object
+       propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo'
+-        count: 
++        id:
++          type: string
++          format: uuid
++        processid:
++          type: string
++          format: uuid
++        statecode:
++          type: string
++        escalationaction:
++          type: string
++        stateslaminute:
+           type: integer
+-        processinstance:
+-          type: array
+-          description: used for search result and create only
+-          item:
+-            $ref: '#/component/schema/processintanceresponse'
+-      description: contract clas to send response. array of tradelicense item are
+-        used in case of search result or response for create, wherea single tradelicense
+-        item i used for update
+-    processintanceresponse:
++        processslaminute:
++          type: integer
++        auditdetail:
++          $ref: '#/component/schema/auditdetail'
++    escalationconfigcreate:
++      allof:
++        - $ref: '#/component/schema/escalationconfig'
++      required: [statecode, escalationaction]
++      propertie:
++        id:
++          readonly: true
++    processdefinitiondetail:
+       type: object
+       propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo'
+-        processinstance:
++        proces:
++          $ref: '#/component/schema/proces'
++        state:
+           type: array
+-          description: used for search result and create only
+           item:
+-            $ref: '#/component/schema/processinstance'
+-      description: contract clas to send response. array of tradelicense item are
+-        used in case of search result or response for create, wherea single tradelicense
+-        item i used for update
+-    processinstancesearchcriteria:
++            type: object
++            propertie:
++              state:
++                $ref: '#/component/schema/state'
++              action:
++                type: array
++                item:
++                  $ref: '#/component/schema/action'
++    processinstance:
+       type: object
+       propertie:
+-        tenantid:
++        id:
++          type: string
++          format: uuid
++        processid:
++          type: string
++        entityid:
 +          type: string
 +        action:
            type: string
-         status:
+         statu:
            type: string
--          description: status of request processing - to be enhanced in futuer to
--            include INPROGRESS
--        businessIds:
--          maxLength: 64
--          minLength: 2
+-          description: statu of request processing - to be enhanced in futuer to
+-            include inprogres
+-        businessid:
+-          maxlength: 64
+-          minlength: 2
 -          type: string
--          description: "Business id is a unique identifier of a task. eg(Propertyid,\
--            \ \nTLid, ServiceRequestid) \n"    
+-          description: "busines id i a unique identifier of a task. eg(propertyid,\
+-            \ \ntlid, servicerequestid) \n"    
 -        assignee: 
 +        comment:
-+          type: string
-+        documents:
-+          type: array
-+          items:
-+            $ref: '#/components/schemas/Document'
-+        assigner:
            type: string
--          description: The unique  Old license number for a Application.
--        ids: 
-+        assignees:
+-          description: the unique  old license number for a application.
+-        id: 
++        document:
++          type: array
++          item:
++            $ref: '#/component/schema/document'
++        assigner:
++          type: string
++        assignee:
            type: array
--          description: unique identifier of Application
-           items:
+-          description: unique identifier of application
+           item:
              type: string
 -        history: 
 -          type: boolean
--          description: Boolean flag to return history of the workflow
--        fromDate:
-+        currentState:
+-          description: boolean flag to return history of the workflow
+-        fromdate:
++        currentstate:
 +          type: string
-+        stateSla:
++        statesla:
            type: integer
            format: int64
--          description: Date from which the operation is registered 
--        toDate:
-+        processSla:
+-          description: date from which the operation i registered 
+-        todate:
++        processsla:
            type: integer
            format: int64
--          description: Date to which the operation is registered
+-          description: date to which the operation i registered
 -        offset:
 -          type: integer
--          description: Starting offset for returning search response
+-          description: starting offset for returning search response
 -        limit: 
 -          type: integer
--          description: Number of records to be returned
--        businessService:
+-          description: number of record to be returned
+-        businessservice:
 -          type: string
--          description: Used for search result and create only
--        moduleName: 
+-          description: used for search result and create only
+-        modulename: 
 -          type: string
--          description: Module name to which workflow application belongs
--    ResponseEntity:
--      title: ResponseEntity
+-          description: module name to which workflow application belong
+-    responseentity:
+-      title: responseentity
 -      type: object
--      properties:
+-      propertie:
 -        body:
-+        attributes:
++        attribute:
            type: object
 -        result:
-+          additionalProperties:
++          additionalpropertie:
 +            type: array
-+            items:
++            item:
 +              type: string
-+        nextActions:
++        nextaction:
            type: array
-           items:
+           item:
              type: string
--        statusCode:
-+        parentInstanceId:
+-        statuscode:
++        parentinstanceid:
            type: string
 -          enum:
--            - ACCEPTED
--            - ALREADY_REPORTED
--            - BAD_GATEWAY
--            - BAD_REQUEST
--            - BANDWIDTH_LIMIT_EXCEEDED
--            - CHECKPOINT
--            - CONFLICT
--            - CONTINUE
--            - CREATED
--            - DESTINATION_LOCKED
--            - EXPECTATION_FAILED
--            - FAILED_DEPENDENCY
--            - FORBIDDEN
--            - FOUND
--            - GATEWAY_TIMEOUT
--            - GONE
--            - HTTP_VERSION_NOT_SUPPORTED
--            - IM_USED
--            - INSUFFICIENT_SPACE_ON_RESOURCE
--            - INSUFFICIENT_STORAGE
--            - INTERNAL_SERVER_ERROR
--            - I_AM_A_TEAPOT
--            - LENGTH_REQUIRED
--            - LOCKED
--            - LOOP_DETECTED
--            - METHOD_FAILURE
--            - METHOD_NOT_ALLOWED
--            - MOVED_PERMANENTLY
--            - MOVED_TEMPORARILY
--            - MULTIPLE_CHOICES
--            - MULTI_STATUS
--            - NETWORK_AUTHENTICATION_REQUIRED
--            - NON_AUTHORITATIVE_INFORMATION
--            - NOT_ACCEPTABLE
--            - NOT_EXTENDED
--            - NOT_FOUND
--            - NOT_IMPLEMENTED
--            - NOT_MODIFIED
--            - NO_CONTENT
--            - OK
--            - PARTIAL_CONTENT
--            - PAYLOAD_TOO_LARGE
--            - PAYMENT_REQUIRED
--            - PERMANENT_REDIRECT
--            - PRECONDITION_FAILED
--            - PRECONDITION_REQUIRED
--            - PROCESSING
--            - PROXY_AUTHENTICATION_REQUIRED
--            - REQUESTED_RANGE_NOT_SATISFIABLE
--            - REQUEST_ENTITY_TOO_LARGE
--            - REQUEST_HEADER_FIELDS_TOO_LARGE
--            - REQUEST_TIMEOUT
--            - REQUEST_URI_TOO_LONG
--            - RESET_CONTENT
--            - SEE_OTHER
--            - SERVICE_UNAVAILABLE
--            - SWITCHING_PROTOCOLS
--            - TEMPORARY_REDIRECT
--            - TOO_EARLY
--            - TOO_MANY_REQUESTS
--            - UNAUTHORIZED
--            - UNAVAILABLE_FOR_LEGAL_REASONS
--            - UNPROCESSABLE_ENTITY
--            - UNSUPPORTED_MEDIA_TYPE
--            - UPGRADE_REQUIRED
--            - URI_TOO_LONG
--            - USE_PROXY
--            - VARIANT_ALSO_NEGOTIATES
--        statusCountValue:
+-            - accepted
+-            - alreadyreported
+-            - badgateway
+-            - badrequest
+-            - bandwidthlimitexceeded
+-            - checkpoint
+-            - conflict
+-            - continue
+-            - created
+-            - destinationlocked
+-            - expectationfailed
+-            - faileddependency
+-            - forbidden
+-            - found
+-            - gatewaytimeout
+-            - gone
+-            - httpversionnotsupported
+-            - imused
+-            - insufficientspaceonresource
+-            - insufficientstorage
+-            - internalservererror
+-            - iamateapot
+-            - lengthrequired
+-            - locked
+-            - loopdetected
+-            - methodfailure
+-            - methodnotallowed
+-            - movedpermanently
+-            - movedtemporarily
+-            - multiplechoice
+-            - multistatu
+-            - networkauthenticationrequired
+-            - nonauthoritativeinformation
+-            - notacceptable
+-            - notextended
+-            - notfound
+-            - notimplemented
+-            - notmodified
+-            - nocontent
+-            - ok
+-            - partialcontent
+-            - payloadtoolarge
+-            - paymentrequired
+-            - permanentredirect
+-            - preconditionfailed
+-            - preconditionrequired
+-            - processing
+-            - proxyauthenticationrequired
+-            - requestedrangenotsatisfiable
+-            - requestentitytoolarge
+-            - requestheaderfieldstoolarge
+-            - requesttimeout
+-            - requesturitoolong
+-            - resetcontent
+-            - seeother
+-            - serviceunavailable
+-            - switchingprotocol
+-            - temporaryredirect
+-            - tooearly
+-            - toomanyrequest
+-            - unauthorized
+-            - unavailableforlegalreason
+-            - unprocessableentity
+-            - unsupportedmediatype
+-            - upgraderequired
+-            - uritoolong
+-            - useproxy
+-            - variantalsonegotiate
+-        statuscountvalue:
 -          type: integer
 -          format: int32      
--    BusinessServiceRequest:
+-    businessservicerequest:
 -      type: object
--      properties:
--        RequestInfo:
--          $ref: '#/components/schemas/RequestInfo'
--        BusinessService:
+-      propertie:
+-        requestinfo:
+-          $ref: '#/component/schema/requestinfo'
+-        businessservice:
 -          type: array
--          description: Used for search result and create only
--          items:
--            $ref: '#/components/schemas/BusinessService'
--      description: Contract class to receive request. Array of TradeLicense items
--        are used in case of create, whereas single TradeLicense item is used for update
--    BusinessServiceResponse:
+-          description: used for search result and create only
+-          item:
+-            $ref: '#/component/schema/businessservice'
+-      description: contract clas to receive request. array of tradelicense item
+-        are used in case of create, wherea single tradelicense item i used for update
+-    businessserviceresponse:
 -      type: object
--      properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo'
--        BusinessService:
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo'
+-        businessservice:
 -          type: array
--          description: Used for search result and create only
--          items:
--            $ref: '#/components/schemas/BusinessService'
--      description: Contract class to send response. Array of TradeLicense items are
--        used in case of search results or response for create, whereas single TradeLicense
--        item is used for update
--    ErrorRes:
+-          description: used for search result and create only
+-          item:
+-            $ref: '#/component/schema/businessservice'
+-      description: contract clas to send response. array of tradelicense item are
+-        used in case of search result or response for create, wherea single tradelicense
+-        item i used for update
+-    errorre:
 -      required:
--      - ResponseInfo
+-      - responseinfo
 -      type: object
--      properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo'
--        Errors:
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo'
+-        error:
 -          type: array
--          description: Error response array corresponding to Request Object array.
--            In case of single object submission or _search related paths this may
+-          description: error response array corresponding to request object array.
+-            in case of single object submission or search related path thi may
 -            be an array of one error element
--          items:
--            $ref: '#/components/schemas/Error'
--      description: All APIs will return ErrorRes in case of failure which will carry
--        ResponseInfo as metadata and Error object as actual representation of error.
--        In case of bulk apis, some apis may chose to return the array of Error objects
+-          item:
+-            $ref: '#/component/schema/error'
+-      description: all api will return errorre in case of failure which will carry
+-        responseinfo a metadata and error object a actual representation of error.
+-        in case of bulk api, some api may chose to return the array of error object
 -        to indicate individual failure.
--    ResponseInfo:
+-    responseinfo:
 -      required:
--      - apiId
--      - status
--      - ts
+-      - apiid
+-      - statu
+-      - t
 -      - ver
-+        branchId:
++        branchid:
 +          type: string
-+        isParallelBranch:
++        isparallelbranch:
 +          type: boolean
-+        isLatest:
++        islatest:
 +          type: boolean
 +        escalated:
 +          type: boolean
-+        auditDetails:
-+          $ref: '#/components/schemas/AuditDetail'
-+    TransitionRequest:
++        auditdetail:
++          $ref: '#/component/schema/auditdetail'
++    transitionrequest:
        type: object
-+      required: [processId, entityId]
-       properties:
--        apiId:
--          maxLength: 128
-+        processInstanceId:
++      required: [processid, entityid]
+       propertie:
+-        apiid:
+-          maxlength: 128
++        processinstanceid:
            type: string
--          description: unique API ID
+-          description: unique api id
 -        ver:
--          maxLength: 32
-+        processId:
+-          maxlength: 32
++        processid:
            type: string
--          description: API version
--        ts:
+-          description: api version
+-        t:
 -          type: integer
 -          description: response time in epoch
 -          format: int64
--        resMsgId:
--          maxLength: 256
-+        entityId:
+-        resmsgid:
+-          maxlength: 256
++        entityid:
            type: string
--          description: unique response message id (UUID) - will usually be the correlation
+-          description: unique response message id (uuid) - will usually be the correlation
 -            id from the server
--        msgId:
--          maxLength: 256
+-        msgid:
+-          maxlength: 256
 +        init:
 +          type: boolean
 +        action:
            type: string
 -          description: message id of the request
-         status:
+         statu:
            type: string
--          description: status of request processing - to be enhanced in futuer to
--            include INPROGRESS
+-          description: statu of request processing - to be enhanced in futuer to
+-            include inprogres
 -          enum:
--          - SUCCESSFUL
--          - FAILED
--      description: ResponseInfo should be used to carry metadata information about
--        the response from the server. apiId, ver and msgId in ResponseInfo should
--        always correspond to the same values in respective request's RequestInfo.
--    Error:
+-          - successful
+-          - failed
+-      description: responseinfo should be used to carry metadata information about
+-        the response from the server. apiid, ver and msgid in responseinfo should
+-        alway correspond to the same value in respective request's requestinfo.
+-    error:
 -      required:
 -      - code
 -      - message
 -      type: object
--      properties:
+-      propertie:
 -        code:
-+        currentState:
++        currentstate:
            type: string
--          description: Error Code will be module specific error label/code to identiffy
--            the error. All modules should also publish the Error codes with their
--            specific localized values in localization service to ensure clients can
--            print locale specific error messages. Example for error code would be
--            User.NotFound to indicate User Not Found by User/Authentication service.
--            All services must declare their possible Error Codes with brief description
--            in the error response section of their API path.
+-          description: error code will be module specific error label/code to identiffy
+-            the error. all module should also publish the error code with their
+-            specific localized value in localization service to ensure client can
+-            print locale specific error message. example for error code would be
+-            user.notfound to indicate user not found by user/authentication service.
+-            all service must declare their possible error code with brief description
+-            in the error response section of their api path.
 -        message:
 -          type: string
--          description: English locale message of the error code. Clients should make
+-          description: english locale message of the error code. client should make
 -            a separate call to get the other locale description if configured with
--            the service. Clients may choose to cache these locale specific messages
--            to enhance performance with a reasonable TTL (May be defined by the localization
+-            the service. client may choose to cache these locale specific message
+-            to enhance performance with a reasonable ttl (may be defined by the localization
 -            service based on tenant + module combination).
 -        description:
 +        comment:
            type: string
--          description: Optional long description of the error to help clients take
--            remedial action. This will not be available as part of localization service.
--        params:
-+        documents:
+-          description: optional long description of the error to help client take
+-            remedial action. thi will not be available a part of localization service.
+-        param:
++        document:
            type: array
--          description: Some error messages may carry replaceable fields (say $1, $2)
--            to provide more context to the message. E.g. Format related errors may
--            want to indicate the actual field for which the format is invalid. Client's
--            should use the values in the param array to replace those fields.
-           items:
+-          description: some error message may carry replaceable field (say $1, $2)
+-            to provide more context to the message. e.g. format related error may
+-            want to indicate the actual field for which the format i invalid. client's
+-            should use the value in the param array to replace those field.
+           item:
              type: string
--      description: Error object will be returned as a part of reponse body in conjunction
--        with ResponseInfo as part of ErrorResponse whenever the request processing
--        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
--        be HTTP 400.
--    ErrorRes_2:
+-      description: error object will be returned a a part of reponse body in conjunction
+-        with responseinfo a part of errorresponse whenever the request processing
+-        statu in the responseinfo i failed. http return in thi scenario will usually
+-        be http 400.
+-    errorres2:
 -      required:
--      - ResponseInfo
+-      - responseinfo
 -      type: object
--      properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo_2'
--        Errors:
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo2'
+-        error:
 +        assigner:
 +          type: string
-+        assignees:
++        assignee:
            type: array
--          description: Error response array corresponding to Request Object array.
--            In case of single object submission or _search related paths this may
+-          description: error response array corresponding to request object array.
+-            in case of single object submission or search related path thi may
 -            be an array of one error element
-           items:
--            $ref: '#/components/schemas/Error_2'
--      description: All APIs will return ErrorRes in case of failure which will carry
--        ResponseInfo as metadata and Error object as actual representation of error.
--        In case of bulk apis, some apis may chose to return the array of Error objects
+           item:
+-            $ref: '#/component/schema/error2'
+-      description: all api will return errorre in case of failure which will carry
+-        responseinfo a metadata and error object a actual representation of error.
+-        in case of bulk api, some api may chose to return the array of error object
 -        to indicate individual failure.
--    ResponseInfo_2:
+-    responseinfo2:
 -      required:
--      - apiId
--      - status
--      - ts
+-      - apiid
+-      - statu
+-      - t
 -      - ver
 +            type: string
-+        attributes:
++        attribute:
 +          type: object
-+          additionalProperties:
++          additionalpropertie:
 +            type: array
-+            items:
++            item:
 +              type: string
-+    TransitionResponse:
++    transitionresponse:
        type: object
-       properties:
--        apiId:
--          maxLength: 128
+       propertie:
+-        apiid:
+-          maxlength: 128
 +        id:
            type: string
--          description: unique API ID
+-          description: unique api id
 -        ver:
--          maxLength: 32
-+        processId:
+-          maxlength: 32
++        processid:
            type: string
--          description: API version
--        ts:
+-          description: api version
+-        t:
 -          type: integer
 -          description: response time in epoch
 -          format: int64
--        resMsgId:
--          maxLength: 256
-+        entityId:
+-        resmsgid:
+-          maxlength: 256
++        entityid:
            type: string
--          description: unique response message id (UUID) - will usually be the correlation
+-          description: unique response message id (uuid) - will usually be the correlation
 -            id from the server
--        msgId:
--          maxLength: 256
+-        msgid:
+-          maxlength: 256
 +        action:
            type: string
 -          description: message id of the request
-         status:
+         statu:
            type: string
--          description: status of request processing - to be enhanced in futuer to
--            include INPROGRESS
+-          description: statu of request processing - to be enhanced in futuer to
+-            include inprogres
 -          enum:
--          - SUCCESSFUL
--          - FAILED
--      description: ResponseInfo should be used to carry metadata information about
--        the response from the server. apiId, ver and msgId in ResponseInfo should
--        always correspond to the same values in respective request's RequestInfo.
--    Error_2:
+-          - successful
+-          - failed
+-      description: responseinfo should be used to carry metadata information about
+-        the response from the server. apiid, ver and msgid in responseinfo should
+-        alway correspond to the same value in respective request's requestinfo.
+-    error2:
 -      required:
 -      - code
 -      - message
 -      type: object
--      properties:
+-      propertie:
 -        code:
 -          type: string
--          description: Error Code will be module specific error label/code to identiffy
--            the error. All modules should also publish the Error codes with their
--            specific localized values in localization service to ensure clients can
--            print locale specific error messages. Example for error code would be
--            User.NotFound to indicate User Not Found by User/Authentication service.
--            All services must declare their possible Error Codes with brief description
--            in the error response section of their API path.
+-          description: error code will be module specific error label/code to identiffy
+-            the error. all module should also publish the error code with their
+-            specific localized value in localization service to ensure client can
+-            print locale specific error message. example for error code would be
+-            user.notfound to indicate user not found by user/authentication service.
+-            all service must declare their possible error code with brief description
+-            in the error response section of their api path.
 -        message:
 -          type: string
--          description: English locale message of the error code. Clients should make
+-          description: english locale message of the error code. client should make
 -            a separate call to get the other locale description if configured with
--            the service. Clients may choose to cache these locale specific messages
--            to enhance performance with a reasonable TTL (May be defined by the localization
+-            the service. client may choose to cache these locale specific message
+-            to enhance performance with a reasonable ttl (may be defined by the localization
 -            service based on tenant + module combination).
 -        description:
 +        comment:
            type: string
--          description: Optional long description of the error to help clients take
--            remedial action. This will not be available as part of localization service.
--        params:
-+        documents:
+-          description: optional long description of the error to help client take
+-            remedial action. thi will not be available a part of localization service.
+-        param:
++        document:
            type: array
--          description: Some error messages may carry replaceable fields (say $1, $2)
--            to provide more context to the message. E.g. Format related errors may
--            want to indicate the actual field for which the format is invalid. Client's
--            should use the values in the param array to replace those fields.
-           items:
+-          description: some error message may carry replaceable field (say $1, $2)
+-            to provide more context to the message. e.g. format related error may
+-            want to indicate the actual field for which the format i invalid. client's
+-            should use the value in the param array to replace those field.
+           item:
              type: string
--      description: Error object will be returned as a part of reponse body in conjunction
--        with ResponseInfo as part of ErrorResponse whenever the request processing
--        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
--        be HTTP 400.
--    AuditDetails:
+-      description: error object will be returned a a part of reponse body in conjunction
+-        with responseinfo a part of errorresponse whenever the request processing
+-        statu in the responseinfo i failed. http return in thi scenario will usually
+-        be http 400.
+-    auditdetail:
 -      type: object
--      properties:
--        createdBy:
+-      propertie:
+-        createdby:
 +        assigner:
            type: string
 -          description: username (preferred) or userid of the user that created the
 -            object
--        lastModifiedBy:
-+        assignees:
+-        lastmodifiedby:
++        assignee:
 +          type: array
-+          items:
++          item:
 +            type: string
-+        currentState:
++        currentstate:
            type: string
 -          description: username (preferred) or userid of the user that last modified
 -            the object
--        createdTime:
-+        stateSla:
+-        createdtime:
++        statesla:
            type: integer
--          description: epoch of the time object is created
+-          description: epoch of the time object i created
            format: int64
--        lastModifiedTime:
-+        processSla:
+-        lastmodifiedtime:
++        processsla:
            type: integer
--          description: epoch of the time object is last modified
+-          description: epoch of the time object i last modified
            format: int64
--      description: Collection of audit related fields used by most models
--    User:
+-      description: collection of audit related field used by most model
+-    user:
 -      required:
 -      - active
 -      - gender
 -      - locale
--      - mobileNumber
+-      - mobilenumber
 -      - name
--      - tenantId
+-      - tenantid
 -      - type
--      - userName
-+        attributes:
+-      - username
++        attribute:
 +          type: object
-+          additionalProperties:
++          additionalpropertie:
 +            type: array
-+            items:
++            item:
 +              type: string
-+        auditDetails:
-+          $ref: '#/components/schemas/AuditDetail'
-+    ProcessInstanceListResponse:
++        auditdetail:
++          $ref: '#/component/schema/auditdetail'
++    processinstancelistresponse:
        type: object
-       properties:
+       propertie:
 -        id:
 -          type: integer
--          description: The unique id an user.
+-          description: the unique id an user.
 -          format: int64
--        userName:
--          maxLength: 64
--          minLength: 1
+-        username:
+-          maxlength: 64
+-          minlength: 1
 -          type: string
--          description: The unique username used for user login.
+-          description: the unique username used for user login.
 -        password:
--          maxLength: 64
+-          maxlength: 64
 -          type: string
--          description: Password for user login.
+-          description: password for user login.
 -          format: password
 -        salutation:
--          maxLength: 5
+-          maxlength: 5
 -          type: string
--          description: The salutation of user name. Example- Mr, Miss, Mrs
+-          description: the salutation of user name. example- mr, mis, mr
 -        name:
--          maxLength: 100
--          minLength: 3
+-          maxlength: 100
+-          minlength: 3
 -          type: string
--          description: The full name of the user.
+-          description: the full name of the user.
 -        gender:
 -          type: string
--          description: Gender of the user.
--        mobileNumber:
--          maxLength: 10
+-          description: gender of the user.
+-        mobilenumber:
+-          maxlength: 10
 -          type: string
--          description: Mobile number ofuser the user
--        emailId:
--          maxLength: 128
+-          description: mobile number ofuser the user
+-        emailid:
+-          maxlength: 128
 -          type: string
--          description: Email address of the user
--        altContactNumber:
--          maxLength: 10
+-          description: email addres of the user
+-        altcontactnumber:
+-          maxlength: 10
 -          type: string
--          description: Alternate contact number of the user
+-          description: alternate contact number of the user
 -        pan:
--          maxLength: 10
+-          maxlength: 10
 -          type: string
--          description: PAN number of the user
--        aadhaarNumber:
--          maxLength: 12
+-          description: pan number of the user
+-        aadhaarnumber:
+-          maxlength: 12
 -          pattern: '[0-9]'
 -          type: string
--          description: Aadhaar number of the user
--        permanentAddress:
--          maxLength: 300
+-          description: aadhaar number of the user
+-        permanentaddres:
+-          maxlength: 300
 -          type: string
--          description: Permanent address of the user.
--        permanentCity:
--          maxLength: 300
+-          description: permanent addres of the user.
+-        permanentcity:
+-          maxlength: 300
 -          type: string
--          description: City of the permanent address.
--        permanentPincode:
--          maxLength: 6
+-          description: city of the permanent addres.
+-        permanentpincode:
+-          maxlength: 6
 -          type: string
--          description: Permanent address pincode.
--        correspondenceCity:
--          maxLength: 50
+-          description: permanent addres pincode.
+-        correspondencecity:
+-          maxlength: 50
 -          type: string
--          description: City of the correspondence address.
--        correspondencePincode:
--          maxLength: 6
+-          description: city of the correspondence addres.
+-        correspondencepincode:
+-          maxlength: 6
 -          type: string
--          description: Permanent address pincode.
--        correspondenceAddress:
--          maxLength: 300
+-          description: permanent addres pincode.
+-        correspondenceaddres:
+-          maxlength: 300
 -          type: string
--          description: Correspondence address of the user.
+-          description: correspondence addres of the user.
 -        active:
 -          type: boolean
--          description: True if the user is active and False if the user is inactive.
+-          description: true if the user i active and false if the user i inactive.
 -        dob:
 -          type: string
--          description: Data of bith of the user in dd/mm/yyyy format.
+-          description: data of bith of the user in dd/mm/yyyy format.
 -          format: date
--        pwdExpiryDate:
+-        pwdexpirydate:
 -          type: string
--          description: Date on which the password registered will expire.
+-          description: date on which the password registered will expire.
 -          format: date
--          readOnly: true
+-          readonly: true
 -        locale:
--          maxLength: 10
+-          maxlength: 10
 -          type: string
--          description: Value will be set to "en_IN".
+-          description: value will be set to "enin".
 -        type:
--          maxLength: 20
+-          maxlength: 20
 -          type: string
--          description: System set value internally. For employee value will be always
--            "EMPLOYEE". For citizen value will be "CITIZEN".
+-          description: system set value internally. for employee value will be alway
+-            "employee". for citizen value will be "citizen".
 -        signature:
 -          type: string
--          description: Image to be loaded for the signature of the employee
--        accountLocked:
+-          description: image to be loaded for the signature of the employee
+-        accountlocked:
 -          type: boolean
--          description: Set to True if account is locked after several incorrect password
--            attempt. False if account is not locked.
--        roles:
-+        processInstances:
+-          description: set to true if account i locked after several incorrect password
+-            attempt. false if account i not locked.
+-        role:
++        processinstance:
            type: array
--          description: List of roles that are attached to the user.
-           items:
--            $ref: '#/components/schemas/Role'
--        fatherOrHusbandName:
--          maxLength: 100
+-          description: list of role that are attached to the user.
+           item:
+-            $ref: '#/component/schema/role'
+-        fatherorhusbandname:
+-          maxlength: 100
 -          type: string
--          description: Name of user's father or husband.
--        bloodGroup:
--          maxLength: 3
+-          description: name of user's father or husband.
+-        bloodgroup:
+-          maxlength: 3
 -          type: string
--          description: Blood group of the user.
--        identificationMark:
--          maxLength: 300
+-          description: blood group of the user.
+-        identificationmark:
+-          maxlength: 300
 -          type: string
--          description: Any identification mark of the person.
+-          description: any identification mark of the person.
 -        photo:
 -          type: string
--          description: Image to be loaded for the photo of the user
--        createdBy:
+-          description: image to be loaded for the photo of the user
+-        createdby:
 -          type: integer
--          description: Id of the user who created the record.
+-          description: id of the user who created the record.
 -          format: int64
--        createdDate:
+-        createddate:
 -          type: string
--          description: Date on which the user master data was added into the system.
+-          description: date on which the user master data wa added into the system.
 -          format: date
--        lastModifiedBy:
-+            $ref: '#/components/schemas/ProcessInstance'
-+        totalCount:
+-        lastmodifiedby:
++            $ref: '#/component/schema/processinstance'
++        totalcount:
            type: integer
--          description: Id of the user who last modified the record.
+-          description: id of the user who last modified the record.
 -          format: int64
--        lastModifiedDate:
+-        lastmodifieddate:
 -          type: string
--          description: Date on which the user master data was last modified.
+-          description: date on which the user master data wa last modified.
 -          format: date
--        otpReference:
+-        otpreference:
 -          type: string
--          description: This is the UUID token that we genarate as part of OTP.
--        tenantId:
+-          description: thi i the uuid token that we genarate a part of otp.
+-        tenantid:
 -          type: string
--          description: Unique Identifier of the tenant, Like AP, AP.Kurnool etc.
--    Role:
+-          description: unique identifier of the tenant, like ap, ap.kurnool etc.
+-    role:
 -      required:
 -      - name
--      - tenantId
+-      - tenantid
 +          format: int32
-+    EscalationResult:
++    escalationresult:
        type: object
-       properties:
+       propertie:
 -        id:
 -          type: integer
--          description: Unique identifier of the role.
+-          description: unique identifier of the role.
 -          format: int64
 -        name:
--          maxLength: 100
--          minLength: 2
+-          maxlength: 100
+-          minlength: 2
 -          type: string
--          description: The Name of the Role.
+-          description: the name of the role.
 -        code:
--          maxLength: 50
--          minLength: 2
+-          maxlength: 50
+-          minlength: 2
 -          type: string
--          description: The Code of the Role.
+-          description: the code of the role.
 -        description:
--          maxLength: 256
+-          maxlength: 256
 -          type: string
--          description: The description of the Role.
--        createdBy:
-+        totalFound:
+-          description: the description of the role.
+-        createdby:
++        totalfound:
            type: integer
--          description: Id of the user who created the record.
+-          description: id of the user who created the record.
 -          format: int64
--        createdDate:
+-        createddate:
 -          type: string
--          description: Date on which the role master data was added into the system.
+-          description: date on which the role master data wa added into the system.
 -          format: date
--        lastModifiedBy:
-+        totalEscalated:
+-        lastmodifiedby:
++        totalescalated:
            type: integer
--          description: Id of the user who last modified the record.
+-          description: id of the user who last modified the record.
 -          format: int64
--        lastModifiedDate:
+-        lastmodifieddate:
 -          type: string
--          description: Date on which the role master data was last modified.
+-          description: date on which the role master data wa last modified.
 -          format: date
--        tenantId:
+-        tenantid:
 -          type: string
--          description: Unique Identifier of the tenant, Like AP, AP.Kurnool etc.
--    RequestInfo:
+-          description: unique identifier of the tenant, like ap, ap.kurnool etc.
+-    requestinfo:
 -      required:
 -      - action
--      - apiId
--      - msgId
--      - ts
+-      - apiid
+-      - msgid
+-      - t
 -      - ver
 -      type: object
--      properties:
--        apiId:
--          maxLength: 128
+-      propertie:
+-        apiid:
+-          maxlength: 128
 -          type: string
--          description: unique API ID
+-          description: unique api id
 -        ver:
--          maxLength: 32
+-          maxlength: 32
 -          type: string
--          description: API version - for HTTP based request this will be same as used
+-          description: api version - for http based request thi will be same a used
 -            in path
--        ts:
+-        t:
 -          type: integer
 -          description: time in epoch
 -          format: int64
 -        action:
--          maxLength: 32
+-          maxlength: 32
 -          type: string
--          description: API action to be performed like _create, _update, _search (denoting
--            POST, PUT, GET) or _oauth etc
+-          description: api action to be performed like create, update, search (denoting
+-            post, put, get) or oauth etc
 -        did:
--          maxLength: 1024
+-          maxlength: 1024
 -          type: string
--          description: Device ID from which the API is called
+-          description: device id from which the api i called
 -        key:
--          maxLength: 256
+-          maxlength: 256
 -          type: string
--          description: API key (API key provided to the caller in case of server to
+-          description: api key (api key provided to the caller in case of server to
 -            server communication)
--        msgId:
--          maxLength: 256
+-        msgid:
+-          maxlength: 256
 -          type: string
--          description: Unique request message id from the caller
--        requesterId:
--          maxLength: 256
+-          description: unique request message id from the caller
+-        requesterid:
+-          maxlength: 256
 -          type: string
--          description: UserId of the user calling
--        authToken:
+-          description: userid of the user calling
+-        authtoken:
 -          type: string
 -          description: //session/jwt/saml token/oauth token - the usual value that
--            would go into HTTP bearer token
--        userInfo:
--          $ref: '#/components/schemas/UserInfo'
--        correlationId:
+-            would go into http bearer token
+-        userinfo:
+-          $ref: '#/component/schema/userinfo'
+-        correlationid:
 -          type: string
--          readOnly: true
--      description: RequestInfo should be used to carry meta information about the
--        requests to the server as described in the fields below. All eGov APIs will
--        use requestinfo as a part of the request body to carry this meta information.
--        Some of this information will be returned back from the server as part of
--        the ResponseInfo in the response body to ensure correlation.
--    UserInfo:
+-          readonly: true
+-      description: requestinfo should be used to carry meta information about the
+-        request to the server a described in the field below. all egov api will
+-        use requestinfo a a part of the request body to carry thi meta information.
+-        some of thi information will be returned back from the server a part of
+-        the responseinfo in the response body to ensure correlation.
+-    userinfo:
 -      required:
 -      - primaryrole
--      - tenantId
--      - userName
+-      - tenantid
+-      - username
 -      type: object
--      properties:
--        tenantId:
+-      propertie:
+-        tenantid:
 -          type: string
--          description: Unique Identifier of the tenant to which user primarily belongs
+-          description: unique identifier of the tenant to which user primarily belong
 -        uuid:
 -          type: string
--          description: System Generated User id of the authenticated user.
--        userName:
+-          description: system generated user id of the authenticated user.
+-        username:
 -          type: string
--          description: Unique user name of the authenticated user
+-          description: unique user name of the authenticated user
 -        password:
 -          type: string
 -          description: password of the user.
--        idToken:
+-        idtoken:
 -          type: string
--          description: This will be the OTP.
+-          description: thi will be the otp.
 -        mobile:
 -          type: string
 -          description: mobile number of the autheticated user
 -        email:
 -          type: string
--          description: email address of the authenticated user
+-          description: email addres of the authenticated user
 -        primaryrole:
-+        escalatedInstances:
++        escalatedinstance:
            type: array
--          description: List of all the roles for the primary tenant
-           items:
--            $ref: '#/components/schemas/Role_2'
--        additionalroles:
-+            $ref: '#/components/schemas/ProcessInstance'
-+        errors:
+-          description: list of all the role for the primary tenant
+           item:
+-            $ref: '#/component/schema/role2'
+-        additionalrole:
++            $ref: '#/component/schema/processinstance'
++        error:
            type: array
--          description: array of additional tenantids authorized for the authenticated
+-          description: array of additional tenantid authorized for the authenticated
 -            user
-           items:
--            $ref: '#/components/schemas/TenantRole'
--      description: This is acting ID token of the authenticated user on the server.
--        Any value provided by the clients will be ignored and actual user based on
+           item:
+-            $ref: '#/component/schema/tenantrole'
+-      description: thi i acting id token of the authenticated user on the server.
+-        any value provided by the client will be ignored and actual user based on
 -        authtoken will be used on the server.
--    Role_2:
+-    role2:
 -      required:
 -      - name
 -      type: object
--      properties:
+-      propertie:
 -        name:
--          maxLength: 64
+-          maxlength: 64
 +            type: string
-+    Error:
++    error:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
-+paths:
-+  /v1/process:
++path:
++  /v1/proces:
 +    post:
-+      tags: [Process]
-+      summary: Create a workflow process
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [proces]
++      summary: create a workflow proces
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/ProcessCreate'
-+      responses:
++              $ref: '#/component/schema/processcreate'
++      response:
 +        '201':
-+          description: Process created
++          description: proces created
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Process'
++                $ref: '#/component/schema/proces'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '409':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    get:
-+      tags: [Process]
-+      summary: Search processes
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
++      tag: [proces]
++      summary: search processe
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
 +        - in: query
 +          name: id
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +          style: form
 +          explode: true
-+          description: Filter by process IDs.
++          description: filter by proces id.
 +        - in: query
 +          name: name
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +          style: form
 +          explode: true
-+          description: Filter by process names.
++          description: filter by proces name.
 +        - in: query
 +          name: code
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +          style: form
 +          explode: true
-+          description: Filter by process codes.
-+      responses:
++          description: filter by proces code.
++      response:
 +        '200':
-+          description: List of processes
++          description: list of processe
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/Process'
++                item:
++                  $ref: '#/component/schema/proces'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    delete:
-+      tags: [Process]
-+      summary: Delete a process by query parameter
-+      description: Provides an alternative delete path accepting either `id` or `code` as query parameters.
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
++      tag: [proces]
++      summary: delete a proces by query parameter
++      description: provide an alternative delete path accepting either `id` or `code` a query parameter.
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
 +        - in: query
 +          name: id
 +          schema:
 +            type: string
-+          description: Process ID (UUID). Takes precedence when supplied.
++          description: proces id (uuid). take precedence when supplied.
 +        - in: query
 +          name: code
 +          schema:
 +            type: string
-+          description: Process code used when `id` is not provided.
-+      responses:
++          description: proces code used when `id` i not provided.
++      response:
 +        '204':
-+          $ref: '#/components/responses/NoContent'
++          $ref: '#/component/response/nocontent'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '409':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
-+  /v1/process/definition:
++          $ref: '#/component/response/errorresponse'
++  /v1/proces/definition:
 +    get:
-+      tags: [Process]
-+      summary: List process definitions with full state/action detail
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
++      tag: [proces]
++      summary: list proces definition with full state/action detail
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
 +        - in: query
 +          name: id
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +          style: form
 +          explode: true
@@ -2210,151 +2200,151 @@
 +          name: name
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +          style: form
 +          explode: true
-+      responses:
++      response:
 +        '200':
-+          description: Full process definitions
++          description: full proces definition
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/ProcessDefinitionDetail'
++                item:
++                  $ref: '#/component/schema/processdefinitiondetail'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
-+  /v1/process/{id}:
-+    parameters:
-+      - $ref: '#/components/parameters/TenantHeader'
++          $ref: '#/component/response/errorresponse'
++  /v1/proces/{id}:
++    parameter:
++      - $ref: '#/component/parameter/tenantheader'
 +      - name: id
 +        in: path
 +        required: true
 +        schema:
            type: string
--          description: Unique name of the role
+-          description: unique name of the role
 -        code:
--          maxLength: 64
+-          maxlength: 64
 +          format: uuid
 +    get:
-+      tags: [Process]
-+      summary: Get process by ID
-+      responses:
++      tag: [proces]
++      summary: get proces by id
++      response:
 +        '200':
-+          description: Process details
++          description: proces detail
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Process'
++                $ref: '#/component/schema/proces'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    put:
-+      tags: [Process]
-+      summary: Update a process
-+      parameters:
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [proces]
++      summary: update a proces
++      parameter:
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/ProcessUpdate'
-+      responses:
++              $ref: '#/component/schema/processupdate'
++      response:
 +        '200':
-+          description: Updated process
++          description: updated proces
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Process'
++                $ref: '#/component/schema/proces'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '409':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    delete:
-+      tags: [Process]
-+      summary: Delete process by ID
-+      responses:
++      tag: [proces]
++      summary: delete proces by id
++      response:
 +        '204':
-+          $ref: '#/components/responses/NoContent'
++          $ref: '#/component/response/nocontent'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '409':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
-+  /v1/process/{processId}/state:
-+    parameters:
-+      - $ref: '#/components/parameters/TenantHeader'
-+      - name: processId
++          $ref: '#/component/response/errorresponse'
++  /v1/proces/{processid}/state:
++    parameter:
++      - $ref: '#/component/parameter/tenantheader'
++      - name: processid
 +        in: path
 +        required: true
 +        schema:
            type: string
--          description: Unique code of the role
+-          description: unique code of the role
 -        description:
 +          format: uuid
 +    post:
-+      tags: [State]
-+      summary: Create state within a process
-+      parameters:
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [state]
++      summary: create state within a proces
++      parameter:
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/StateCreate'
-+      responses:
++              $ref: '#/component/schema/statecreate'
++      response:
 +        '201':
-+          description: State created
++          description: state created
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/State'
++                $ref: '#/component/schema/state'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    get:
-+      tags: [State]
-+      summary: List states under a process
-+      parameters:
++      tag: [state]
++      summary: list state under a proces
++      parameter:
 +        - in: query
 +          name: code
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +          style: form
 +          explode: true
-+          description: Filter by state codes.
-+      responses:
++          description: filter by state code.
++      response:
 +        '200':
-+          description: States under the process
++          description: state under the proces
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/State'
++                item:
++                  $ref: '#/component/schema/state'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +  /v1/state/{id}:
-+    parameters:
-+      - $ref: '#/components/parameters/TenantHeader'
++    parameter:
++      - $ref: '#/component/parameter/tenantheader'
 +      - name: id
 +        in: path
 +        required: true
@@ -2362,129 +2352,129 @@
            type: string
 -          description: brief description of the role
 -      description: |
--        minimal representation of the Roles in the system to be carried along in UserInfo with RequestInfo meta data. Actual authorization service to extend this to have more role related attributes
--    TenantRole:
+-        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+-    tenantrole:
 -      required:
--      - roles
--      - tenantId
+-      - role
+-      - tenantid
 -      type: object
--      properties:
--        tenantId:
+-      propertie:
+-        tenantid:
 +          format: uuid
 +    get:
-+      tags: [State]
-+      summary: Get state by ID
-+      responses:
++      tag: [state]
++      summary: get state by id
++      response:
 +        '200':
-+          description: State details
++          description: state detail
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/State'
++                $ref: '#/component/schema/state'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    put:
-+      tags: [State]
-+      summary: Update state by ID
-+      parameters:
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [state]
++      summary: update state by id
++      parameter:
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/StateUpdate'
-+      responses:
++              $ref: '#/component/schema/stateupdate'
++      response:
 +        '200':
-+          description: Updated state
++          description: updated state
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/State'
++                $ref: '#/component/schema/state'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    delete:
-+      tags: [State]
-+      summary: Delete state by ID
-+      responses:
++      tag: [state]
++      summary: delete state by id
++      response:
 +        '204':
-+          $ref: '#/components/responses/NoContent'
++          $ref: '#/component/response/nocontent'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
-+  /v1/state/{stateId}/action:
-+    parameters:
-+      - $ref: '#/components/parameters/TenantHeader'
-+      - name: stateId
++          $ref: '#/component/response/errorresponse'
++  /v1/state/{stateid}/action:
++    parameter:
++      - $ref: '#/component/parameter/tenantheader'
++      - name: stateid
 +        in: path
 +        required: true
 +        schema:
            type: string
 -          description: tenantid for the tenant
--        roles:
+-        role:
 -          type: array
--          description: Roles assigned for a particular tenant - array of role codes/names
--          items:
--            $ref: '#/components/schemas/Role_2'
--      description: User role carries the tenant related role information for the user.
--        A user can have multiple roles per tenant based on the need of the tenant.
--        A user may also have multiple roles for multiple tenants.
+-          description: role assigned for a particular tenant - array of role code/name
+-          item:
+-            $ref: '#/component/schema/role2'
+-      description: user role carrie the tenant related role information for the user.
+-        a user can have multiple role per tenant based on the need of the tenant.
+-        a user may also have multiple role for multiple tenant.
 -x-api-id: org.egov.wf.service
 -x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml
 \ No newline at end of file
 +          format: uuid
 +    post:
-+      tags: [Action]
-+      summary: Create an action for a state
-+      parameters:
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [action]
++      summary: create an action for a state
++      parameter:
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/ActionCreate'
-+      responses:
++              $ref: '#/component/schema/actioncreate'
++      response:
 +        '201':
-+          description: Action created
++          description: action created
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Action'
++                $ref: '#/component/schema/action'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    get:
-+      tags: [Action]
-+      summary: List actions for a state
-+      parameters:
++      tag: [action]
++      summary: list action for a state
++      parameter:
 +        - in: query
 +          name: code
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +          style: form
 +          explode: true
-+          description: Filter by action codes.
-+      responses:
++          description: filter by action code.
++      response:
 +        '200':
-+          description: Actions under the state
++          description: action under the state
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/Action'
++                item:
++                  $ref: '#/component/schema/action'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +  /v1/action/{id}:
-+    parameters:
-+      - $ref: '#/components/parameters/TenantHeader'
++    parameter:
++      - $ref: '#/component/parameter/tenantheader'
 +      - name: id
 +        in: path
 +        required: true
@@ -2492,99 +2482,99 @@
 +          type: string
 +          format: uuid
 +    get:
-+      tags: [Action]
-+      summary: Get action by ID
-+      responses:
++      tag: [action]
++      summary: get action by id
++      response:
 +        '200':
-+          description: Action details
++          description: action detail
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Action'
++                $ref: '#/component/schema/action'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    put:
-+      tags: [Action]
-+      summary: Update action by ID
-+      parameters:
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [action]
++      summary: update action by id
++      parameter:
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/ActionUpdate'
-+      responses:
++              $ref: '#/component/schema/actionupdate'
++      response:
 +        '200':
-+          description: Updated action
++          description: updated action
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Action'
++                $ref: '#/component/schema/action'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    delete:
-+      tags: [Action]
-+      summary: Delete action by ID
-+      responses:
++      tag: [action]
++      summary: delete action by id
++      response:
 +        '204':
-+          $ref: '#/components/responses/NoContent'
++          $ref: '#/component/response/nocontent'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
-+  /v1/process/{processId}/escalation:
-+    parameters:
-+      - $ref: '#/components/parameters/TenantHeader'
-+      - name: processId
++          $ref: '#/component/response/errorresponse'
++  /v1/proces/{processid}/escalation:
++    parameter:
++      - $ref: '#/component/parameter/tenantheader'
++      - name: processid
 +        in: path
 +        required: true
 +        schema:
 +          type: string
 +          format: uuid
 +    post:
-+      tags: [EscalationConfig]
-+      summary: Create escalation configuration for a process
-+      parameters:
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [escalationconfig]
++      summary: create escalation configuration for a proces
++      parameter:
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/EscalationConfigCreate'
-+      responses:
++              $ref: '#/component/schema/escalationconfigcreate'
++      response:
 +        '201':
-+          description: Escalation configuration created
++          description: escalation configuration created
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/EscalationConfig'
++                $ref: '#/component/schema/escalationconfig'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    get:
-+      tags: [EscalationConfig]
-+      summary: List escalation configurations for a process
-+      parameters:
++      tag: [escalationconfig]
++      summary: list escalation configuration for a proces
++      parameter:
 +        - in: query
-+          name: stateCode
++          name: statecode
 +          schema:
 +            type: string
-+          description: Filter by state code.
-+      responses:
++          description: filter by state code.
++      response:
 +        '200':
-+          description: Escalation configurations
++          description: escalation configuration
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/EscalationConfig'
++                item:
++                  $ref: '#/component/schema/escalationconfig'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +  /v1/escalation/{id}:
-+    parameters:
-+      - $ref: '#/components/parameters/TenantHeader'
++    parameter:
++      - $ref: '#/component/parameter/tenantheader'
 +      - name: id
 +        in: path
 +        required: true
@@ -2592,162 +2582,162 @@
 +          type: string
 +          format: uuid
 +    get:
-+      tags: [EscalationConfig]
-+      summary: Get escalation configuration by ID
-+      responses:
++      tag: [escalationconfig]
++      summary: get escalation configuration by id
++      response:
 +        '200':
-+          description: Escalation configuration
++          description: escalation configuration
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/EscalationConfig'
++                $ref: '#/component/schema/escalationconfig'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    put:
-+      tags: [EscalationConfig]
-+      summary: Update escalation configuration by ID
-+      parameters:
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [escalationconfig]
++      summary: update escalation configuration by id
++      parameter:
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/EscalationConfig'
-+      responses:
++              $ref: '#/component/schema/escalationconfig'
++      response:
 +        '200':
-+          description: Updated configuration
++          description: updated configuration
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/EscalationConfig'
++                $ref: '#/component/schema/escalationconfig'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    delete:
-+      tags: [EscalationConfig]
-+      summary: Delete escalation configuration by ID
-+      responses:
++      tag: [escalationconfig]
++      summary: delete escalation configuration by id
++      response:
 +        '204':
-+          $ref: '#/components/responses/NoContent'
++          $ref: '#/component/response/nocontent'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +  /v1/transition:
 +    post:
-+      tags: [Transition]
-+      summary: Trigger a workflow transition or create an instance
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
-+        - $ref: '#/components/parameters/ClientHeader'
-+      requestBody:
++      tag: [transition]
++      summary: trigger a workflow transition or create an instance
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
++        - $ref: '#/component/parameter/clientheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/TransitionRequest'
-+      responses:
++              $ref: '#/component/schema/transitionrequest'
++      response:
 +        '200':
-+          description: Transition result
++          description: transition result
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/TransitionResponse'
++                $ref: '#/component/schema/transitionresponse'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '403':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '404':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '409':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +    get:
-+      tags: [Transition]
-+      summary: Search process instances (transitions)
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
++      tag: [transition]
++      summary: search proces instance (transition)
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
 +        - in: query
-+          name: entityId
++          name: entityid
 +          schema:
 +            type: string
 +        - in: query
-+          name: processId
++          name: processid
 +          schema:
 +            type: string
 +        - in: query
-+          name: currentStateId
++          name: currentstateid
 +          schema:
 +            type: string
 +        - in: query
-+          name: assigneeId
++          name: assigneeid
 +          schema:
 +            type: string
 +        - in: query
 +          name: history
 +          schema:
 +            type: boolean
-+          description: Only valid when filtering by entityId.
-+      responses:
++          description: only valid when filtering by entityid.
++      response:
 +        '200':
-+          description: Matching process instances
++          description: matching proces instance
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ProcessInstanceListResponse'
++                $ref: '#/component/schema/processinstancelistresponse'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '403':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
-+  /v1/auto/{processCode}/_escalate:
++          $ref: '#/component/response/errorresponse'
++  /v1/auto/{processcode}/escalate:
 +    post:
-+      tags: [AutoEscalation]
-+      summary: Trigger auto-escalation run for a process code
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
-+        - name: processCode
++      tag: [autoescalation]
++      summary: trigger auto-escalation run for a proces code
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
++        - name: processcode
 +          in: path
 +          required: true
 +          schema:
 +            type: string
-+        - name: X-Client-Id
++        - name: x-client-id
 +          in: header
 +          required: true
 +          schema:
 +            type: string
-+      requestBody:
++      requestbody:
 +        required: false
 +        content:
 +          application/json:
 +            schema:
 +              type: object
-+              properties:
-+                attributes:
++              propertie:
++                attribute:
 +                  type: object
-+                  additionalProperties:
++                  additionalpropertie:
 +                    type: array
-+                    items:
++                    item:
 +                      type: string
-+      responses:
++      response:
 +        '200':
-+          description: Auto-escalation summary
++          description: auto-escalation summary
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/EscalationResult'
++                $ref: '#/component/schema/escalationresult'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
-+  /v1/auto/_search:
++          $ref: '#/component/response/errorresponse'
++  /v1/auto/search:
 +    get:
-+      tags: [AutoEscalation]
-+      summary: Search escalated applications
-+      parameters:
-+        - $ref: '#/components/parameters/TenantHeader'
++      tag: [autoescalation]
++      summary: search escalated application
++      parameter:
++        - $ref: '#/component/parameter/tenantheader'
 +        - in: query
-+          name: processId
++          name: processid
 +          schema:
 +            type: string
 +        - in: query
@@ -2760,16 +2750,16 @@
 +          schema:
 +            type: integer
 +            default: 0
-+      responses:
++      response:
 +        '200':
-+          description: Escalated instances
++          description: escalated instance
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/ProcessInstance'
++                item:
++                  $ref: '#/component/schema/processinstance'
 +        '400':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'
 +        '500':
-+          $ref: '#/components/responses/ErrorResponse'
++          $ref: '#/component/response/errorresponse'

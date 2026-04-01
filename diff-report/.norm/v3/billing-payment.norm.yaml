@@ -1,0 +1,2719 @@
+openapi: 3.0.3
+info:
+  title: digit billing - busines service api
+  version: 3.0.0
+  description: |
+    rest api to manage busines service in the digit billing & collection domain.
+    a busines service represent a billable service (e.g., property tax, trade license, water/sewerage)
+    and it collection behavior and default.
+
+server:
+  - url: https://api.example.com/billing/v3
+    description: production server
+  - url: https://staging-api.example.com/billing/v3
+    description: staging server
+
+security:
+  - bearerauth: []
+
+tag:
+  - name: businessservice
+    description: manage billable busines service (e.g., pt, tl, w) and collection default.
+  
+  - name: taxhead
+    description: manage tax head (e.g., base tax, penalty, exemption, ces).
+
+  - name: demand
+    description: manage accrual, state, and billing eligibility for consumer liabilitie.
+
+  - name: bill
+    description: manage the full bill lifecycle including creation from active/frozen demand
+
+  - name: payment
+    description: manage payment collection, validation & processing
+
+path:
+  /busines-service:
+    post:
+      summary: create one or more busines service
+      operationid: createbusinessservice
+      tag: [businessservice]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - $ref: '#/component/parameter/idempotencykey'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              description: one or more busines service to create
+              item:
+                $ref: '#/component/schema/businessservicecreate'
+      response:
+        '201':
+          description: busines service(s) created
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/businessservice'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '409':
+          description: conflict (duplicate code within tenant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    get:
+      summary: search busines service by filter
+      operationid: searchbusinessservice
+      tag: [businessservice]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: code
+          schema: { type: string }
+          description: filter by busines service code (exact match)
+        - in: query
+          name: isactive
+          schema: { type: boolean }
+          description: filter by active statu
+        - in: query
+          name: effectiveon
+          schema: { type: integer, format: int64 }
+          description: return service effective on thi timestamp (within effectivefrom/effectiveto)
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+          description: page size (max 100)
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+          description: offset for pagination
+      response:
+        '200':
+          description: list of busines service
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/businessservice'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /busines-service/{code}:
+    get:
+      summary: get a busines service by code
+      operationid: getbusinessservicebycode
+      tag: [businessservice]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          description: unique busines service code (e.g., pt, tl, w)
+          schema: { type: string }
+      response:
+        '200':
+          description: busines service found
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/businessservice'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    put:
+      summary: replace a busines service by code
+      operationid: updatebusinessservice
+      tag: [businessservice]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          description: unique busines service code
+          schema: { type: string }
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/businessserviceupdatebycode'
+      response:
+        '200':
+          description: updated successfully
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/businessservice'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '409':
+          description: conflict (e.g., trying to change immutable field such a code)
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    patch:
+      summary: partially update a busines service by code
+      operationid: patchbusinessservice
+      tag: [businessservice]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          description: unique busines service code
+          schema: { type: string }
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/businessservicepatch'
+      response:
+        '200':
+          description: updated successfully
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/businessservice'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    delete:
+      summary: soft delete (deactivate) a busines service by code
+      operationid: deletebusinessservice
+      tag: [businessservice]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          description: unique busines service code
+          schema: { type: string }
+      response:
+        '204':
+          description: deactivated successfully
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /tax-head:
+    post:
+      summary: create one or more new tax head
+      operationid: createtaxhead
+      tag: [taxhead]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - $ref: '#/component/parameter/idempotencykey'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              description: one or more tax head to create
+              item:
+                $ref: '#/component/schema/taxheadcreate'
+      response:
+        '201':
+          description: tax head(s) created
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/taxhead'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '409':
+          description: conflict (duplicate code within tenant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    get:
+      summary: search tax head by filter
+      operationid: searchtaxhead
+      tag: [taxhead]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: code
+          schema: { type: string }
+          description: filter by tax head code
+        - in: query
+          name: category
+          schema: { type: string, enum: [tax, ces, penalty, interest, rebate, rounding, other] }
+          description: filter by category
+        - in: query
+          name: isactive
+          schema: { type: boolean }
+          description: filter by active statu
+        - in: query
+          name: businessservicecode
+          schema: { type: string }
+          description: filter by linked busines service
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+          description: page size (max 100)
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+          description: offset for pagination
+      response:
+        '200':
+          description: list of tax head
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/taxhead'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /tax-head/{code}:
+    get:
+      summary: get a tax head by code
+      operationid: gettaxheadbycode
+      tag: [taxhead]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+          description: unique tax head code
+      response:
+        '200':
+          description: tax head found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/taxhead'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    put:
+      summary: replace a tax head by code
+      operationid: updatetaxhead
+      tag: [taxhead]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+          description: unique tax head code
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/taxheadupdatebycode'
+      response:
+        '200':
+          description: updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/taxhead'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '409':
+          description: conflict (immutable field change attempted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    patch:
+      summary: partially update a tax head by code
+      operationid: patchtaxhead
+      tag: [taxhead]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/taxheadpatch'
+      response:
+        '200':
+          description: updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/taxhead'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    delete:
+      summary: soft delete (deactivate) a tax head
+      operationid: deletetaxhead
+      tag: [taxhead]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+      response:
+        '204':
+          description: deactivated successfully
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /demand:
+    post:
+      summary: create demand (bulk)
+      operationid: createdemand
+      tag: [demand]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - $ref: '#/component/parameter/idempotencykey'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minitem: 1
+              item:
+                $ref: '#/component/schema/demandcreate'
+      response:
+        '201':
+          description: demand created
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/demand' }
+        '207':
+          description: multi-statu — some item succeeded, some failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/bulkresponse'
+        '400':
+          description: validation error (unknown head, invalid amount, bad statu transition, etc.)
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+        '409':
+          description: conflict (duplicate create without idempotency-key; overlapping/duplicate demand a per policy)
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+    put:
+      summary: update/replace demand (bulk)
+      operationid: updatedemand
+      tag: [demand]
+      description: |
+        bulk full-replace for demand. each object **must include `id`** and be in an editable state (`draft` or `active`).
+        consider requiring `if-match` etag per item (future iteration) for optimistic concurrency.
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minitem: 1
+              item:
+                $ref: '#/component/schema/demandupdate'
+      response:
+        '200':
+          description: demand updated
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/demand' }
+        '207':
+          description: multi-statu — some item updated, some failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/bulkresponse'
+        '400':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+        '422':
+          description: 'unprocessable (item not editable: frozen/billed/cancelled)'
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+    get:
+      summary: search demand by filter
+      operationid: searchdemand
+      tag: [demand]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: businessservicecode
+          schema: { type: string }
+          description: filter by busines service code (exact match)
+        - in: query
+          name: consumercode
+          schema: { type: string }
+          description: filter by consumer code (exact match)
+        - in: query
+          name: statu
+          schema:
+            type: string
+            enum: [draft, active, frozen, cancelled]
+          description: filter by demand statu
+        - in: query
+          name: createdfrom
+          schema: { type: integer, format: int64 }
+          description: createdtime >= createdfrom
+        - in: query
+          name: createdto
+          schema: { type: integer, format: int64 }
+          description: createdtime <= createdto
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+          description: page size (max 100)
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+          description: offset for pagination
+      response:
+        '200':
+          description: list of demand
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/demand' }
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+  /demand/{id}:
+    get:
+      summary: get a demand by id
+      operationid: getdemandbyid
+      tag: [demand]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      response:
+        '200':
+          description: demand found
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/demand' }
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+    patch:
+      summary: partially update a demand by id
+      operationid: patchdemandbyid
+      tag: [demand]
+      description: |
+        allowed only if demand i `draft` or `active` and not frozen/billed/cancelled.
+        typical use: fix amount, add/remove item, update payer/meta before bill issuance.
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/component/schema/demandpatch' }
+            example:
+              patchamount:
+                summary: correct one item amount
+                value:
+                  lineitem:
+                    - taxheadcode: ptbase
+                      amount: 4400
+      response:
+        '200':
+          description: updated successfully
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/demand' }
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+        '422':
+          description: unprocessable (frozen/billed/cancelled; or rule violation)
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+  /demand/{id}/freeze:
+    post:
+      summary: freeze a demand by id (prevent further edit)
+      operationid: freezedemandbyid
+      tag: [demand]
+      description: |
+        transition `active` → `frozen`. prevent further patch. typically called before bill generation.
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      response:
+        '200':
+          description: demand frozen
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/demand' }
+        '409':
+          description: conflict (invalid state transition)
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+  /demand/{id}/cancel:
+    post:
+      summary: cancel a demand by id
+      operationid: canceldemandbyid
+      tag: [demand]
+      description: |
+        cancel a demand (e.g., wrong assessment). if already billed/partially collected, the system may
+        require adjustment instead, returning `422` with guidance.
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestbody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              propertie:
+                reasoncode: { type: string, description: optional reference to reason master }
+                note: { type: string }
+      response:
+        '200':
+          description: demand cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/demand' }
+        '422':
+          description: unprocessable (already billed/collected; need adjustment route)
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+  /bill:
+    get:
+      summary: search bill by filter
+      operationid: searchbill
+      tag: [bill]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: businessservicecode
+          schema: { type: string }
+          description: filter by busines service code (exact match)
+        - in: query
+          name: consumercode
+          schema: { type: array, item: { type: string } }
+          description: filter by consumer code
+        - in: query
+          name: billnumber
+          schema: { type: array, item: { type: string } }
+          description: filter by bill number
+        - in: query
+          name: billid
+          schema: { type: array, item: { type: string } }
+          description: filter by bill id
+        - in: query
+          name: statu
+          description: filter by bill statu
+          schema:
+            type: string
+            enum: [active, cancelled, expired, paid, partiallypaid, paymentcancelled]
+        - in: query
+          name: mobilenumber
+          schema: 
+            type: string
+            pattern: '^\\+?[0-9]{10,15}$'
+            description: mobile number with optional '+' prefix. should be 10 to 15 digit (e.g., +919876543210)
+          description: filter by payer mobile number
+        - in: query
+          name: email
+          schema:
+            type: string
+            format: email
+            maxlength: 254
+            description: valid email addres (e.g., user@example.com)
+          description: filter by payer email
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+          description: page size (max 100)
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+          description: offset for pagination
+      response:
+        '200':
+          description: list of demand
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/bill' }
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+  /bill/generate:
+    post:
+      summary: generate a bill
+      operationid: generatebill
+      tag: [bill]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - $ref: '#/component/parameter/idempotencykey'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/generatebillcriteria'
+      response:
+        '201':
+          description: bill generated
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/bill'
+        '400':
+          description: validation error (unknown head, invalid amount, bad statu transition, etc.)
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+        '409':
+          description: conflict (duplicate create without idempotency-key; overlapping/duplicate bill a per policy)
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+      
+  /bill/cancel:
+    post:
+      summary: cancel a bill
+      operationid: cancelbill
+      tag: [bill]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - $ref: '#/component/parameter/idempotencykey'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/updatebillstatu'
+      response:
+        '201':
+          description: bill canceled
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/bill'
+        '400':
+          description: validation error (unknown head, invalid amount, bad statu transition, etc.)
+          content:
+            application/json:
+              schema:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+        '409':
+          description: conflict (duplicate create without idempotency-key; overlapping/duplicate bill a per policy)
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/component/schema/error' }
+
+  /payment:
+    post:
+      summary: create a new payment
+      operationid: createpayment
+      tag: [payment]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - $ref: '#/component/parameter/idempotencykey'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/payment'
+      response:
+        '201':
+          description: payment created
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/payment'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '409':
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    get:
+      summary: search payment by filter
+      operationid: searchpayment
+      tag: [payment]
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: paymentid
+          schema: { type: array, item: { type: string } }
+          description: filter by payment id
+        - in: query
+          name: billid
+          schema: { type: array, item: { type: string } }
+          description: filter by bill id
+        - in: query
+          name: receiptnumber
+          schema: { type: array, item: { type: string } }
+          description: filter by receipt number
+        - in: query
+          name: consumercode
+          schema: { type: array, item: { type: string } }
+          description: filter by consumer code
+        - in: query
+          name: paymentstatuse
+          schema: { type: array, item: { type: string } }
+          description: filter by payment statuse
+        - in: query
+          name: instrumentstatuse
+          schema: { type: array, item: { type: string } }
+          description: filter by instrument statuse
+        - in: query
+          name: paymentmode
+          schema: { type: array, item: { type: string } }
+          description: filter by payment mode
+        - in: query
+          name: payerid
+          schema: { type: array, item: { type: string } }
+          description: filter by payer id
+        - in: query
+          name: businessservicecode
+          schema: { type: string }
+          description: filter by busines service code (exact match)
+        - in: query
+          name: transactionnumber
+          schema: { type: string }
+          description: filter by transaction number
+        - in: query
+          name: payermobilenumber
+          schema: { type: string }
+          description: filter by payer mobile number
+        - in: query
+          name: fromdate
+          schema: { type: integer, format: int64 }
+          description: transactiondate >= fromdate
+        - in: query
+          name: todate
+          schema: { type: integer, format: int64 }
+          description: transactiondate <= todate
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+          description: page size (max 100)
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+          description: offset for pagination
+      response:
+        '200':
+          description: list of payment
+          header:
+            x-response-time: { $ref: '#/component/header/x-response-time' }
+            x-response-timestamp: { $ref: '#/component/header/x-response-timestamp' }
+            x-request-id: { $ref: '#/component/header/x-request-id' }
+            x-correlation-id: { $ref: '#/component/header/x-correlation-id' }
+            x-tenant-id: { $ref: '#/component/header/x-tenant-id' }
+            x-rate-limit: { $ref: '#/component/header/x-rate-limit' }
+            x-rate-limit-remaining: { $ref: '#/component/header/x-rate-limit-remaining' }
+            x-rate-limit-reset: { $ref: '#/component/header/x-rate-limit-reset' }
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/payment'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+
+
+component:
+  securityscheme:
+    bearerauth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+
+  parameter:
+    requestidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+    correlationidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+    useragentheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+    tenantidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    forwardedforheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+    clientid:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+    clientsecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+    timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+    idempotencykey:
+      name: idempotency-key
+      in: header
+      required: false
+      description: provide a unique value to prevent duplicate creation on retrie.
+      schema:
+        type: string
+        minlength: 8
+        maxlength: 128
+
+  header:
+    x-response-time:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+    x-response-timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+    x-request-id:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+    x-correlation-id:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+    x-tenant-id:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+    x-rate-limit:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+    x-rate-limit-remaining:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+    x-rate-limit-reset:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+
+  schema:
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+
+    auditdetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
+
+    businessservice:
+      type: object
+      description: define billing configuration for a service (e.g., property tax, trade license).
+      required:
+        - code
+        - name
+        - isactive
+        - currency
+        - effectivefrom
+        - billexpiryday
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: unique id for internal reference (uuid)
+        code:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            unique code of the busines service (e.g., pt, tl, w).
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+        name:
+          type: string
+          description: human readable name
+          minlength: 2
+          maxlength: 128
+        collectionmode:
+          type: string
+          description: allowed collection channel(s)
+          enum: [online, offline, both]
+          default: both
+        allowedpaymentmode:
+          type: array
+          description: enabled payment mode for thi service
+          item:
+            type: string
+            enum: [cash, cheque, dd, postalorder, offlineneft, offlinertg, online, card,onlineneft, onlinertg, upi, netbanking, wallet]
+        billexpiryday:
+          type: integer
+          description: day after which an issued bill expire (-1 = never)
+          example: 30
+        partialpaymentallowed:
+          type: boolean
+          description: allow paying les than total amount 
+          default: false
+        minpayableamount:
+          type: number
+          format: double
+          minimum: 0
+          description: minimum payable threshold; smaller amount get rounded/accumulated per rule
+          example: 10
+        currency:
+          type: string
+          pattern: '^[a-z]{3}$'
+          example: inr
+        roundingrulecode:
+          type: string
+          description: optional reference to a rounding rule master
+          nullable: true
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive:
+          type: boolean
+          default: true
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          readonly: true
+          description: internal version for concurrency control
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+
+    businessservicecreate:
+      type: object
+      description: payload to create a new busines service.
+      required:
+        - code
+        - name
+        - isactive
+        - currency
+        - effectivefrom
+      propertie:
+        code:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            unique code of the busines service (e.g., pt, tl, w).
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+        name:
+          type: string
+          description: human readable name
+          minlength: 2
+          maxlength: 128
+        collectionmode:
+          type: string
+          description: allowed collection channel(s)
+          enum: [online, offline, both]
+          default: both
+        allowedpaymentmode:
+          type: array
+          description: enabled payment mode for thi service
+          item:
+            type: string
+            enum: [cash, cheque, dd, postalorder, offlineneft, offlinertg, online, card,onlineneft, onlinertg, upi, netbanking, wallet]
+        billexpiryday:
+          type: integer
+          minimum: -1
+          description: day after which an issued bill expire (-1 = never)
+          example: 30
+        partialpaymentallowed:
+          type: boolean
+          description: allow paying les than total amount 
+          default: false
+        minpayableamount:
+          type: number
+          format: double
+          minimum: 0
+          description: minimum payable threshold; smaller amount get rounded/accumulated per rule
+          example: 10
+        currency:
+          type: string
+          pattern: '^[a-z]{3}$'
+          example: inr
+        roundingrulecode:
+          type: string
+          description: optional reference to a rounding rule master
+          nullable: true
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive:
+          type: boolean
+          default: true
+
+    businessserviceupdatebycode:
+      type: object
+      description: payload to update a existing busines service by code.
+      required:
+        - name
+        - isactive
+        - currency
+        - effectivefrom
+      propertie:
+        name:
+          type: string
+          description: human readable name
+          minlength: 2
+          maxlength: 128
+        collectionmode:
+          type: string
+          description: allowed collection channel(s)
+          enum: [online, offline, both]
+          default: both
+        allowedpaymentmode:
+          type: array
+          description: enabled payment mode for thi service
+          item:
+            type: string
+            enum: [cash, cheque, dd, postalorder, offlineneft, offlinertg, online, card,onlineneft, onlinertg, upi, netbanking, wallet]
+        billexpiryday:
+          type: integer
+          minimum: 0
+          description: day after which an issued bill expire (0 = never)
+          example: 30
+        partialpaymentallowed:
+          type: boolean
+          description: allow paying les than total amount 
+          default: false
+        minpayableamount:
+          type: number
+          format: double
+          minimum: 0
+          description: minimum payable threshold; smaller amount get rounded/accumulated per rule
+          example: 10
+        currency:
+          type: string
+          pattern: '^[a-z]{3}$'
+          example: inr
+        roundingrulecode:
+          type: string
+          description: optional reference to a rounding rule master
+          nullable: true
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive:
+          type: boolean
+          default: true
+
+    businessservicepatch:
+      type: object
+      description: partial update model for modifying editable field of a businessservice without replacing the full object.
+      propertie:
+        name:
+          type: string
+          minlength: 2
+          maxlength: 128
+        collectionmode:
+          type: string
+          enum: [online, offline, both]
+        allowedpaymentmode:
+          type: array
+          item:
+            type: string
+            enum: [cash, cheque, dd, postalorder, offlineneft, offlinertg, online, card,onlineneft, onlinertg, upi, netbanking, wallet]
+        billexpiryday:
+          type: integer
+          minimum: 0
+        minpayableamount:
+          type: number
+          format: double
+          minimum: 0
+        roundingrulecode:
+          type: string
+          nullable: true
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive:
+          type: boolean
+
+    taxhead:
+      type: object
+      description: represent a configurable charge component (e.g., base tax, penalty, rebate) linked to a businessservice.
+      required: 
+        - code
+        - name
+        - businessservicecode
+        - order
+        - effectivefrom
+        - isactive
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: unique id for internal reference (uuid)
+        code:
+          type: string
+          minlength: 2
+          maxlength: 64
+          pattern: '^[a-z][a-z0-9]{1,63}$'
+          description: |
+            unique tax head code (e.g., ptbase, ptpenalty, ptrebate).
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: ptbase
+        name:
+          type: string
+          description: human readable name
+          minlength: 2
+          maxlength: 128
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+        category:
+          type: string
+          enum: [tax, ces, penalty, interest, rebate, rounding, arrear, other]
+          default: other
+          description: tax head category
+        order: 
+          type: integer
+          minimum: 1
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive:
+          type: boolean
+          default: true
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          readonly: true
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+
+    taxheadcreate:
+      type: object
+      description: payload to create a new tax head.
+      required: 
+        - code
+        - name
+        - businessservicecode
+        - order
+        - effectivefrom
+        - isactive
+      propertie:
+        code:
+          type: string
+          minlength: 2
+          maxlength: 64
+          pattern: '^[a-z][a-z0-9]{1,63}$'
+          description: |
+            unique tax head code (e.g., ptbase, ptpenalty, ptrebate).
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: ptbase
+        name:
+          type: string
+          description: human readable name
+          minlength: 2
+          maxlength: 128
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+        category:
+          type: string
+          enum: [tax, ces, penalty, interest, rebate, rounding, arrear, other]
+          default: other
+          description: tax head category
+        order: 
+          type: integer
+          minimum: 1
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive:
+          type: boolean
+          default: true
+
+    taxheadupdatebycode:
+      type: object
+      description: payload to create a new tax head.
+      required: 
+        - name
+        - businessservicecode
+        - order
+        - effectivefrom
+        - isactive
+      propertie:
+        name:
+          type: string
+          description: human readable name
+          minlength: 2
+          maxlength: 128
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+        category:
+          type: string
+          enum: [tax, ces, penalty, interest, rebate, rounding, arrear, other]
+          default: other
+          description: tax head category
+        order: 
+          type: integer
+          minimum: 1
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive:
+          type: boolean
+          default: true
+
+    taxheadpatch:
+      type: object
+      description: schema for updating editable attribute of an existing taxhead without full replacement.
+      propertie:
+        name:
+          type: string
+          description: human readable name
+          minlength: 2
+          maxlength: 128
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+        effectivefrom:
+          type: integer
+          format: int64
+          description: start of effectivenes window (inclusive) timestamp (epoch millisecond)
+          example: 1735669800000
+        effectiveto:
+          type: integer
+          format: int64
+          description: end of effectivenes window (exclusive) timestamp (epoch millisecond)
+          example: 1767205800000
+          nullable: true
+        isactive: { type: boolean }
+
+    demand:
+      type: object
+      description: |
+        represent a calculated liability for a consumer over a time period. serve a the source record for bill generation and collection.
+        tenant context i provided via header; it i not embedded in thi object.
+      required:
+        - businessservicecode
+        - periodfrom
+        - periodto
+        - consumercode
+        - lineitem
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: system-generated unique identifier (uuid) for thi demand.
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: pt
+        periodfrom:
+          type: integer
+          format: int64
+          description: |
+            start (inclusive) of the assessed period in timestamp (epoch millisecond).
+            must be **on or before** `periodto`. used for proration and due-date policie.
+          example: 1735669800000
+        periodto:
+          type: integer
+          format: int64
+          description: |
+            end (inclusive) of the assessed period in timestamp (epoch millisecond).
+            must be **on or after** `periodfrom`.
+          example: 1767205799000
+        consumercode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: |
+            identifier of the underlying entity being billed (e.g., propertyid, connectionno, licenseno).
+          example: pb-jld-p-000123
+        billexpiryday:
+          type: integer
+          minimum: 0
+          description: day after which an issued bill expire (0 = never)
+          example: 30
+        payer:
+          type: array
+          minitem: 0
+          maxitem: 10
+          description: |
+            array of **individual id** responsible for paying thi demand.
+            each entry should reference an individual record in the identity/individual service.
+            can be empty if payer i inferred elsewhere (e.g., from consumer entity).
+          item:
+            type: string
+            minlength: 2
+            maxlength: 64
+            description: individual id (string/uuid) referencing an individual registry entry.
+          example:
+            - "ind-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
+            - "ind-51b7d3c1-5e2e-4f1a-92f3-2b3f9b0caa11"
+        arreardemandid:
+          type: array
+          description: store reference to all previou aggregated demand id (ordered newest → oldest).
+          item:
+            type: string
+            description: demand id (uuid)
+          example:
+            - 550e8400-e29b-41d4-a716-446655440000
+            - 550e8400-e29b-41d4-a716-446655440001
+        lineitem:
+          type: array
+          minitem: 1
+          maxitem: 200
+          description: |
+            strictly **tax-head referenced** line item (no open item). each line map to a configured tax head
+            and carrie the assessed amount for thi demand period.
+            **service rule**: duplicate taxheadcode entrie within the same demand are rejected.
+          item:
+            $ref: '#/component/schema/lineitem'
+        statu:
+          type: string
+          enum: [draft, active, frozen, cancelled]
+          default: active
+          description: |
+            demand lifecycle:
+            - **draft**: created but not yet validated/finalized. fully editable. not eligible for billing.
+            - **active**: validated and eligible for billing. minor correction allowed until frozen (per policy).
+            - **frozen**: locked for bill generation; **no edit** allowed (use adjustment or a new demand).
+            - **cancelled**: voided. not billable. used when assessment i withdrawn or superseded.
+        totalamount:
+          type: number
+          format: double
+          readonly: true
+          description: |
+            the computed sum of all line item `amount` value for thi demand.
+            thi value i system-generated and cannot be provided by the client.
+        totalcollectedamount:
+          type: number
+          format: double
+          readonly: true
+          description: |
+            the computed sum of all line item `collectedamount` value for thi demand.
+            represent how much ha been paid against the total amount. thi value i system-managed and cannot be modified by the client.
+        isdemandpaid:
+          type: boolean
+          readonly: true
+          default: false
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: freeform key-value context for calculator/reporting (e.g., assessmentversion, geo tag).
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          readonly: true
+          description: server-managed version for optimistic concurrency and audit.
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      # cros-field/busines rule (non-json-schema constraint)
+      x-businessrule:
+        - periodfrom <= periodto (date comparison).
+        - all lineitem.taxheadcode must exist & be active for the busines service and period.
+        - for positive line item amount, collectionamount ≤ amount; for negative amount, collectionamount must be 0.
+        - duplicate taxheadcode in lineitem i not allowed.
+        - demand i editable only in draft/active; transition enforced by service.
+
+    lineitem:
+      type: object
+      description: breakdown of an assessed amount within a demand, mapped to a specific taxhead (e.g., base charge, penalty, ces).
+      required: 
+        - taxheadcode
+        - amount
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: unique id for internal reference (uuid)
+        demandid:
+          type: string
+          format: uuid
+          readonly: true
+          description: reference demand
+        taxheadcode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          pattern: '^[a-z][a-z0-9]{1,63}$'
+          description: |
+            code of the configured tax head (same busines service; active within the period).
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: ptbase
+        amount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          multipleof: 0.01
+          description: |
+            assessed amount for thi line. positive value increase payable; negative value represent credit
+            (e.g., rebate). two-decimal precision enforced.
+          example: 4500
+        collectedamount:
+          type: number
+          format: double
+          minimum: 0
+          maximum:  1000000000
+          default: 0
+          multipleof: 0.01
+          description: |
+            amount already collected against thi line. must be ≥ 0 and, for positive `amount`, must not exceed `amount`.
+            for negative `amount` (credit), `collectionamount` must be **0**.
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: optional calculator trace (e.g., `rate`, `basi`, `unit`, `area`, `multiplier`, `slabid`) to support audit.
+      x-businessrule:
+        - if amount < 0 then collectionamount must be 0.
+        - if amount >= 0 then collectionamount ≤ amount.
+
+    demandcreate:
+      type: object
+      description: payload to create a new demand
+      required:
+        - businessservicecode
+        - periodfrom
+        - periodto
+        - consumercode
+        - lineitem
+      propertie:
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: pt
+        periodfrom:
+          type: integer
+          format: int64
+          description: |
+            start (inclusive) of the assessed period in timestamp (epoch millisecond).
+            must be **on or before** `periodto`. used for proration and due-date policie.
+          example: 1735669800000
+        periodto:
+          type: integer
+          format: int64
+          description: |
+            end (inclusive) of the assessed period in timestamp (epoch millisecond).
+            must be **on or after** `periodfrom`.
+          example: 1767205799000
+        consumercode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: |
+            identifier of the underlying entity being billed (e.g., propertyid, connectionno, licenseno).
+          example: pb-jld-p-000123
+        billexpiryday:
+          type: integer
+          minimum: 0
+          description: day after which an issued bill expire (0 = never)
+          example: 30
+        payer:
+          type: array
+          minitem: 0
+          maxitem: 10
+          description: |
+            array of **individual id** responsible for paying thi demand.
+            each entry should reference an individual record in the identity/individual service.
+            can be empty if payer i inferred elsewhere (e.g., from consumer entity).
+          item:
+            type: string
+            minlength: 2
+            maxlength: 64
+            description: individual id (string/uuid) referencing an individual registry entry.
+          example:
+            - "ind-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
+            - "ind-51b7d3c1-5e2e-4f1a-92f3-2b3f9b0caa11"
+        arrearsourcedemandid:
+          type: array
+          description: store reference to all previou aggregated demand id (ordered newest → oldest).
+          item:
+            type: string
+            description: demand id (uuid)
+          example:
+            - 550e8400-e29b-41d4-a716-446655440000
+            - 550e8400-e29b-41d4-a716-446655440001
+        lineitem:
+          type: array
+          minitem: 1
+          maxitem: 200
+          description: |
+            strictly **tax-head referenced** line item (no open item). each line map to a configured tax head
+            and carrie the assessed amount for thi demand period.
+            **service rule**: duplicate taxheadcode entrie within the same demand are rejected.
+          item:
+            $ref: '#/component/schema/lineitem'
+        statu:
+          type: string
+          enum: [draft, active, frozen, cancelled]
+          default: active
+          description: |
+            demand lifecycle:
+            - **draft**: created but not yet validated/finalized. fully editable. not eligible for billing.
+            - **active**: validated and eligible for billing. minor correction allowed until frozen (per policy).
+            - **frozen**: locked for bill generation; **no edit** allowed (use adjustment or a new demand).
+            - **cancelled**: voided. not billable. used when assessment i withdrawn or superseded.
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: freeform key-value context for calculator/reporting (e.g., assessmentversion, geo tag).
+      # cros-field/busines rule (non-json-schema constraint)
+      x-businessrule:
+        - periodfrom <= periodto (date comparison).
+        - all lineitem.taxheadcode must exist & be active for the busines service and period.
+        - for positive line item amount, collectionamount ≤ amount; for negative amount, collectionamount must be 0.
+        - duplicate taxheadcode in lineitem i not allowed.
+        - demand i editable only in draft/active; transition enforced by service.
+
+    demandupdate:
+      type: object
+      description: payload to fully replace an existing demand.
+      allof:
+        - type: object
+          required:
+            - id
+          propertie:
+            id:
+              type: string
+              format: uuid
+              description: unique identifier of the demand to update.
+        - $ref: '#/component/schema/demandcreate'
+      # cros-field/busines rule (non-json-schema constraint)
+      x-businessrule:
+        - periodfrom <= periodto (date comparison).
+        - all lineitem.taxheadcode must exist & be active for the busines service and period.
+        - for positive line item amount, collectionamount ≤ amount; for negative amount, collectionamount must be 0.
+        - duplicate taxheadcode in lineitem i not allowed.
+        - demand i editable only in draft/active; transition enforced by service.
+                     
+    demandpatch:
+      type: object
+      description: partial update schema for modifying an existing editable demand (before freezing or billing).
+      propertie:
+        consumercode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: |
+            identifier of the underlying entity being billed (e.g., propertyid, connectionno, licenseno).
+        payer:
+          type: array
+          minitem: 0
+          maxitem: 10
+          description: |
+            array of **individual id** responsible for paying thi demand.
+            each entry should reference an individual record in the identity/individual service.
+            can be empty if payer i inferred elsewhere (e.g., from consumer entity).
+          item:
+            type: string
+            minlength: 2
+            maxlength: 64
+            description: individual id (string/uuid) referencing an individual registry entry.
+          example:
+            - "ind-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
+            - "ind-51b7d3c1-5e2e-4f1a-92f3-2b3f9b0caa11"
+        lineitem:
+          type: array
+          minitem: 1
+          maxitem: 200
+          description: |
+            strictly **tax-head referenced** line item (no open item). each line map to a configured tax head
+            and carrie the assessed amount for thi demand period.
+            **service rule**: duplicate taxheadcode entrie within the same demand are rejected.
+          item:
+            $ref: '#/component/schema/lineitem'
+        statu:
+          type: string
+          enum: [draft, active]
+          description: only transition within editable state are allowed via patch
+
+    bulkresponse:
+      type: object
+      description: used for bulk api operation. contain separate list for successful and failed item to support partial processing.
+      propertie:
+        succes:
+          type: array
+          item: { $ref: '#/component/schema/demand' }
+        failure:
+          type: array
+          item:
+            type: object
+            propertie:
+              index:
+                type: integer
+                description: index of the failed item in the request array
+              error:
+                type: array
+                item: { $ref: '#/component/schema/error' }
+
+    generatebillcriteria:
+      type: object
+      description: criteria for generating one or more bill from eligible frozen?active demand under a businessservice.
+      required:
+        - businessservicecode
+        - consumercode
+      propertie:
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: pt
+        consumercode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: |
+            identifier of the underlying entity being billed (e.g., propertyid, connectionno, licenseno).
+          example: pb-jld-p-000123
+        payerid:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: individual id (string/uuid) referencing an individual registry entry.
+          example: ind-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3
+        payername:
+          type: string
+          maxlength: 256
+          example: john doe
+        payeraddres:
+          type: string
+          maxlength: 1024
+        payermobilenumber:
+          type: string
+          pattern: '^\\+?[0-9]{10,15}$'
+          description: mobile number with optional '+' prefix. should be 10 to 15 digit (e.g., +919876543210)
+          example: +919876543210
+        payeremail:
+          type: string
+          format: email
+          maxlength: 254
+          description: valid email addres (e.g., user@example.com)
+
+    updatebillstatu:
+      type: object
+      description: represent a request to change the statu of one or more existing bill (e.g., cancel, expire, mark paid).
+      required:
+        - businessservicecode
+        - consumercode
+        - statustobeupdated
+        - metadata
+      propertie:
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: pt
+        consumercode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: |
+            identifier of the underlying entity being billed (e.g., propertyid, connectionno, licenseno).
+          example: pb-jld-p-000123
+        statustobeupdated:
+          type: string
+          enum: [active, cancelled, expired, paid, partiallypaid, paymentcancelled]
+          description: current statu of the bill
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: optional calculator trace (e.g., `rate`, `basi`, `unit`, `area`, `multiplier`, `slabid`) to support audit.
+
+    bill:
+      type: object
+      description: represent an issued bill derived from a demand. track payer detail, bill item, payable amount, and lifecycle statu.
+      required:
+        - businessservicecode
+        - consumercode
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: system-generated unique identifier (uuid) for thi bill.
+        payerid:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: individual id (string/uuid) referencing an individual registry entry.
+          example: ind-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3
+        payername:
+          type: string
+          maxlength: 256
+          example: john doe
+        payeraddres:
+          type: string
+          maxlength: 1024
+        payermobilenumber:
+          type: string
+          pattern: '^\\+?[0-9]{10,15}$'
+          description: mobile number with optional '+' prefix. should be 10 to 15 digit (e.g., +919876543210)
+          example: +919876543210
+        payeremail:
+          type: string
+          format: email
+          maxlength: 254
+          description: valid email addres (e.g., user@example.com)
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: pt
+        consumercode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: |
+            identifier of the underlying entity being billed (e.g., propertyid, connectionno, licenseno).
+          example: pb-jld-p-000123
+        billnumber:
+          type: string
+          readonly: true
+          description: idgen generated bill number
+          example: bill-06151  
+        billissueat:
+          type: integer
+          format: int64
+          readonly: true
+          description: bill generation timestamp (epoch millisecond)
+          example: 1735669800000
+        billexpiryat:
+          type: integer
+          format: int64
+          description: bill expiry timestamp (epoch millisecond)
+          example: 1767205800000
+        statu:
+          type: string
+          enum: [active, cancelled, expired, paid, partiallypaid, paymentcancelled]
+          description: current statu of the bill
+          default: active
+        totalamount:
+          type: number
+          format: double
+          example: 1000
+        totalcollectedamount:
+          type: number
+          format: double
+          example: 1000
+        billdetail:
+          type: array
+          item: 
+            $ref: '#/component/schema/billdetail'
+          minitem:  1
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: optional calculator trace (e.g., `rate`, `basi`, `unit`, `area`, `multiplier`, `slabid`) to support audit.
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+
+    billdetail:
+      type: object
+      description: define the period-based billing section associated with a demand, containing aggregated amount value and detailed account-level tax entrie.
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: unique id for internal reference (uuid)
+        billid:
+          type: string
+          format: uuid
+          readonly: true
+          description: reference bill
+        demandid:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          example: 10000
+        amountpaid:
+          type: number
+          format: double
+          example: 0
+        periodfrom:
+          type: integer
+          format: int64
+          description: |
+            start (inclusive) of the assessed period in timestamp (epoch millisecond).
+            must be **on or before** `periodto`. used for proration and due-date policie.
+          example: 1735669800000
+        periodto:
+          type: integer
+          format: int64
+          description: |
+            end (inclusive) of the assessed period in timestamp (epoch millisecond).
+            must be **on or after** `periodfrom`.
+          example: 1767205799000
+        billaccountdetail:
+          type: array
+          item:
+            $ref: '#/component/schema/billaccountdetail'
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: optional calculator trace (e.g., `rate`, `basi`, `unit`, `area`, `multiplier`, `slabid`) to support audit.
+
+    billaccountdetail:
+      type: object
+      description: define the granular accounting component of a bill, specifying tax head mapping, payable and adjusted amount, and metadata for audit traceability.
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: unique id for internal reference (uuid)
+        billdetailid:
+          type: string
+          format: uuid
+          readonly: true
+          description: reference bill detail
+        lineitemid:
+          type: string
+          format: uuid
+          readonly: true
+          description: reference line item
+        taxheadcode:
+          type: string
+          minlength: 2
+          maxlength: 64
+          pattern: '^[a-z][a-z0-9]{1,63}$'
+          description: |
+            code of the configured tax head (same busines service; active within the period).
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: ptbase
+        order: 
+          type: integer
+          minimum: 1
+        amount:
+          type: number
+          format: double
+          example: 1000
+        adjustedamount:
+          type: number
+          format: double
+          example: 0
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: optional calculator trace (e.g., `rate`, `basi`, `unit`, `area`, `multiplier`, `slabid`) to support audit.
+
+    payment:
+      type: object
+      description: represent a payment transaction recorded in the system.
+      required:
+        - totalamountpaid
+        - paymentmode
+        - paidby
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: system-generated unique identifier (uuid) for thi payment.
+        totalamountdue:
+          type: number
+          format: double
+          example: 1000
+        totalamountpaid:
+          type: number
+          format: double
+          example: 1000
+        transactionnumber:
+          type: string
+          maxlength: 128
+        transactiondate:
+          type: integer
+          format: int64
+        paymentmode:
+          type: string
+          enum: [cash, cheque, dd, postalorder, offlineneft, offlinertg, online, card,onlineneft, onlinertg, upi, netbanking, wallet]
+        paymentstatu:
+          type: string
+          enum: [new, deposited, cancelled, dishonoured, reconciled]
+        instrumentdate:
+          type: integer
+          format: int64
+        instrumentnumber:
+          type: string
+          maxlength: 128
+        instrumentstatu:
+          type: string
+          enum: [approved, approvalpending, tobesubmitted, cancelled, dishonoured, remitted, rejected]
+        ifsccode:
+          type: string
+          maxlength: 64
+        paidby:
+          type: string
+          maxlength: 128
+          pattern: '^[a-za-z]+(([\-''`\. ][a-za-z ])?[a-za-z]*)*$'
+          example: rajesh kumar
+        payerid:
+          type: string
+          minlength: 2
+          maxlength: 64
+          description: individual id (string/uuid) referencing an individual registry entry.
+          example: ind-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3
+        payername:
+          type: string
+          maxlength: 256
+          example: john doe
+        payeraddres:
+          type: string
+          maxlength: 1024
+        payermobilenumber:
+          type: string
+          pattern: '^\\+?[0-9]{10,15}$'
+          description: mobile number with optional '+' prefix. should be 10 to 15 digit (e.g., +919876543210)
+          example: +919876543210
+        payeremail:
+          type: string
+          format: email
+          maxlength: 254
+          description: valid email addres (e.g., user@example.com)
+        paymentdetail:
+          type: array
+          item:
+            $ref: '#/component/schema/paymentdetail'
+        filestoreid:
+          type: string
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: optional calculator trace (e.g., `rate`, `basi`, `unit`, `area`, `multiplier`, `slabid`) to support audit.
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+
+    paymentdetail:
+      type: object
+      description: define how a payment amount i distributed acros bill
+      required:
+        - totalamountpaid
+        - businessservicecode
+        - billid
+      propertie:
+        id:
+          type: string
+          format: uuid
+          readonly: true
+          description: unique id for internal reference (uuid)
+        paymentid:
+          type: string
+          format: uuid
+          readonly: true
+          description: reference payment
+        totalamountdue:
+          type: number
+          format: double
+          example: 1000
+        totalamountpaid:
+          type: number
+          format: double
+          example: 1000
+        manualreceiptnumber:
+          type: string
+          maxlength: 64
+        manualreceiptdate:
+          type: integer
+          format: int64
+        receiptnumber:
+          type: string
+          maxlength: 64
+        receiptdate:
+          type: integer
+          format: int64
+        receipttype:
+          type: string
+        businessservicecode:
+          type: string
+          minlength: 2
+          maxlength: 32
+          pattern: '^[a-z][a-z0-9]{1,31}$'
+          description: |
+            code of the owning busines service (e.g., pt, tl, w). must reference an **active** service.
+            pattern: uppercase letter, digit, underscore; must start with a letter.
+          example: pt
+        billid:
+          type: string
+        bill:
+          $ref: '#/component/schema/bill'
+        metadata:
+          type: object
+          additionalpropertie: true
+          description: optional calculator trace (e.g., `rate`, `basi`, `unit`, `area`, `multiplier`, `slabid`) to support audit.
+
+
+
+        

@@ -1,0 +1,1082 @@
+openapi: 3.0.3
+info:
+  title: workflow service api
+  version: 3.0.0
+  description: |
+    openapi contract for the digit workflow service. all endpoint are relative to the
+    configured context path (for example, `/workflow`). each request must include
+    the `x-tenant-id` header to scope operation to a tenant unles explicitly noted.
+server:
+  - url: /workflow
+    description: base context path (override per environment).
+tag:
+  - name: proces
+    description: manage workflow processe.
+  - name: state
+    description: manage state within a workflow proces.
+  - name: action
+    description: manage action/transition between state.
+  - name: escalationconfig
+    description: manage escalation configuration.
+  - name: transition
+    description: execute and search workflow transition.
+  - name: autoescalation
+    description: trigger or search auto-escalation run.
+component:
+  parameter:
+    tenantheader:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+      description: tenant identifier used to scope the request.
+    clientheader:
+      name: x-client-id
+      in: header
+      required: false
+      schema:
+        type: string
+      description: client/user identifier captured for audit; required by some endpoint.
+  response:
+    errorresponse:
+      description: api error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/component/schema/error'
+    nocontent:
+      description: operation completed successfully with no body.
+  schema:
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+        createdtime:
+          type: integer
+          format: int64
+        modifiedby:
+          type: string
+        modifiedtime:
+          type: integer
+          format: int64
+    document:
+      type: object
+      propertie:
+        documenttype:
+          type: string
+        filestoreid:
+          type: string
+        documentuid:
+          type: string
+        additionaldetail:
+          type: object
+          additionalpropertie: {}
+    attributevalidation:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        attribute:
+          type: object
+          additionalpropertie:
+            type: array
+            item:
+              type: string
+        assigneecheck:
+          type: boolean
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    proces:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+        sla:
+          type: integer
+          format: int64
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    processcreate:
+      allof:
+        - $ref: '#/component/schema/proces'
+      required: [name, code]
+      propertie:
+        id:
+          readonly: true
+    processupdate:
+      type: object
+      propertie:
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+        sla:
+          type: integer
+          format: int64
+    state:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        processid:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        sla:
+          type: integer
+          format: int64
+        isinitial:
+          type: boolean
+        isparallel:
+          type: boolean
+        isjoin:
+          type: boolean
+        branchstate:
+          type: array
+          item:
+            type: string
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    statecreate:
+      allof:
+        - $ref: '#/component/schema/state'
+      required: [code, name]
+      propertie:
+        id:
+          readonly: true
+        processid:
+          readonly: true
+    stateupdate:
+      type: object
+      propertie:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        sla:
+          type: integer
+          format: int64
+        isinitial:
+          type: boolean
+        isparallel:
+          type: boolean
+        isjoin:
+          type: boolean
+        branchstate:
+          type: array
+          item:
+            type: string
+    action:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        label:
+          type: string
+        currentstate:
+          type: string
+          format: uuid
+        nextstate:
+          type: string
+        attributevalidation:
+          $ref: '#/component/schema/attributevalidation'
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    actioncreate:
+      type: object
+      required: [name, nextstate]
+      propertie:
+        name:
+          type: string
+        label:
+          type: string
+        nextstate:
+          type: string
+          description: state code or uuid for the next state.
+        attributevalidation:
+          $ref: '#/component/schema/attributevalidation'
+    actionupdate:
+      allof:
+        - $ref: '#/component/schema/actioncreate'
+    escalationconfig:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        processid:
+          type: string
+          format: uuid
+        statecode:
+          type: string
+        escalationaction:
+          type: string
+        stateslaminute:
+          type: integer
+        processslaminute:
+          type: integer
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    escalationconfigcreate:
+      allof:
+        - $ref: '#/component/schema/escalationconfig'
+      required: [statecode, escalationaction]
+      propertie:
+        id:
+          readonly: true
+    processdefinitiondetail:
+      type: object
+      propertie:
+        proces:
+          $ref: '#/component/schema/proces'
+        state:
+          type: array
+          item:
+            type: object
+            propertie:
+              state:
+                $ref: '#/component/schema/state'
+              action:
+                type: array
+                item:
+                  $ref: '#/component/schema/action'
+    processinstance:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        processid:
+          type: string
+        entityid:
+          type: string
+        action:
+          type: string
+        statu:
+          type: string
+        comment:
+          type: string
+        document:
+          type: array
+          item:
+            $ref: '#/component/schema/document'
+        assigner:
+          type: string
+        assignee:
+          type: array
+          item:
+            type: string
+        currentstate:
+          type: string
+        statesla:
+          type: integer
+          format: int64
+        processsla:
+          type: integer
+          format: int64
+        attribute:
+          type: object
+          additionalpropertie:
+            type: array
+            item:
+              type: string
+        nextaction:
+          type: array
+          item:
+            type: string
+        parentinstanceid:
+          type: string
+        branchid:
+          type: string
+        isparallelbranch:
+          type: boolean
+        islatest:
+          type: boolean
+        escalated:
+          type: boolean
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    transitionrequest:
+      type: object
+      required: [processid, entityid]
+      propertie:
+        processinstanceid:
+          type: string
+        processid:
+          type: string
+        entityid:
+          type: string
+        init:
+          type: boolean
+        action:
+          type: string
+        statu:
+          type: string
+        currentstate:
+          type: string
+        comment:
+          type: string
+        document:
+          type: array
+          item:
+            type: string
+        assigner:
+          type: string
+        assignee:
+          type: array
+          item:
+            type: string
+        attribute:
+          type: object
+          additionalpropertie:
+            type: array
+            item:
+              type: string
+    transitionresponse:
+      type: object
+      propertie:
+        id:
+          type: string
+        processid:
+          type: string
+        entityid:
+          type: string
+        action:
+          type: string
+        statu:
+          type: string
+        comment:
+          type: string
+        document:
+          type: array
+          item:
+            type: string
+        assigner:
+          type: string
+        assignee:
+          type: array
+          item:
+            type: string
+        currentstate:
+          type: string
+        statesla:
+          type: integer
+          format: int64
+        processsla:
+          type: integer
+          format: int64
+        attribute:
+          type: object
+          additionalpropertie:
+            type: array
+            item:
+              type: string
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    processinstancelistresponse:
+      type: object
+      propertie:
+        processinstance:
+          type: array
+          item:
+            $ref: '#/component/schema/processinstance'
+        totalcount:
+          type: integer
+          format: int32
+    escalationresult:
+      type: object
+      propertie:
+        totalfound:
+          type: integer
+        totalescalated:
+          type: integer
+        escalatedinstance:
+          type: array
+          item:
+            $ref: '#/component/schema/processinstance'
+        error:
+          type: array
+          item:
+            type: string
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+path:
+  /v1/proces:
+    post:
+      tag: [proces]
+      summary: create a workflow proces
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/processcreate'
+      response:
+        '201':
+          description: proces created
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/proces'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '409':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+    get:
+      tag: [proces]
+      summary: search processe
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - in: query
+          name: id
+          schema:
+            type: array
+            item:
+              type: string
+          style: form
+          explode: true
+          description: filter by proces id.
+        - in: query
+          name: name
+          schema:
+            type: array
+            item:
+              type: string
+          style: form
+          explode: true
+          description: filter by proces name.
+        - in: query
+          name: code
+          schema:
+            type: array
+            item:
+              type: string
+          style: form
+          explode: true
+          description: filter by proces code.
+      response:
+        '200':
+          description: list of processe
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/proces'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+    delete:
+      tag: [proces]
+      summary: delete a proces by query parameter
+      description: provide an alternative delete path accepting either `id` or `code` a query parameter.
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - in: query
+          name: id
+          schema:
+            type: string
+          description: proces id (uuid). take precedence when supplied.
+        - in: query
+          name: code
+          schema:
+            type: string
+          description: proces code used when `id` i not provided.
+      response:
+        '204':
+          $ref: '#/component/response/nocontent'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '404':
+          $ref: '#/component/response/errorresponse'
+        '409':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/proces/definition:
+    get:
+      tag: [proces]
+      summary: list proces definition with full state/action detail
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - in: query
+          name: id
+          schema:
+            type: array
+            item:
+              type: string
+          style: form
+          explode: true
+        - in: query
+          name: name
+          schema:
+            type: array
+            item:
+              type: string
+          style: form
+          explode: true
+      response:
+        '200':
+          description: full proces definition
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/processdefinitiondetail'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/proces/{id}:
+    parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tag: [proces]
+      summary: get proces by id
+      response:
+        '200':
+          description: proces detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/proces'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '404':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+    put:
+      tag: [proces]
+      summary: update a proces
+      parameter:
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/processupdate'
+      response:
+        '200':
+          description: updated proces
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/proces'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '404':
+          $ref: '#/component/response/errorresponse'
+        '409':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+    delete:
+      tag: [proces]
+      summary: delete proces by id
+      response:
+        '204':
+          $ref: '#/component/response/nocontent'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '404':
+          $ref: '#/component/response/errorresponse'
+        '409':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/proces/{processid}/state:
+    parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: processid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tag: [state]
+      summary: create state within a proces
+      parameter:
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/statecreate'
+      response:
+        '201':
+          description: state created
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/state'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+    get:
+      tag: [state]
+      summary: list state under a proces
+      parameter:
+        - in: query
+          name: code
+          schema:
+            type: array
+            item:
+              type: string
+          style: form
+          explode: true
+          description: filter by state code.
+      response:
+        '200':
+          description: state under the proces
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/state'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/state/{id}:
+    parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tag: [state]
+      summary: get state by id
+      response:
+        '200':
+          description: state detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/state'
+        '404':
+          $ref: '#/component/response/errorresponse'
+    put:
+      tag: [state]
+      summary: update state by id
+      parameter:
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/stateupdate'
+      response:
+        '200':
+          description: updated state
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/state'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '404':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+    delete:
+      tag: [state]
+      summary: delete state by id
+      response:
+        '204':
+          $ref: '#/component/response/nocontent'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/state/{stateid}/action:
+    parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: stateid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tag: [action]
+      summary: create an action for a state
+      parameter:
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/actioncreate'
+      response:
+        '201':
+          description: action created
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/action'
+        '400':
+          $ref: '#/component/response/errorresponse'
+    get:
+      tag: [action]
+      summary: list action for a state
+      parameter:
+        - in: query
+          name: code
+          schema:
+            type: array
+            item:
+              type: string
+          style: form
+          explode: true
+          description: filter by action code.
+      response:
+        '200':
+          description: action under the state
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/action'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/action/{id}:
+    parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tag: [action]
+      summary: get action by id
+      response:
+        '200':
+          description: action detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/action'
+        '404':
+          $ref: '#/component/response/errorresponse'
+    put:
+      tag: [action]
+      summary: update action by id
+      parameter:
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/actionupdate'
+      response:
+        '200':
+          description: updated action
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/action'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '404':
+          $ref: '#/component/response/errorresponse'
+    delete:
+      tag: [action]
+      summary: delete action by id
+      response:
+        '204':
+          $ref: '#/component/response/nocontent'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/proces/{processid}/escalation:
+    parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: processid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tag: [escalationconfig]
+      summary: create escalation configuration for a proces
+      parameter:
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/escalationconfigcreate'
+      response:
+        '201':
+          description: escalation configuration created
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/escalationconfig'
+        '400':
+          $ref: '#/component/response/errorresponse'
+    get:
+      tag: [escalationconfig]
+      summary: list escalation configuration for a proces
+      parameter:
+        - in: query
+          name: statecode
+          schema:
+            type: string
+          description: filter by state code.
+      response:
+        '200':
+          description: escalation configuration
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/escalationconfig'
+        '400':
+          $ref: '#/component/response/errorresponse'
+  /v1/escalation/{id}:
+    parameter:
+      - $ref: '#/component/parameter/tenantheader'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tag: [escalationconfig]
+      summary: get escalation configuration by id
+      response:
+        '200':
+          description: escalation configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/escalationconfig'
+        '404':
+          $ref: '#/component/response/errorresponse'
+    put:
+      tag: [escalationconfig]
+      summary: update escalation configuration by id
+      parameter:
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/escalationconfig'
+      response:
+        '200':
+          description: updated configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/escalationconfig'
+        '400':
+          $ref: '#/component/response/errorresponse'
+    delete:
+      tag: [escalationconfig]
+      summary: delete escalation configuration by id
+      response:
+        '204':
+          $ref: '#/component/response/nocontent'
+        '404':
+          $ref: '#/component/response/errorresponse'
+  /v1/transition:
+    post:
+      tag: [transition]
+      summary: trigger a workflow transition or create an instance
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - $ref: '#/component/parameter/clientheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/transitionrequest'
+      response:
+        '200':
+          description: transition result
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/transitionresponse'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '403':
+          $ref: '#/component/response/errorresponse'
+        '404':
+          $ref: '#/component/response/errorresponse'
+        '409':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+    get:
+      tag: [transition]
+      summary: search proces instance (transition)
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - in: query
+          name: entityid
+          schema:
+            type: string
+        - in: query
+          name: processid
+          schema:
+            type: string
+        - in: query
+          name: currentstateid
+          schema:
+            type: string
+        - in: query
+          name: assigneeid
+          schema:
+            type: string
+        - in: query
+          name: history
+          schema:
+            type: boolean
+          description: only valid when filtering by entityid.
+      response:
+        '200':
+          description: matching proces instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/processinstancelistresponse'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '403':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/auto/{processcode}/escalate:
+    post:
+      tag: [autoescalation]
+      summary: trigger auto-escalation run for a proces code
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - name: processcode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: x-client-id
+          in: header
+          required: true
+          schema:
+            type: string
+      requestbody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              propertie:
+                attribute:
+                  type: object
+                  additionalpropertie:
+                    type: array
+                    item:
+                      type: string
+      response:
+        '200':
+          description: auto-escalation summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/escalationresult'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'
+  /v1/auto/search:
+    get:
+      tag: [autoescalation]
+      summary: search escalated application
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - in: query
+          name: processid
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      response:
+        '200':
+          description: escalated instance
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/processinstance'
+        '400':
+          $ref: '#/component/response/errorresponse'
+        '500':
+          $ref: '#/component/response/errorresponse'

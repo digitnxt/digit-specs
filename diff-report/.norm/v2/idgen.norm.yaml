@@ -1,0 +1,330 @@
+openapi: 3.0.1
+info:
+  title: id generation service
+  description: "thi service generate a unique id/code given the needed format e.g.\
+    \ an id wit format ap-pt-2017/04/11-000001-23 where format i can be decomposed\
+    \ a (- i used a a separator in the above example) -\n  \n  ap - fixed string\
+    \ indicating the tenant\n  \n  pt - fixed string indicating module\n  \n  2017/04/11\
+    \ - date field indicating yyyy/mm/dd\n  \n  000001 - local sequence number\n \
+    \ \n  23 - two random digit\n\n  thi can be indicated to idgen service a an\
+    \ id needed in the format (square bracket indicate the part that will be replaced\
+    \ by the svc to generate the new id) -\n  ap-pt-[yyyy/mm/dd]-[seqacknum]-[d{2}]\n\
+    \  \n  please note that are replaceable element will be enclosed within []. following\
+    \ construct are supported - \n      \n      1. date pattern a per java simpledateformat\
+    \ (https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html)\n \
+    \     2. regex pattern a per java regex patern (http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html)\n\
+    \      3. seq where x i the name of a sequence to be used, e.g. seqacknum\n\
+    \      4. static element will be without enclosing square bracket\n  \n"
+  contact:
+    name: pranav
+  version: 1.0.0
+server:
+- url: https://dev.digit.org/egov-idgen/
+path:
+  /id/generate:
+    post:
+      tag:
+      - property
+      summary: create new id.
+      description: api to generate new id based on the id format passed.
+      requestbody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/idgenerationrequest'
+        required: true
+      response:
+        201:
+          description: id generated sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/idgenerationresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/idgenerrorre'
+      x-codegen-request-body-name: idrequest
+component:
+  schema:
+    idrequest:
+      required:
+      - idname
+      - tenantid
+      type: object
+      propertie:
+        idname:
+          type: string
+          description: |
+            it would indicate the type of id, we would like to generate, ex upic no or acknowledgement number. please nite that the id format can also be configured with idgen service with thei name in case calling service wishe to do so, so a to not needing to pas the format each time. in such a case if the format i passed at the runtime then the passed format will take precedence over configured format. idname should be namespaced with module/functionality e.g. propertytax.acknumber or propertytax.assessmentnumber
+        tenantid:
+          type: string
+          description: |
+            tenantid for which id ha to be generated. please note that an id configuration can be overwritten for a particular tenant using tenantid prefix,  e.g. mycity.propertytax.acknumber configuration will be evaluated for mycity if both propertytax.acknumber and mycity.propertytax.acknumber are configured
+        format:
+          type: string
+          description: format of the id to be generated. supported a per the description
+            of the service.
+        count:
+          type: integer
+          description: count for id
+    idresponse:
+      type: object
+      propertie:
+        id:
+          type: string
+          description: thi i the generated id
+    idgenerationrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        idrequest:
+          type: array
+          item:
+            $ref: '#/component/schema/idrequest'
+      description: contract clas to receive request.
+    idgenerationresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        idresponse:
+          type: array
+          item:
+            $ref: '#/component/schema/idresponse'
+      description: contract clas to send response.
+    idgenerrorre:
+      allof:
+      - $ref: '#/component/schema/errorre'
+      - type: object
+        propertie:
+          code:
+            type: string
+            enum:
+            - invalididformat
+            - idseqoverflow
+            - idseqnotfound
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        id:
+          type: integer
+          description: user id of the authenticated user. will be deprecated in future
+          format: int32
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+    role:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.

@@ -1,0 +1,4169 @@
+openapi: 3.0.1
+info:
+  title: egov billing service api
+  description: |-
+    egov billing service manage head wise demand and demand bill information for all the revenue module from egov solution. it manage
+    * the demand data for a revenue module with category of tax for a defined *period, rebate, penalty, late payment interest, fee* etc and again head wise in each category. thi module have one entity called demand for every revenue entity which hold the list of category and head wise demand for a defined period in demanddetail.
+    * the demand bill data with period and head wise due and it payment detail.
+    * service api support single tenant only
+  contact:
+    name: egovernment foundation
+  version: 1.1.0
+server:
+- url: /
+path:
+
+  /billing-service/amendment/create:
+    post:
+      tag:
+      - amendment-controller
+      summary: create
+      operationid: createusingpost
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/amendmentrequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/amendment/search:
+    post:
+      tag:
+      - amendment-controller
+      summary: search
+      operationid: searchusingpost
+      parameter:
+      - name: amendmentid
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: businessservice
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: mobilenumber
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: statu
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/amendment/update:
+    post:
+      tag:
+      - amendment-controller
+      summary: update
+      operationid: updateusingpost
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/amendmentupdaterequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/bill/v2/cancelbill:
+    post:
+      tag:
+      - bill-controllerv-2
+      summary: cancelbill
+      operationid: cancelbillusingpost
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/updatebillrequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/bill/v2/create:
+    post:
+      tag:
+      - bill-controllerv-2
+      summary: create
+      operationid: createusingpost2
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/billrequestv2"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/bill/v2/fetchbill:
+    post:
+      tag:
+      - bill-controllerv-2
+      summary: fetchbill
+      operationid: fetchbillusingpost1
+      parameter:
+      - name: businessservice
+        in: query
+        required: true
+        style: form
+        schema:
+          maximum: 256
+          minimum: 0
+          maxlength: 256
+          minlength: 0
+          type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: demandid
+        in: query
+        required: false
+        style: form
+        schema:
+          maximum: 64
+          minimum: 0
+          maxlength: 64
+          minlength: 0
+          type: string
+      - name: email
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: mobilenumber
+        in: query
+        required: false
+        style: form
+        schema:
+          pattern: "^[0-9]{10}$"
+          type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          maximum: 256
+          minimum: 0
+          maxlength: 256
+          minlength: 0
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/bill/v2/generate:
+    post:
+      tag:
+      - bill-controllerv-2
+      summary: genratebill
+      operationid: genratebillusingpost1
+      parameter:
+      - name: businessservice
+        in: query
+        required: true
+        style: form
+        schema:
+          maximum: 256
+          minimum: 0
+          maxlength: 256
+          minlength: 0
+          type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: demandid
+        in: query
+        required: false
+        style: form
+        schema:
+          maximum: 64
+          minimum: 0
+          maxlength: 64
+          minlength: 0
+          type: string
+      - name: email
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: mobilenumber
+        in: query
+        required: false
+        style: form
+        schema:
+          pattern: "^[0-9]{10}$"
+          type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          maximum: 256
+          minimum: 0
+          maxlength: 256
+          minlength: 0
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/bill/v2/search:
+    post:
+      tag:
+      - bill-controllerv-2
+      summary: search
+      operationid: searchusingpost2
+      parameter:
+      - name: billid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: billnumber
+        in: query
+        required: false
+        style: form
+        schema:
+          maximum: 256
+          minimum: 0
+          maxlength: 256
+          minlength: 0
+          type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: email
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: fromperiod
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: isactive
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: iscancelled
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: mobilenumber
+        in: query
+        required: false
+        style: form
+        schema:
+          pattern: "^[0-9]{10}$"
+          type: string
+      - name: offset
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: orderby
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: retrieveoldest
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: service
+        in: query
+        required: false
+        style: form
+        schema:
+          maximum: 256
+          minimum: 0
+          maxlength: 256
+          minlength: 0
+          type: string
+      - name: size
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: statu
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+          enum:
+          - active
+          - cancelled
+          - expired
+          - paid
+          - partiallypaid
+          - paymentcancelled
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          maximum: 256
+          minimum: 0
+          maxlength: 256
+          minlength: 0
+          type: string
+      - name: toperiod
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/businessservice/search:
+    post:
+      tag:
+      - busines-service-detail-controller
+      summary: search
+      operationid: searchusingpost3
+      parameter:
+      - name: businessservice
+        in: query
+        required: true
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: id
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found        
+  /billing-service/demand/create:
+    post:
+      tag:
+      - demand-controller
+      summary: create
+      operationid: createusingpost3
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/demandrequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/demand/migratetov1:
+    post:
+      tag:
+      - demand-controller
+      summary: migrate
+      operationid: migrateusingpost
+      parameter:
+      - name: batchstart
+        in: query
+        description: batchstart
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: batchsizeinput
+        in: query
+        description: batchsizeinput
+        required: true
+        style: form
+        schema:
+          type: integer
+          format: int32
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/demand/search:
+    post:
+      tag:
+      - demand-controller
+      summary: search
+      operationid: searchusingpost4
+      parameter:
+      - name: businessservice
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: demandfrom
+        in: query
+        required: false
+        style: form
+        schema:
+          type: number
+          format: bigdecimal
+      - name: demandid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: demandto
+        in: query
+        required: false
+        style: form
+        schema:
+          type: number
+          format: bigdecimal
+      - name: email
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: ispaymentcompleted
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: mobilenumber
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: payer
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: periodfrom
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: periodto
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: receiptrequired
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: statu
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      - name: type
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+          enum:
+          - arrear
+          - current
+          - due
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/demand/update:
+    post:
+      tag:
+      - demand-controller
+      summary: update
+      operationid: updateusingpost1
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/demandrequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /billing-service/taxhead/search:
+    post:
+      tag:
+      - tax-head-master-controller
+      summary: search
+      operationid: searchusingpost5
+      parameter:
+      - name: category
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: code
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: id
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: isactualdemand
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: isdebit
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: name
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: service
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found        
+  /billing-service/taxperiod/search:
+    post:
+      tag:
+      - tax-period-controller
+      summary: search
+      operationid: searchusingpost6
+      parameter:
+      - name: code
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: date
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: fromdate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: id
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: periodcycle
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+          enum:
+          - annual
+          - halfyear
+          - month
+          - quarter
+      - name: service
+        in: query
+        required: true
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      - name: todate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found         
+component:
+  schema:
+    action:
+      title: action
+      required:
+      - action
+      - nextstate
+      - role
+      type: object
+      propertie:
+        action:
+          maxlength: 256
+          minlength: 0
+          type: string
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        currentstate:
+          maxlength: 256
+          minlength: 0
+          type: string
+        nextstate:
+          maxlength: 256
+          minlength: 0
+          type: string
+        role:
+          type: array
+          item:
+            type: string
+        tenantid:
+          maxlength: 256
+          minlength: 0
+          type: string
+        uuid:
+          maxlength: 256
+          minlength: 0
+          type: string
+    amendment:
+      title: amendment
+      required:
+      - amendmentreason
+      - businessservice
+      - consumercode
+      - demanddetail
+      - document
+      - tenantid
+      type: object
+      propertie:
+        additionaldetail:
+          "$ref": "#/component/schema/jsonnode"
+        amendeddemandid:
+          type: string
+        amendmentid:
+          type: string
+        amendmentreason:
+          type: string
+          enum:
+          - arrearwriteoff
+          - courtcasesettlement
+          - dcbcorrection
+          - onetimesettlement
+          - other
+          - remissionforpropertytax
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        businessservice:
+          type: string
+        consumercode:
+          type: string
+        demanddetail:
+          type: array
+          item:
+            "$ref": "#/component/schema/demanddetail"
+        document:
+          type: array
+          item:
+            "$ref": "#/component/schema/document"
+        effectivefrom:
+          type: integer
+          format: int64
+        effectivetill:
+          type: integer
+          format: int64
+        id:
+          type: string
+        reasondocumentnumber:
+          type: string
+        statu:
+          type: string
+          enum:
+          - active
+          - consumed
+          - inactive
+          - inworkflow
+        tenantid:
+          type: string
+        workflow:
+          "$ref": "#/component/schema/processinstance"
+    amendmentrequest:
+      title: amendmentrequest
+      required:
+      - amendment
+      - requestinfo
+      type: object
+      propertie:
+        amendment:
+          "$ref": "#/component/schema/amendment"
+        requestinfo:
+          "$ref": "#/component/schema/requestinfo"
+    amendmentupdate:
+      title: amendmentupdate
+      required:
+      - amendmentid
+      - tenantid
+      - workflow
+      type: object
+      propertie:
+        additionaldetail:
+          "$ref": "#/component/schema/jsonnode"
+        amendeddemandid:
+          type: string
+        amendmentid:
+          type: string
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        document:
+          type: array
+          item:
+            "$ref": "#/component/schema/document"
+        statu:
+          type: string
+          enum:
+          - active
+          - consumed
+          - inactive
+          - inworkflow
+        tenantid:
+          type: string
+        workflow:
+          "$ref": "#/component/schema/processinstance"
+    amendmentupdaterequest:
+      title: amendmentupdaterequest
+      required:
+      - amendmentupdate
+      - requestinfo
+      type: object
+      propertie:
+        amendmentupdate:
+          "$ref": "#/component/schema/amendmentupdate"
+        requestinfo:
+          "$ref": "#/component/schema/requestinfo"
+    demand:
+      required:
+      - businessservice
+      - consumercode
+      - consumertype
+      - demanddetail
+      - taxperiodfrom
+      - taxperiodto
+      - tenantid
+      type: object
+      propertie:
+        id:
+          type: string
+          description: primary key of a demand.
+        tenantid:
+          maxlength: 128
+          minlength: 4
+          type: string
+          description: unique identifier of the tenant
+        consumercode:
+          type: string
+          description: unique identification of billing entity.
+        consumertype:
+          type: string
+          description: consumer type of billing entity.
+        businessservice:
+          maxlength: 256
+          minlength: 4
+          type: string
+          description: billing system e.g., property tax, water charge etc.
+        payer:
+          $ref: '#/component/schema/user'
+        taxperiodfrom:
+          type: integer
+          description: start date from when the tax i applicable.
+          format: int64
+        taxperiodto:
+          type: integer
+          description: end date till when the tax i applicable.
+          format: int64
+        demanddetail:
+          type: array
+          item:
+            $ref: '#/component/schema/demanddetail'
+        billexpirytime:
+          type: integer
+          description: time in epoch indicating the period in which the bill generated
+            for thi particular demand expire or invalidate.
+          format: int64
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+        additionaldetail:
+          type: object
+          propertie: {}
+          description: field for capturing any additional detail.
+        statu:
+          type: string
+          enum:
+          - active
+          - cancelled
+          - adjusted
+      description: a object which hold the basic info about the revenue assessment
+        for which the demand i generated like module name, consumercode, owner, etc.
+    demanddetail:
+      required:
+      - collectionamount
+      - taxamount
+      type: object
+      propertie:
+        id:
+          type: string
+          description: primary key of a demanddetail.
+        demandid:
+          type: string
+          description: foriegn key of a demanddetail from demand.
+        taxheadmastercode:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: tax head code.
+        taxamount:
+          type: number
+          description: demand amount.
+          format: bigdecimal
+        collectionamount:
+          type: number
+          description: collection against taxamount.
+        additionaldetail:
+          type: object
+          propertie: {}
+          description: field for capturing any additional detail.
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+        tenantid:
+          maxlength: 128
+          minlength: 4
+          type: string
+          description: unique identifier of the tenant
+      description: a object hold a demand and collection value for a tax head and
+        period.
+    document:
+      title: document
+      required:
+      - documenttype
+      - filestoreid
+      type: object
+      propertie:
+        additionaldetail:
+          type: object
+        documenttype:
+          type: string
+        documentuid:
+          type: string
+        filestoreid:
+          type: string
+        id:
+          type: string    
+    billdetailv2:
+      title: billdetailv2
+      type: object
+      propertie:
+        additionaldetail:
+          type: object
+        amount:
+          type: number
+          format: bigdecimal
+        amountpaid:
+          type: number
+          format: bigdecimal
+        billaccountdetail:
+          type: array
+          item:
+            "$ref": "#/component/schema/billaccountdetailv2"
+        billid:
+          type: string
+        demandid:
+          type: string
+        expirydate:
+          type: integer
+          format: int64
+        fromperiod:
+          type: integer
+          format: int64
+        id:
+          type: string
+        tenantid:
+          type: string
+        toperiod:
+          type: integer
+          format: int64        
+    billaccountdetailv2:
+      title: billaccountdetailv2
+      type: object
+      propertie:
+        additionaldetail:
+          type: object
+        adjustedamount:
+          type: number
+          format: bigdecimal
+        amount:
+          type: number
+          format: bigdecimal
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        billdetailid:
+          type: string
+        demanddetailid:
+          type: string
+        id:
+          type: string
+        order:
+          type: integer
+          format: int32
+        taxheadcode:
+          type: string
+        tenantid:
+          type: string      
+    demandrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        demand:
+          type: array
+          item:
+            $ref: '#/component/schema/demand'
+    billrequestv2:
+      title: billrequestv2
+      type: object
+      propertie:
+        bill:
+          type: array
+          item:
+            "$ref": "#/component/schema/billv2"
+        requestinfo:
+          "$ref": "#/component/schema/requestinfo"
+    jsonnode:
+      title: jsonnode
+      type: object      
+    billv2:
+      title: billv2
+      type: object
+      propertie:
+        additionaldetail:
+          "$ref": "#/component/schema/jsonnode"
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        billdate:
+          type: integer
+          format: int64
+        billdetail:
+          type: array
+          item:
+            "$ref": "#/component/schema/billdetailv2"
+        billnumber:
+          maxlength: 256
+          minlength: 0
+          type: string
+        businessservice:
+          maxlength: 256
+          minlength: 0
+          type: string
+        consumercode:
+          maxlength: 256
+          minlength: 0
+          type: string
+        filestoreid:
+          type: string
+        id:
+          maxlength: 256
+          minlength: 0
+          type: string
+        mobilenumber:
+          pattern: "^[0-9]{10}$"
+          type: string
+        payeraddres:
+          maxlength: 1024
+          minlength: 0
+          type: string
+        payeremail:
+          maxlength: 256
+          minlength: 0
+          type: string
+        payername:
+          maxlength: 256
+          minlength: 0
+          type: string
+        statu:
+          type: string
+          enum:
+          - active
+          - cancelled
+          - expired
+          - paid
+          - partiallypaid
+          - paymentcancelled
+        tenantid:
+          maxlength: 256
+          minlength: 0
+          type: string
+        totalamount:
+          type: number
+          format: bigdecimal      
+    updatebillrequest:
+      title: updatebillrequest
+      type: object
+      propertie:
+        requestinfo:
+          "$ref": "#/component/schema/requestinfo"
+        updatebillcriteria:
+          "$ref": "#/component/schema/updatebillcriteria"        
+    updatebillcriteria:
+      title: updatebillcriteria
+      required:
+      - additionaldetail
+      - businessservice
+      - consumercode
+      - statustobeupdated
+      - tenantid
+      type: object
+      propertie:
+        additionaldetail:
+          "$ref": "#/component/schema/jsonnode"
+        billid:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+        businessservice:
+          type: string
+        consumercode:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+        statustobeupdated:
+          type: string
+          enum:
+          - active
+          - cancelled
+          - expired
+          - paid
+          - partiallypaid
+          - paymentcancelled
+        tenantid:
+          type: string      
+    user:
+      required:
+      - active
+      - gender
+      - locale
+      - mobilenumber
+      - name
+      - tenantid
+      - type
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        id:
+          type: integer
+          description: the unique numeric id of an user. to be deprecated in future.
+          format: int64
+        username:
+          maxlength: 64
+          minlength: 4
+          type: string
+          description: the unique username used of the user - thi will be used for
+            user login. thi need to be unique within the tenant.
+        authtoken:
+          type: string
+          description: "authentication token for the user that may be - \n1. password\
+            \ in case of basic auth\n2. otp in case of otp based verification\n3.\
+            \ oauth auth token for oauth based auth\n"
+          format: password
+        salutation:
+          maxlength: 5
+          type: string
+          description: the salutation of user name. example- mr, mis, mr
+        name:
+          maxlength: 100
+          minlength: 3
+          type: string
+          description: the full name of the user.
+        gender:
+          type: string
+          description: gender of the user.
+        mobilenumber:
+          maxlength: 10
+          type: string
+          description: mobile number of the user
+        emailid:
+          maxlength: 128
+          type: string
+          description: email addres of the user
+        aadhaarnumber:
+          maxlength: 12
+          pattern: '[0-9]'
+          type: string
+          description: aadhaar number of the user
+        active:
+          type: boolean
+          description: true if the user i active and false if the user i inactive.
+        pwdexpirydate:
+          type: integer
+          description: epoch of time when the current auth token (password/otp) will
+            expire.
+          format: int64
+          readonly: true
+        locale:
+          maxlength: 5
+          type: string
+          description: value will be set to "enin".
+        type:
+          maxlength: 20
+          type: string
+          description: system set value internally. for employee value will be alway
+            "employee". for citizen value will be "citizen".
+        accountlocked:
+          type: boolean
+          description: set to true if account i locked after several incorrect password
+            attempt. false if account i not locked.
+          default: false
+        role:
+          type: array
+          description: list of role that are attached to the user.
+          item:
+            $ref: '#/component/schema/role'
+        userdetail:
+          $ref: '#/component/schema/userdetail'
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    role:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    processinstance:
+      title: processinstance
+      required:
+      - action
+      - businessid
+      - businessservice
+      - modulename
+      - tenantid
+      type: object
+      propertie:
+        action:
+          maxlength: 128
+          minlength: 0
+          type: string
+        assigner:
+          "$ref": "#/component/schema/user"
+        assigne:
+          type: array
+          item:
+            "$ref": "#/component/schema/user"
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        businessid:
+          maxlength: 128
+          minlength: 0
+          type: string
+        businessservice:
+          maxlength: 128
+          minlength: 0
+          type: string
+        businesssservicesla:
+          type: integer
+          format: int64
+        comment:
+          maxlength: 1024
+          minlength: 0
+          type: string
+        document:
+          type: array
+          item:
+            "$ref": "#/component/schema/document"
+        entity:
+          type: object
+        id:
+          maxlength: 64
+          minlength: 0
+          type: string
+        modulename:
+          maxlength: 64
+          minlength: 0
+          type: string
+        nextaction:
+          type: array
+          item:
+            "$ref": "#/component/schema/action"
+        previousstatu:
+          maxlength: 128
+          minlength: 0
+          type: string
+        state:
+          "$ref": "#/component/schema/state"
+        statesla:
+          type: integer
+          format: int64
+        tenantid:
+          maxlength: 128
+          minlength: 0
+          type: string    
+    userdetail:
+      type: object
+      propertie:
+        firstname:
+          maxlength: 32
+          minlength: 1
+          type: string
+          description: the full name of the user.
+        middlename:
+          maxlength: 32
+          minlength: 1
+          type: string
+          description: the full name of the user.
+        lastname:
+          maxlength: 32
+          minlength: 1
+          type: string
+          description: the full name of the user.
+        dob:
+          type: string
+          description: date of birth of the user in dd/mm/yyyy format.
+          format: date
+        altcontactnumber:
+          maxlength: 16
+          type: string
+          description: alternate contact number of the user
+        fathername:
+          maxlength: 100
+          type: string
+          description: user's father's name if available
+        husbandname:
+          maxlength: 100
+          type: string
+          description: name of user's husband - if applicable
+        bloodgroup:
+          maxlength: 3
+          type: string
+          description: blood group of the user.
+        pan:
+          maxlength: 10
+          type: string
+          description: pan number of the user
+        permanentaddres:
+          maxlength: 300
+          type: string
+          description: permanent addres of the user.
+        permanentcity:
+          maxlength: 300
+          type: string
+          description: city of the permanent addres.
+        permanentpincode:
+          maxlength: 6
+          type: string
+          description: permanent addres pincode.
+        correspondencecity:
+          maxlength: 50
+          type: string
+          description: city of the correspondence addres.
+        correspondencepincode:
+          maxlength: 6
+          type: string
+          description: permanent addres pincode.
+        correspondenceaddres:
+          maxlength: 300
+          type: string
+          description: correspondence addres of the user.
+        signature:
+          type: string
+          description: image to be loaded for the signature of the employee
+        identificationmark:
+          maxlength: 300
+          type: string
+          description: any identification mark of the person.
+        photo:
+          type: string
+          description: image to be loaded for the photo of the user
+      description: infrequently used detail for the user
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+          description: username (preferred) or userid of the user that created the
+            object
+        lastmodifiedby:
+          type: string
+          description: username (preferred) or userid of the user that last modified
+            the object
+        createdtime:
+          type: integer
+          description: epoch of the time object i created
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          description: epoch of the time object i last modified
+          format: int64
+      description: collection of audit related field used by most model
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    requestinfowrapper:
+      title: requestinfowrapper
+      type: object
+      propertie:
+        requestinfo:
+          "$ref": "#/component/schema/requestinfo"    
+    state:
+      title: state
+      type: object
+      propertie:
+        action:
+          type: array
+          item:
+            "$ref": "#/component/schema/action"
+        applicationstatu:
+          maxlength: 256
+          minlength: 0
+          type: string
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        businessserviceid:
+          maxlength: 256
+          minlength: 0
+          type: string
+        docuploadrequired:
+          type: boolean
+        isstartstate:
+          type: boolean
+        isstateupdatable:
+          type: boolean
+        isterminatestate:
+          type: boolean
+        sla:
+          type: integer
+          format: int64
+        state:
+          maxlength: 256
+          minlength: 0
+          type: string
+        tenantid:
+          maxlength: 256
+          minlength: 0
+          type: string
+        uuid:
+          maxlength: 256
+          minlength: 0
+          type: string      
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        id:
+          type: integer
+          description: user id of the authenticated user. will be deprecated in future
+          format: int32
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml
+
+
+openapi: 3.0.1
+info:
+  title: collection system
+  description: collection management system serve a revenue collection platform
+    for all the billing system through cash, cheque, dd, swipe machine.
+  contact:
+    name: egovernment foundation
+    email: contact@egovernment.org
+  version: 1.0.1
+server:
+- url: /
+path:
+  /bankaccountservicemapping/create:
+    post:
+      tag:
+      - bank-account-service-mapping-controller
+      summary: create
+      operationid: createusingpost
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/bankaccountservicemappingreq"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /bankaccountservicemapping/search:
+    post:
+      tag:
+      - bank-account-service-mapping-controller
+      summary: search
+      operationid: searchusingpost
+      parameter:
+      - name: bankaccount
+        in: query
+        schema: {}
+      - name: businessdetail
+        in: query
+        schema: {}
+      - name: tenantid
+        in: query
+        schema: {}
+      response:
+        200:
+          description: ok
+          content: {}
+        201:
+          description: created
+          content: {}
+        401:
+          description: unauthorized
+          content: {}
+        403:
+          description: forbidden
+          content: {}
+        404:
+          description: not found
+          content: {}
+  /payment/search: 
+    post:
+      tag:
+      - payment
+      summary: searche the payment based on search criteria
+      description: api to search payment based on search parameter like consumercode,
+        mobilenumber, transactionnumber etc.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: pagesize
+        in: query
+        description: number of record returned.
+        schema:
+          multipleof: 10.0
+          maximum: 100
+          exclusivemaximum: false
+          minimum: 0
+          exclusiveminimum: true
+          type: integer
+          default: 20
+      - name: pagenumber
+        in: query
+        description: page number
+        schema:
+          type: integer
+          default: 1
+      - name: sort
+        in: query
+        description: receipt result will be sorted by receiptnumber ascending by
+          default.
+        style: pipedelimited
+        schema:
+          maxitem: 3
+          minitem: 1
+          uniqueitem: true
+          type: array
+          item:
+            pattern: '[-+](receiptnumber|receiptdate)'
+            type: string
+          default: '["+receiptnumber"]'
+      - name: id
+        in: query
+        description: payment id.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      - name: consumercode
+        in: query
+        description: consumer code .
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      - name: receiptnumber
+        in: query
+        description: list of receipt number.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      - name: fromdate
+        in: query
+        description: transaction date, here search will happen a transaction date
+          i greater or equal to given fromdate.
+        schema:
+          type: integer
+          format: int64
+      - name: todate
+        in: query
+        description: transaction date, here search will happen a transaction date
+          i lesser or equal to given todate.
+        schema:
+          type: integer
+          format: int64
+      - name: statu
+        in: query
+        description: search based on the statu of the payment.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      - name: instrumentstatu
+        in: query
+        description: search based on the statu of the instrument.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      - name: paymentmode
+        in: query
+        description: search based on the payment type such a cash, cheque, dd etc.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      - name: payerid
+        in: query
+        description: the id of the payer
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      - name: transactionnumber
+        in: query
+        description: unique tansaction number for multiple receipt created in one
+          transaction.
+        schema:
+          maxlength: 64
+          minlength: 0
+          type: string
+      - name: mobilenumber
+        in: query
+        description: unique tansaction number for multiple receipt created in one
+          transaction.
+        schema:
+          maxlength: 64
+          minlength: 0
+          type: string
+      - name: billid
+        in: query
+        description: list of bill id to search receipt.busines detail code i
+          mandatory for searching with thi criteria.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: successful response
+          content:
+            '*/*':
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/paymentresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: requestinfo
+  /payment/plainsearch:
+    post:
+      tag:
+      - payment
+      summary: plainsearch
+      operationid: plainsearchusingpost
+      parameter:
+      - name: billid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: businessservice
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: fromdate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: id
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: instrumentstatu
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: iscountrequest
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: mobilenumber
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: offset
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: payerid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          type: array
+          item:
+            type: string
+      - name: paymentmode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: receiptnumber
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: statu
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: tenantid
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: tenantid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: todate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: transactionnumber
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/component/schema/paymentresponse"
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found    
+  /payment/create:
+    post:
+      tag:
+      - payment
+      summary: record the payment in the system
+      description: thi api generate a transaction number and persist the payment
+        detail. the payment information i then pushed to queue for further processing.
+      requestbody:
+        description: create payment for list of bill
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/paymentrequest'
+        required: true
+      response:
+        201:
+          description: payment created sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/paymentresponse'
+        400:
+          description: invalid input.
+          content: {}
+      x-codegen-request-body-name: paymentrequest
+  /payment/validate:
+    post:
+      tag:
+      - payment
+      summary: validate the paymentrequest
+      description: |
+        the api run the following set of validation on the payment request.
+        1. bill i present and i in valid state
+        2. amount paid i positive integer
+        3. zero amount payment i allowed only if bill amount i zero
+        4. payment mode i allowed
+        5. partial payment i allowed based on the businessservice
+        6. advance payment i allowed based on the businessservice
+      requestbody:
+        description: the request to be validated
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/paymentrequest'
+        required: true
+      response:
+        201:
+          description: payment info validated sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/paymentresponse'
+        400:
+          description: invalid input.
+          content: {}
+      x-codegen-request-body-name: paymentrequest
+  /payment/{modulename}/search:
+    post:
+      tag:
+      - payment
+      summary: search
+      operationid: searchusingpost2
+      parameter:
+      - name: billid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: businessservice
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: fromdate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: id
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: instrumentstatu
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: iscountrequest
+        in: query
+        required: false
+        style: form
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: mobilenumber
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: offset
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: payerid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          type: array
+          item:
+            type: string
+      - name: paymentmode
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: receiptnumber
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: statu
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: tenantid
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: tenantid
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+      - name: todate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: transactionnumber
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: modulename
+        in: path
+        description: modulename
+        required: true
+        style: simple
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found        
+  /payment/{modulename}/workflow:
+    post:
+      tag:
+      - payment
+      summary: workflow
+      operationid: workflowusingpost
+      parameter:
+      - name: modulename
+        in: path
+        description: modulename
+        required: true
+        style: simple
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/paymentworkflowrequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /preexistpayment/update:
+    post:
+      tag:
+      - pre-exist-payment-controller
+      summary: update
+      operationid: updateusingpost
+      response:
+        '200':
+          description: ok
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found        
+  /remittance/create:
+    post:
+      tag:
+      - remittance-controller
+      summary: create
+      operationid: createusingpost2
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/remittancerequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/component/schema/remittanceresponse"
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /remittance/search:
+    post:
+      tag:
+      - remittance-controller
+      summary: search
+      operationid: searchusingpost3
+      parameter:
+      - name: bankaccount
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: fromdate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: function
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: fund
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: id
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          type: array
+          item:
+            type: string
+      - name: limit
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: offset
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: pagesize
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: reasonfordelay
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: referencenumber
+        in: query
+        required: false
+        style: pipedelimited
+        schema:
+          type: array
+          item:
+            type: string
+      - name: remark
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: sortby
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: sortorder
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: statu
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: tenantid
+        in: query
+        required: true
+        style: form
+        schema:
+          type: string
+      - name: todate
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: voucherheader
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/component/schema/remittanceresponse"
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /remittance/update:
+    post:
+      tag:
+      - remittance-controller
+      summary: update
+      operationid: updateusingpost1
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/remittancerequest"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found        
+  
+component:
+  schema:
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+          description: username (preferred) or userid of the user that created the
+            object
+        lastmodifiedby:
+          type: string
+          description: username (preferred) or userid of the user that last modified
+            the object
+        createdtime:
+          type: integer
+          description: epoch of the time object i created
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          description: epoch of the time object i last modified
+          format: int64
+      description: collection of audit related field used by most model
+    bankaccountservicemappingreq:
+      title: bankaccountservicemappingreq
+      required:
+      - bankaccountservicemapping
+      - requestinfo
+      type: object
+      propertie:
+        bankaccountservicemapping:
+          type: array
+          item:
+            $ref: '#/component/schema/bankaccountservicemapping'
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+    bankaccountservicemapping:
+      title: bankaccountservicemapping
+      required:
+      - bankaccount
+      - businessdetail
+      - tenantid
+      type: object
+      propertie:
+        bank:
+          type: string
+        bankaccount:
+          type: string
+        bankbranch:
+          type: string
+        businessdetail:
+          type: string
+        tenantid:
+          type: string      
+    bill:
+      type: object
+      propertie:
+        paidby:
+          type: string
+          description: name of the person who i making payment.
+        mobilenumber:
+          type: string
+          description: the mobilenumber of person who i paying
+          format: varchar
+        payername:
+          type: string
+          description: the owner of the bill
+          format: varchar
+        payeraddres:
+          type: string
+          description: the addres of the owner of the bill
+          format: varchar
+        payeremail:
+          type: string
+          description: the email id of the owner of the bill
+          format: varchar
+        payerid:
+          type: string
+          description: the system user id of the owner of the bill
+          format: varchar
+        statu:
+          type: string
+          description: statu of the bill.
+          enum:
+          - active
+          - cancelled
+          - paid
+          - expired
+        reasonforcancellation:
+          type: string
+          description: the reason for cancellation of bill
+          format: varchar
+        iscancelled:
+          type: boolean
+          description: boolean indicating if the bill i cancelled
+          format: varchar
+        additionaldetail:
+          type: object
+          propertie: {}
+          description: additional field can be captured here
+        collectionmodesnotallowed:
+          type: array
+          description: the list of collection mode that are not allowed
+          item:
+            type: string
+        partpaymentallowed:
+          type: boolean
+          description: boolean flag indicating if partial payment i allowed to be
+            collected
+        isadvanceallowed:
+          type: boolean
+          description: flag indicating if advance can be collected
+        minimumamounttobepaid:
+          type: number
+          description: the minumun amount that can be paid against the bill
+          format: double
+        businessservice:
+          type: string
+          description: the businessservice of the entity for which the bill i generated
+          format: varchar
+        totalamount:
+          type: number
+          description: the total amount to be paid for the bill
+          format: double
+        consumercode:
+          type: string
+          description: the consumer code for which bill i generated
+          format: varchar
+        billnumber:
+          type: string
+          description: the bill number generated by system
+          format: varchar
+        billdate:
+          type: number
+          description: the date on which bill i generated
+          format: int64
+        billdetail:
+          type: array
+          item:
+            $ref: '#/component/schema/billdetail'
+    billdetail:
+      type: object
+      propertie:
+        id:
+          type: string
+          description: uuid of the billdetail.
+        tenantid:
+          type: string
+          description: tenantid of the billdetail.
+        demandid:
+          type: string
+          description: the id of the corresponding demand .
+        billid:
+          type: string
+          description: the id of the parent bill.
+        amount:
+          type: number
+          description: amount to be paid for the bill detail.
+          format: double
+        amountpaid:
+          type: number
+          description: amount paid by the citizen.
+          format: double
+        fromperiod:
+          type: number
+          description: start date of the taxperiod
+          format: int64
+        toperiod:
+          type: number
+          description: end date of the taxperiod
+          format: int64
+        receiptdate:
+          type: string
+          description: receipt date.
+          format: date
+        receipttype:
+          type: object
+          description: type of receipt.
+        channel:
+          type: string
+          description: to be used by third party application, to send the channel
+            name.
+        voucherheader:
+          type: object
+          description: voucher header  need to refer from finanical.
+        boundary:
+          type: object
+          description: boundary need to refer from core service.
+        manualreceiptnumber:
+          type: string
+          description: manual receipt number for legacy reciept.
+        manualreceiptdate:
+          type: number
+          description: manual receipt date for legacy reciept.
+        collectiontype:
+          type: string
+          description: collectiontype of the payment.
+        billdescription:
+          type: string
+          description: description of the bill.
+        expirydate:
+          type: number
+          description: expiry date in epoch
+          format: int64
+        displaymessage:
+          type: string
+        cancellationremark:
+          type: string
+          description: remark related to cancellation of payment
+        billaccountdetail:
+          type: array
+          item:
+            $ref: '#/component/schema/billaccountdetail'
+    billaccountdetail:
+      type: object
+      propertie:
+        id:
+          type: string
+          description: uuid of the billaccountdetail.
+        tenantid:
+          type: string
+          description: tenantid of the billaccountdetail.
+        billdetailid:
+          type: string
+          description: uuid of the parent billdetail.
+        demanddetailid:
+          type: string
+          description: uuid of the demand for which the parent billdetail i created.
+        order:
+          type: integer
+          description: priority of the account detail.
+        amount:
+          type: number
+          description: amount to be paid for the bill account detail
+          format: double
+        adjustedamount:
+          type: number
+          description: the amount paid against the bill account detail
+          format: double
+        taxheadcode:
+          type: string
+          description: the taxheadcode of the bill account detail
+        additionaldetail:
+          type: object
+          propertie: {}
+          description: additional field can be captured in thi object a map
+        purpose:
+          type: string
+          description: purpose of the bill account detail.
+          enum:
+          - arrear
+          - current
+          - advance
+          - exemption
+          - arrearlatepaymentcharge
+          - currentlatepaymentcharge
+          - chequebouncepenalty
+          - rebate
+          - other
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.      
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.    
+    paymentrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        payment:
+          $ref: '#/component/schema/payment'
+      description: payment request with request info.
+    paymentresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        payment:
+          $ref: '#/component/schema/payment'
+      description: receipt request with request info.
+    paymentworkflowrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        payment:
+          $ref: '#/component/schema/paymentworkflow'
+      description: payment workflow request with request info.
+    payment:
+      required:
+      - mobilenumber
+      - paidby
+      - paymentdetail
+      - paymentmode
+      - tenantid
+      - totalamountpaid
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 64
+          type: string
+          description: unique id of tenant.
+          format: varchar
+        id:
+          maxlength: 64
+          type: string
+          description: unique id of tenant.
+          format: varchar
+        totaldue:
+          type: number
+          description: total amount due.
+        totalamountpaid:
+          type: number
+          description: unique id of tenant.
+          format: double
+        transactionnumber:
+          maxlength: 128
+          type: string
+          description: transaction number of the payment
+          format: varchar
+        transactiondate:
+          type: number
+          description: the date of payment in epoch
+          format: int64
+        paymentmode:
+          type: string
+          description: mode of payment used.
+          format: varchar
+          enum:
+          - cash
+          - cheque
+          - dd
+          - online
+          - card
+        instrumentdate:
+          type: number
+          description: the instrument date
+          format: int64
+        instrumentnumber:
+          maxlength: 128
+          type: string
+          description: the number of the instrument like dd number,cheque number etc.
+          format: varchar
+        instrumentstatu:
+          type: string
+          description: the statu of the instrument
+          format: varchar
+          enum:
+          - approved
+          - approvalpending
+          - tobesubmitted
+          - remitted
+          - rejected
+          - cancelled
+          - dishonoured
+        ifsccode:
+          maxlength: 64
+          type: string
+          description: ifsc code of the bank to which payment i made
+          format: varchar
+        additionaldetail:
+          type: object
+          propertie: {}
+          description: any additional field can be captured here a a map
+        paymentdetail:
+          type: array
+          description: payment detail of each bill
+          item:
+            $ref: '#/component/schema/paymentdetail'
+        paidby:
+          maxlength: 128
+          type: string
+          description: the person who i paying the bill
+          format: varchar
+        mobilenumber:
+          maxlength: 64
+          type: string
+          description: the mobilenumber of person who i paying
+          format: varchar
+        payername:
+          maxlength: 128
+          type: string
+          description: the owner of the bill
+          format: varchar
+        payeraddres:
+          maxlength: 1024
+          type: string
+          description: the addres of the owner of the bill
+          format: varchar
+        payeremail:
+          maxlength: 64
+          type: string
+          description: the email id of the owner of the bill
+          format: varchar
+        payerid:
+          maxlength: 64
+          type: string
+          description: the system user id of the owner of the bill
+          format: varchar
+        paymentstatu:
+          type: string
+          description: unique id of tenant.
+          enum:
+          - new
+          - deposited
+          - cancelled
+          - dishonoured
+          - reconciled
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    paymentdetail:
+      required:
+      - billid
+      - totalamountpaid
+      type: object
+      propertie:
+        id:
+          maxlength: 64
+          type: string
+          description: id of the payment detail
+        tenantid:
+          maxlength: 64
+          type: string
+          description: tenantid of the payment detail
+        totaldue:
+          type: number
+          description: the total amount to be paid for the bill corresponding to the
+            payment detail
+          format: double
+        totalamountpaid:
+          type: number
+          description: the amount that i being paid
+          format: double
+        manualreceiptnumber:
+          maxlength: 64
+          type: string
+          description: receipt number entered manually for legacy data.
+        receiptnumber:
+          maxlength: 64
+          type: string
+          description: the receipt number generated for the payment against the bill
+        receipttype:
+          type: string
+          description: the receipt type generated for the payment against the bill
+        receiptdate:
+          type: integer
+          description: the epoch receipt date generated for the payment against the
+            bill
+        businessservice:
+          type: string
+          description: the code of the businessservice to which the bill belong
+        billid:
+          maxlength: 64
+          type: string
+          description: the id of the bill for which the payment i made
+        bill:
+          $ref: '#/component/schema/bill'
+        additionaldetail:
+          type: integer
+          description: any additional field can be captured here a a map
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: the payment detail of each bill
+    paymentworkflow:
+      required:
+      - action
+      - paymentid
+      - tenantid
+      type: object
+      propertie:
+        paymentid:
+          type: string
+          description: id of the payment on which to take action .
+        action:
+          type: string
+          description: the action to be taken on the payment
+          enum:
+          - cancel
+          - dishonour
+          - remit
+        tenantid:
+          type: string
+          description: tenantid of the payment
+        reason:
+          type: string
+          description: reason for taking the action.
+        additionaldetail:
+          type: integer
+          description: any additional field can be captured here a a map
+      description: workflow object for payment
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    requestinfowrapper:
+      title: requestinfowrapper
+      type: object
+      propertie:
+        requestinfo:
+          "$ref": "#/component/schema/requestinfo"    
+    remittance:
+      title: remittance
+      required:
+      - referencedate
+      - referencenumber
+      - tenantid
+      type: object
+      propertie:
+        auditdetail:
+          "$ref": "#/component/schema/auditdetail"
+        bankaccount:
+          type: string
+        function:
+          type: string
+        fund:
+          type: string
+        id:
+          type: string
+        reasonfordelay:
+          type: string
+        referencedate:
+          type: integer
+          format: int64
+        referencenumber:
+          type: string
+        remark:
+          type: string
+        remittancedetail:
+          uniqueitem: true
+          type: array
+          item:
+            "$ref": "#/component/schema/remittancedetail"
+        remittanceinstrument:
+          uniqueitem: true
+          type: array
+          item:
+            "$ref": "#/component/schema/remittanceinstrument"
+        remittancereceipt:
+          uniqueitem: true
+          type: array
+          item:
+            "$ref": "#/component/schema/remittancereceipt"
+        statu:
+          type: string
+        tenantid:
+          type: string
+        voucherheader:
+          type: string      
+    remittancedetail:
+      title: remittancedetail
+      required:
+      - chartofaccount
+      type: object
+      propertie:
+        chartofaccount:
+          type: string
+        creditamount:
+          type: number
+          format: bigdecimal
+        debitamount:
+          type: number
+          format: bigdecimal
+        id:
+          type: string
+        remittance:
+          type: string
+        tenantid:
+          type: string
+    remittanceinstrument:
+      title: remittanceinstrument
+      required:
+      - instrument
+      type: object
+      propertie:
+        id:
+          type: string
+        instrument:
+          type: string
+        reconciled:
+          type: boolean
+        remittance:
+          type: string
+        tenantid:
+          type: string
+    remittancereceipt:
+      title: remittancereceipt
+      type: object
+      propertie:
+        id:
+          type: string
+        receipt:
+          type: string
+        remittance:
+          type: string
+        tenantid:
+          type: string          
+    remittancerequest:
+      title: remittancerequest
+      required:
+      - remittance
+      - requestinfo
+      type: object
+      propertie:
+        remittance:
+          type: array
+          item:
+            "$ref": "#/component/schema/remittance"
+        requestinfo:
+          "$ref": "#/component/schema/requestinfo"
+    remittanceresponse:
+      title: remittanceresponse
+      type: object
+      propertie:
+        remittance:
+          type: array
+          item:
+            "$ref": "#/component/schema/remittance"
+        responseinfo:
+          "$ref": "#/component/schema/responseinfo"          
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    role:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        id:
+          type: integer
+          description: user id of the authenticated user. will be deprecated in future
+          format: int32
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+   
+    
+  parameter:
+    pagesize:
+      name: pagesize
+      in: query
+      description: number of record returned.
+      schema:
+        multipleof: 10.0
+        maximum: 100
+        exclusivemaximum: false
+        minimum: 0
+        exclusiveminimum: true
+        type: integer
+        default: 20
+    pagenumber:
+      name: pagenumber
+      in: query
+      description: page number
+      schema:
+        type: integer
+        default: 1
+    sortreceipt:
+      name: sort
+      in: query
+      description: receipt result will be sorted by receiptnumber ascending by default.
+      style: pipedelimited
+      schema:
+        maxitem: 3
+        minitem: 1
+        uniqueitem: true
+        type: array
+        item:
+          pattern: '[-+](receiptnumber|receiptdate)'
+          type: string
+        default: '["+receiptnumber"]'
+x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml
+
+openapi: 3.0.1
+info:
+  title: egov payment gateway service.
+  description: |
+    thi module act a a liaison between egov app and external payment gateway. it facilitate payment, refund and look up of transaction' statu.
+  contact:
+    name: egovernment foundation
+    email: contact@egovernment.org
+  version: 1.0.0
+server:
+- url: /egov-pg-service
+path:
+  "/pg-service/gateway/v1/search":
+    post:
+      tag:
+      - transaction-api-controller
+      summary: transactionsv1availablegatewayspost
+      operationid: transactionsv1availablegatewayspostusingpost
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                uniqueitem: true
+                type: array
+                item:
+                  type: string
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  "/pg-service/transaction/v1/create":
+    post:
+      tag:
+      - transaction-api-controller
+      summary: transactionsv1createpost
+      operationid: transactionsv1createpostusingpost
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/transactioncreateresponse"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/component/schema/transactioncreateresponse"
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  "/pg-service/transaction/v1/search":
+    post:
+      tag:
+      - transaction-api-controller
+      summary: transactionsv1searchpost
+      operationid: transactionsv1searchpostusingpost
+      parameter:
+      - name: billid
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: consumercode
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: createdtime
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int64
+      - name: limit
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: offset
+        in: query
+        required: false
+        style: form
+        schema:
+          type: integer
+          format: int32
+      - name: receipt
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: tenantid
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: txnid
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: txnstatu
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+          enum:
+          - failure
+          - pending
+          - succes
+      - name: useruuid
+        in: query
+        required: false
+        style: form
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/component/schema/transactionresponse"
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  "/pg-service/transaction/v1/update":
+    post:
+      tag:
+      - transaction-api-controller
+      summary: transactionsv1updatepost
+      operationid: transactionsv1updatepostusingpost
+      parameter:
+      - name: param
+        in: query
+        description: param
+        required: true
+        style: deepobject
+        explode: true
+        schema:
+          type: object
+          additionalpropertie:
+            type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfowrapper"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/component/schema/transactionresponse"
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+component:
+  schema:
+    transaction:
+      required:
+      - billid
+      - callbackurl
+      - gateway
+      - module
+      - moduleid
+      - productinfo
+      - tenantid
+      - txnamount
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 50
+          minlength: 2
+          type: string
+          description: the unique identifier for service - thi i equivalent to jurisdictionid
+            in open311. a the platform intend to be multi tenanted - thi i alway
+            required
+        txnamount:
+          minlength: 1
+          type: string
+          description: transaction amount, preferably rounded off to two decimal place
+        billid:
+          type: string
+          description: unique bill id associated with the transaction
+        module:
+          type: string
+          description: module busines code for which the transaction i being initiated,
+            ex pt, w, pgr etc
+        moduleid:
+          type: string
+          description: unique identifier in the module for which the transaction i
+            being initiated
+        productinfo:
+          type: string
+          description: brief description for which the transaction i being carried
+            out.
+        gateway:
+          type: string
+          description: gateway to be used, from the available list, such a paytm,
+            phonepe.
+        callbackurl:
+          type: string
+          description: url to which control ha to be redirected to from the gateway
+        txnid:
+          type: string
+          description: transaction id of the payment, generated by the gateway service
+          readonly: true
+        user:
+          $ref: '#/component/schema/user'
+        txnstatu:
+          type: string
+          description: current statu of the transaction
+          readonly: true
+          enum:
+          - succes
+          - failure
+          - pending
+        txnstatusmsg:
+          type: string
+          description: brief statu message for the transaction
+          readonly: true
+        gatewaytxnid:
+          type: string
+          description: transaction id returned by the gateway, for reference
+          readonly: true
+        gatewaypaymentmode:
+          type: string
+          description: mode of payment used at the gateway
+          readonly: true
+        gatewaystatuscode:
+          type: string
+          description: payment gateway specific raw statu code
+          readonly: true
+        gatewaystatusmsg:
+          type: string
+          description: payment gateway specific raw statu message
+          readonly: true
+        receipt:
+          type: string
+          description: receipt id generated for thi payment
+          readonly: true
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: detail of the payment object.
+    user:
+      required:
+      - mobilenumber
+      - name
+      - tenantid
+      - username
+      - uuid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        uuid:
+          type: string
+          description: uuid for the user.
+        username:
+          maxlength: 64
+          minlength: 4
+          type: string
+          description: the unique username used of the user - thi will be used for
+            user login. thi need to be unique within the tenant.
+        name:
+          maxlength: 100
+          minlength: 3
+          type: string
+          description: the full name of the user.
+        mobilenumber:
+          maxlength: 10
+          type: string
+          description: mobile number of the user
+        emailid:
+          maxlength: 128
+          type: string
+          description: email addres of the user
+    transactioncreateresponse:
+      title: transactioncreateresponse
+      type: object
+      propertie:
+        responseinfo:
+          "$ref": "#/component/schema/responseinfo"
+        transaction:
+          "$ref": "#/component/schema/transaction"
+    requestinfowrapper:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+      description: wrapper for request info
+    transactionresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        transaction:
+          type: array
+          item:
+            $ref: '#/component/schema/transaction'
+      description: the payment seatch response object, representing the statu of
+        the payment
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+          description: username (preferred) or userid of the user that created the
+            object
+        lastmodifiedby:
+          type: string
+          description: username (preferred) or userid of the user that last modified
+            the object
+        createdtime:
+          type: integer
+          description: epoch of the time object i created
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          description: epoch of the time object i last modified
+          format: int64
+      description: collection of audit related field used by most model
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        id:
+          type: integer
+          description: user id of the authenticated user. will be deprecated in future
+          format: int32
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+    role:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml

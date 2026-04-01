@@ -1,0 +1,902 @@
+openapi: 3.0.1
+info:
+  title: master data management service
+  description: api available to get the master data for perticuler tenant and module
+    master.
+  contact:
+    name: abhishek jain
+  version: 1.0.0
+server:
+- url: /
+path:
+  /egov-mdm-service/v1/search:
+    post:
+      tag:
+      - mdm-controller
+      summary: get list of master for a particular module and tenantid.
+      description: get list of master for a perticulare module and tenantid.
+      requestbody:
+        description: detail of module and master which need to be search using mdm
+          .
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/mdmscriteriareq'
+        required: true
+      response:
+        201:
+          description: designation created sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/mdmsresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: mdmscriteriareq
+  /egov-mdm-service/v1/get:
+    post:
+      tag:
+      - mdm-controller
+      summary: search
+      operationid: searchusingpost
+      parameter:
+      - name: modulename
+        in: query
+        description: modulename
+        required: true
+        style: form
+        schema:
+          type: string
+      - name: mastername
+        in: query
+        description: mastername
+        required: true
+        style: form
+        schema:
+          type: string
+      - name: filter
+        in: query
+        description: filter
+        required: false
+        style: form
+        schema:
+          type: string
+      - name: tenantid
+        in: query
+        description: tenantid
+        required: true
+        style: form
+        schema:
+          type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/requestinfo"
+      response:
+        '200':
+          description: ok
+          content:
+            "*/*":
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+component:
+  schema:
+    mdmscriteriareq:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        mdmscriteria:
+          $ref: '#/component/schema/mdmscriteria'
+    mdmscriteria:
+      required:
+      - moduledetail
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for for a tenant.
+        moduledetail:
+          type: array
+          item:
+            $ref: '#/component/schema/moduledetail'
+    moduledetail:
+      required:
+      - masterdetail
+      - modulename
+      type: object
+      propertie:
+        modulename:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: name of the module for which master are required.
+        masterdetail:
+          type: array
+          item:
+            $ref: '#/component/schema/masterdetail'
+    masterdetail:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for for a tenant.
+        filter:
+          maxlength: 500
+          minlength: 1
+          type: string
+          description: pas jsonpath predicate to get ther filtered data for a master.
+    mdmsresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        mdm:
+          type: array
+          description: array of module
+          item:
+            type: array
+            description: array of master
+            item:
+              type: object
+              propertie: {}
+    mdmscreaterequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        mastermetadata:
+          $ref: '#/component/schema/mastermetadata'
+    mdmscreateresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        data:
+          type: object
+          propertie: {}
+          description: content written on the file
+    mastermetadata:
+      required:
+      - filepath
+      - masterdata
+      - mastername
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for for a tenant.
+        filepath:
+          maxlength: 1000
+          minlength: 1
+          type: string
+          description: file path on git that i to be created/updated.
+        mastername:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: master name to be created/updated.
+        masterdata:
+          type: object
+          propertie: {}
+          description: content of be written on the file.
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        id:
+          type: integer
+          description: user id of the authenticated user. will be deprecated in future
+          format: int32
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+    role:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+
+openapi: 3.0.1
+info:
+  title: master data management service(mdm)
+  description: | 
+   api available to get the master data for particular tenant and module
+   master.
+  contact:
+    name: egovernment foundation
+  version: 1.0.0
+server:
+- url: https://unified-dev.digit.org/
+path:
+  /egov-mdm-service/schema/v1/create:
+    post:
+      tag:
+      - mdm-schema
+      summary: create the schema for master
+      description: each master data will have diffrent schema, mdm create and update api will use thi schema to validate the data request
+      requestbody:
+        description: request body to add new master schema
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/schemadefinitionrequest'
+        required: true
+      response:
+        201:
+          description: master schema added successfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/schemadefinitionresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+  /egov-mdm-service/schema/v1/search:
+    post:
+      tag:
+      - mdm-schema
+      summary: get list of master for a particular module and tenantid.
+      description: get list of master for a perticulare module and tenantid.
+      requestbody:
+        description: detail of module and master which need to be search using mdm
+          .
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/schemadefsearchrequest'
+        required: true
+      response:
+        200:
+          description: schema definition searched sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/schemadefinitionresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+  /egov-mdm-service/v2/create/{schemacode}:
+    post:
+      tag:
+      - mdm
+      summary: create or add data for a schema
+      description: request to create the data
+      parameter: 
+        - in: path
+          name: schemacode
+          schema:
+            type: string
+          required: true
+          description: unique schema code from schema master
+
+      requestbody:
+        description: data create request
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/mdmsrequest'
+        required: true
+      response:
+        200:
+          description: data created sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/mdmsresponsev2'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+  /egov-mdm-service/v2/update/{schemacode}:
+    post:
+      tag:
+      - mdm
+      summary: get list of master for a particular module and tenantid.
+      description: get list of master for a perticulare module and tenantid.
+      parameter: 
+        - in: path
+          name: schemacode
+          schema:
+            type: string
+          required: true
+          description: unique schema code from schema master
+      
+      requestbody:
+        description: detail of module and master which need to be search using mdm
+          .
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/mdmsrequest'
+        required: true
+      response:
+        200:
+          description: data updated sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/mdmsresponsev2'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+  /egov-mdm-service/v1/search:
+    post:
+      tag:
+      - mdm
+      summary: get list of master for a particular module and tenantid.
+      description: get list of master for a perticulare module and tenantid.
+      requestbody:
+        description: detail of module and master which need to be search using mdm
+          .
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/mdmscriteriareq'
+        required: true
+      response:
+        200:
+          description: data searched sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/mdmsresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+  /egov-mdm-service/v2/search:
+    post:
+      tag:
+      - mdm
+      summary: get list of master for a particular module and tenantid.
+      description: get list of master for a perticulare module and tenantid.
+      requestbody:
+        description: detail of module and master which need to be search using mdm
+          .
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/mdmscriteriareqv2'
+        required: true
+      response:
+        200:
+          description: data searched sucessfully.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/mdmsresponsev2'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ErrorRes'
+component:
+  schema:
+    schemadefinition:
+      type: object
+      description: bind the request meta data(requestinfo) and schema defination
+      propertie:
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier for the tenant
+        code:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: thi i namespaced unique identifier for the schema defination(to standarize the schema code for master data we should use modulename.mastername)
+          example: property.propertytype
+        description:
+          maxlength: 512
+          minlength: 2
+          type: string
+          description:  description about schema defination 
+        definition:
+          type: object
+          additionalpropertie: true
+        isactive:
+          type: boolean
+          default: true
+          example: property.propertytype
+        auditdetail:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/AuditDetails'
+      required: [tenantid, code, definition]
+    mdm:
+      type: object
+      description: bind the request meta data(requestinfo) and schema defination
+      propertie:
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier for the tenant
+        schemacode:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: thi i namespaced unique identifier for the schema defination(to standarize the schema code for master data we should use modulename.mastername)
+          example: property.propertytype
+        uniqueidentifier:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: thi unique idetifier of the record for it's schema
+          example: property.propertytype
+          readonly: true
+        data:
+          type: object
+          additionalpropertie: true
+        isactive:
+          type: boolean
+          default: true
+        auditdetail:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/AuditDetails'
+      required: [tenantid, data]
+    workflow:
+      type: object
+      propertie:
+        action:
+          type: string
+          description: 'action of the workflow to be performned on the request'
+        comment:
+          type: string
+          description: 'comment for the workflow action to be performed'
+        assignee:
+          type: array
+          item:
+            type: string
+            description: ' uuid of the user in the system to assign workflow to the specific user intead of a all the user with the gien role.'
+        
+      required: [ action ]
+    mdmscriteria:
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for for a tenant.
+        moduledetail:
+          type: array
+          item:
+            $ref: '#/component/schema/moduledetail'
+    moduledetail:
+      required:
+      - masterdetail
+      - modulename
+      type: object
+      propertie:
+        modulename:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: name of the module for which master are required.
+        masterdetail:
+          type: array
+          item:
+            $ref: '#/component/schema/masterdetail'
+    masterdetail:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for for a tenant.
+        filter:
+          maxlength: 500
+          minlength: 1
+          type: string
+          description: pas jsonpath predicate to get ther filtered data for a master.
+    schemadefinitionrequest:
+      type: object
+      description: bind the request meta data(requestinfo) and schema defination 
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        schemadefinition:
+          $ref: '#/component/schema/schemadefinition'
+      required: [requestinfo, schemadefinition]
+    schemadefinitionresponse:
+      type: object
+      description: response from server
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        schemadefinition:
+          type: array
+          item: 
+             $ref: '#/component/schema/schemadefinition'
+    schemadefcriteria:
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for a tenant.
+        code:
+          type: array
+          description: search by schema unique identifier 
+          item:
+            type: string
+    schemadefsearchrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml#/definitions/RequestInfo'
+        schemadefcriteria:
+          $ref: '#/component/schema/schemadefcriteria'
+    mdmsrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml#/definitions/RequestInfo'
+        mdm:
+          $ref: '#/component/schema/mdm'
+        workflow:
+          $ref: '#/component/schema/workflow'
+    mdmscriteriav2:
+      title: mdmscriteriav2
+      required:
+      - tenantid
+      type: object
+      propertie:
+        filter:
+          type: object
+          description: filter map to filter master data
+        id:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+          description: db entity id to search master data
+        isactive:
+          type: boolean
+          description: search master data whether it i enabled or disabled
+        limit:
+          type: integer
+          format: int32
+          description: number of record to be fetched in search response
+        offset:
+          type: integer
+          format: int32
+          description: offset from which data should be fethed
+        schemacode:
+          type: string
+          description: schema code for which master data need to be searched
+        tenantid:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: tenantid against which master data need to be searched
+        uniqueidentifier:
+          uniqueitem: true
+          type: array
+          item:
+            type: string
+          description: unique identifier of the master data which need to be fetched
+    mdmscriteriareq:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        mdmscriteria:
+          $ref: '#/component/schema/mdmscriteria'
+    mdmscriteriareqv2:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        mdmscriteriav2:
+          $ref: '#/component/schema/mdmscriteriav2'
+    mdmsresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        mdmsre: 
+          type: object
+          additionalpropertie: true
+          description: thi object will contain map of map where key of each map will represent the "modulename" and 'mastername' respectively
+          example: {
+            "property": {
+              "propertytype": {
+              },
+              "usage": {
+              }
+            }
+          }
+    mdmsresponsev2:
+      title: mdmsresponsev2
+      type: object
+      propertie:
+        responseinfo:
+          "$ref": "https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo"
+        mdm:
+          type: array
+          item:
+            "$ref": "#/component/schema/mdmsre"
+    mdmsre:
+      title: mdmsre
+      required:
+      - data
+      - schemacode
+      - tenantid
+      type: object
+      propertie:
+        auditdetail:
+          "$ref": "https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/AuditDetails"
+        data:
+          type: object
+          description: master data json
+        id:
+          maxlength: 64
+          minlength: 2
+          type: string
+          readonly: true
+          description: db entity uuid
+        isactive:
+          type: boolean
+          description: boolean field to enable/disable master data
+        schemacode:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: schema code against which data i created
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: tenant id of the master data
+        uniqueidentifier:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier of the master data

@@ -1,0 +1,1812 @@
+openapi: 3.0.1
+info:
+  title: egov workflow engine.
+  description: "api for workflow engine. thi module handle below functionality.\
+    \ \n1. start workflow \n2. validate document and action on each step of workflow\n\
+    3. calculate state wise sla a well a overall sla of the application\n4. search\
+    \ existing workflow application \n"
+  contact:
+    name: egovernment foundation
+    email: contact@egovernment.org
+  version: 1.0.0
+server:
+- url: /egov-wf
+path:
+  /proces/transition:
+    post:
+      tag:
+      - workflow
+      summary: create new workflow entry for a given application number(businessid).
+      description: "to create new workflow applicationin the system. api support\
+        \ bulk creation with max limit a defined in the trade license request. please\
+        \ note that either whole batch succeed or fail, there's no partial batch\
+        \ succes. to create one workflow(processinstance) instance, please pas array\
+        \ with one workflow(processinstance) object. \n  \n\nfollowing condition\
+        \ are applied -\n  1. valid action i send according to workflow configuration\
+        \ defined\n  2. supportdocument to perform workflow action will created.\
+        \ in case of not attaching the mandatory supported document creation of workflow\
+        \ fail.\n  3. application will move to next state if valid action i passe.\n"
+      requestbody:
+        description: detail for the new workflow(s) + requestinfo meta data.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/processinstancerequest'
+        required: true
+      response:
+        201:
+          description: reponseinfo with workflow(s) created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/processintanceresponse'
+        400:
+          description: workflow(s) creation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: processinstancerequest
+  /proces/search:
+    post:
+      tag:
+      - workflow
+      summary: get the list of workflow application defined in the system.
+      description: |-
+        1. search and get application(s)  based on defined search criteria.
+        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: id
+        in: query
+        description: unique identifier of application
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: businessservice
+        in: query
+        description: name of the workflow confguration.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: modulename
+        in: query
+        description: module name to which workflow application belong
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: businessid
+        in: query
+        description: the list of businessid
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: string
+      - name: assignee
+        in: query
+        description: the unique  old license number for a application.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: history
+        in: query
+        description: boolean flag to return history of the workflow
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        description: number of record to be returned
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        description: starting offset for returning search response
+        schema:
+          type: integer
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: application(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/processintanceresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: requestinfo
+  /proces/count:
+    post:
+      tag:
+      - workflow
+      summary: get the count of application satisfying the given criteria
+      description: |-
+        1. return the total number of application in the system based on the criteria given
+        2. primarily used to shoe total count in inbox
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: id
+        in: query
+        description: unique identifier of trade licence
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: businessservice
+        in: query
+        description: unique application number for a trade license application.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: businessid
+        in: query
+        description: the list of businessid
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: assignee
+        in: query
+        description: the unique  old license number for a trade license.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: history
+        in: query
+        description: boolean flag to return history of the workflow
+        schema:
+          type: boolean
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: trade license(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/processintanceresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: requestinfo
+      
+  /proces/nearingslacount:
+    post:
+      tag:
+      - workflow
+      summary: get the nearing sla count of workflow application defined in the system.
+      description: |-
+        1. search and get application(s)  based on defined search criteria.
+        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: id
+        in: query
+        description: unique identifier of application
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: businessservice
+        in: query
+        description: name of the workflow confguration.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: modulename
+        in: query
+        description: module name to which workflow application belong
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: businessid
+        in: query
+        description: the list of businessid
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: string
+      - name: assignee
+        in: query
+        description: the unique  old license number for a application.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: history
+        in: query
+        description: boolean flag to return history of the workflow
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        description: number of record to be returned
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        description: starting offset for returning search response
+        schema:
+          type: integer
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: application(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/processcountresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: requestinfo   
+  /proces/statuscount:
+    post:
+      tag:
+      - workflow
+      summary: get the list of statu count workflow application defined in the system.
+      description: |-
+        1. search and get application(s)  based on defined search criteria.
+        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: id
+        in: query
+        description: unique identifier of application
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: businessservice
+        in: query
+        description: name of the workflow confguration.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: modulename
+        in: query
+        description: module name to which workflow application belong
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: businessid
+        in: query
+        description: the list of businessid
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: string
+      - name: assignee
+        in: query
+        description: the unique  old license number for a application.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: history
+        in: query
+        description: boolean flag to return history of the workflow
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        description: number of record to be returned
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        description: starting offset for returning search response
+        schema:
+          type: integer
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/statuscountreq'
+        required: false
+      response:
+        200:
+          description: application(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/responseentity'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: statuscountreq       
+  /proces/escalate/search:
+    post:
+      tag:
+      - escalate
+      summary: get the list of escalate workflow application defined in the system.
+      description: |-
+        1. search and get application(s)  based on defined search criteria.
+        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: id
+        in: query
+        description: unique identifier of application
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: businessservice
+        in: query
+        description: name of the workflow confguration.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: modulename
+        in: query
+        description: module name to which workflow application belong
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: businessid
+        in: query
+        description: the list of businessid
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: string
+      - name: assignee
+        in: query
+        description: the unique  old license number for a application.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: history
+        in: query
+        description: boolean flag to return history of the workflow
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        description: number of record to be returned
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        description: starting offset for returning search response
+        schema:
+          type: integer
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: application(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/processintanceresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: requestinfo    
+      
+  /auto/{businessservice}/escalate:
+    post:
+      tag:
+      - escalate
+      summary: get the list of workflow application defined in the system.
+      description: |-
+        1. search and get application(s)  based on defined search criteria.
+        2. in case multiple parameter are passed application(s) will be searched a an and combination of all the parameter.
+      parameter:
+      - in: path
+        name: businessservice
+        required: true
+        description: name of the workflow confguration.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: id
+        in: query
+        description: unique identifier of application
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: modulename
+        in: query
+        description: module name to which workflow application belong
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: businessid
+        in: query
+        description: the list of businessid
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: string
+      - name: assignee
+        in: query
+        description: the unique  old license number for a application.
+        schema:
+          maxlength: 64
+          minlength: 2
+          type: string
+      - name: history
+        in: query
+        description: boolean flag to return history of the workflow
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        description: number of record to be returned
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        description: starting offset for returning search response
+        schema:
+          type: integer
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: application(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/processintanceresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: requestinfo    
+      
+  /businessservice/v2/create:
+    post:
+      tag:
+      - businessservicev2
+      summary: create new v2 buinessservice.
+      description: "to create new workflow configuration(buinessservice) in the system.\
+        \ api support bulk creation with max limit a defined in the buinessservice\
+        \ request. please note that either whole batch succeed or fail, there's\
+        \ no partial batch succes. to create one buinessservice, please pas array\
+        \ with one buinessservice object. \n  \n\nfollowing condition are applied\
+        \ -\n  1. all action have valid next state i.e next state should be present\
+        \ in the system\n  2. uuid will be auto generated and assigned to all sub\
+        \ object\n  3. for end state isterminatestate should be true\n"
+      requestbody:
+        description: detail for the new businessservice(s) + requestinfo meta data.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/businessservicerequest'
+        required: true
+      response:
+        201:
+          description: reponseinfo withbusinessservice(s) created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/businessserviceresponse'
+        400:
+          description: businessservice(s) creation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: businessservicerequest    
+  /businessservice/v2/update:
+    post:
+      tag:
+      - businessservicev2
+      summary: update a existing v2 buinessservice.
+      description: "can be used only to add new state or action in the workflow. can\
+        \ update any existing field. removing of any state i not allowed a application\
+        \ in that state will be in invalid state \n  \n\nfollowing condition are\
+        \ applied -\n  1. can add state and action\n  2. can update role in action,\
+        \ sla etc.\n"
+      requestbody:
+        description: detail for the new businessservice(s) + requestinfo meta data.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/businessservicerequest'
+        required: true
+      response:
+        201:
+          description: reponseinfo withbusinessservice(s) created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/businessserviceresponse'
+        400:
+          description: businessservice(s) creation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: businessservicerequest    
+  /businessservice/v2/search:
+    post:
+      tag:
+      - businessservicev2
+      summary: get the list of v2 businessservice defined in the system.
+      description: |-
+        1. search and get businessservice(s)  based on defined search criteria.
+        2. in case multiple parameter are passed businessservice(s) will be searched a an and combination of all the parameter.
+      parameter:
+      - name: businessservice
+        in: query
+        description: businessservice code of the businessservice
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: trade license(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/businessserviceresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: requestinfo    
+  /businessservice/create:
+    post:
+      tag:
+      - businessservice
+      summary: create new buinessservice.
+      description: "to create new workflow configuration(buinessservice) in the system.\
+        \ api support bulk creation with max limit a defined in the buinessservice\
+        \ request. please note that either whole batch succeed or fail, there's\
+        \ no partial batch succes. to create one buinessservice, please pas array\
+        \ with one buinessservice object. \n  \n\nfollowing condition are applied\
+        \ -\n  1. all action have valid next state i.e next state should be present\
+        \ in the system\n  2. uuid will be auto generated and assigned to all sub\
+        \ object\n  3. for end state isterminatestate should be true\n"
+      requestbody:
+        description: detail for the new businessservice(s) + requestinfo meta data.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/businessservicerequest'
+        required: true
+      response:
+        201:
+          description: reponseinfo withbusinessservice(s) created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/businessserviceresponse'
+        400:
+          description: businessservice(s) creation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: businessservicerequest
+  /businessservice/update:
+    post:
+      tag:
+      - businessservice
+      summary: update a existing buinessservice.
+      description: "can be used only to add new state or action in the workflow. can\
+        \ update any existing field. removing of any state i not allowed a application\
+        \ in that state will be in invalid state \n  \n\nfollowing condition are\
+        \ applied -\n  1. can add state and action\n  2. can update role in action,\
+        \ sla etc.\n"
+      requestbody:
+        description: detail for the new businessservice(s) + requestinfo meta data.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/businessservicerequest'
+        required: true
+      response:
+        201:
+          description: reponseinfo withbusinessservice(s) created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/businessserviceresponse'
+        400:
+          description: businessservice(s) creation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: businessservicerequest
+  /businessservice/search:
+    post:
+      tag:
+      - businessservice
+      summary: get the list of businessservice defined in the system.
+      description: |-
+        1. search and get businessservice(s)  based on defined search criteria.
+        2. in case multiple parameter are passed businessservice(s) will be searched a an and combination of all the parameter.
+      parameter:
+      - name: businessservice
+        in: query
+        description: businessservice code of the businessservice
+        style: form
+        explode: false
+        schema:
+          maxitem: 50
+          type: array
+          item:
+            type: integer
+            format: int64
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      requestbody:
+        description: parameter to carry request metadata in the request body
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/requestinfo'
+        required: false
+      response:
+        200:
+          description: trade license(s) retrived successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/businessserviceresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: requestinfo
+component:
+  schema:
+    document:
+      required:
+      - documenttype
+      - filestoreid
+      - tenantid
+      type: object
+      propertie:
+        id:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: state unique identifier uuid
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier of ulb
+        documenttype:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: 1.unique document type code from common master. 2. thi i
+            defined under mdm common master. 3. object defination i defined under
+            'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/DocumentType'
+        filestoreid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: unique file store id of uploaded document.
+        documentuid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: document number(eg.pan number, aadhar number).
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: a object hold the basic data for a trade license
+    processinstance:
+      required:
+      - action
+      - businessid
+      - businessservice
+      - tenantid
+      type: object
+      propertie:
+        id:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: unique proces instance id (uuid)
+          readonly: true
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier of ulb
+        businessservice:
+          maxlength: 256
+          minlength: 2
+          type: string
+          description: busines service key.
+        businessid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: "busines id i a unique identifier of a task. eg(propertyid,\
+            \ \ntlid, servicerequestid) \n"
+        action:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: action are define for each busines service.
+        state:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: statu will be populate by efengine for each action, if it
+            i configured.
+          readonly: true
+        comment:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: consumer can pas the comment on each action.
+        document:
+          type: array
+          description: document can be attached with each of the action.
+          item:
+            $ref: '#/component/schema/document'
+        assigner:
+          $ref: '#/component/schema/user'
+        assigne:
+          type: array
+          item:
+            $ref: '#/component/schema/user'
+        nextaction:
+          type: array
+          description: wf will return next possible action based on .
+          readonly: true
+          item:
+            type: string
+        sla:
+          type: integer
+          description: date from when license i valid a epoch.
+          format: int64
+        currentstatu:
+          type: string
+          description: statu after action performed
+        previousstatu:
+          type: string
+          description: statu before action performed
+        entity:
+          type: object
+          propertie: {}
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: a object hold the basic data for a trade license
+    statuscountreq:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        processinstancesearchcriteria:
+          $ref: '#/component/schema/processinstancesearchcriteria'
+    businessservice:
+      required:
+      - businessservice
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier of ulb
+        uuid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: unique identifier uuid
+        businessservice:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: unique identifier of the trade license (uuid)
+        geturi:
+          maxlength: 32
+          minlength: 2
+          type: string
+          description: unique license number of the trade. thi i  unique in system
+            for a tenant. thi i mandatory but alway be generated on the final approval.
+            in case of legacy license user will enter the old license number.
+        posturi:
+          maxlength: 32
+          minlength: 2
+          type: string
+          description: unique license number of the trade. thi i  unique in system
+            for a tenant. thi i mandatory but alway be generated on the final approval.
+            in case of legacy license user will enter the old license number.
+        state:
+          type: array
+          item:
+            $ref: '#/component/schema/state'
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: a object hold the
+    state:
+      type: object
+      propertie:
+        uuid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: state unique identifier uuid
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier of ulb
+        businessserviceid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: unique identifier of the trade license (uuid)
+        state:
+          maxlength: 32
+          minlength: 2
+          type: string
+          description: unique license number of the trade. thi i  unique in system
+            for a tenant. thi i mandatory but alway be generated on the final approval.
+            in case of legacy license user will enter the old license number.
+        applicationstatu:
+          type: string
+          description: application statu a in module
+        docuploadrequired:
+          type: boolean
+          description: boolean to describe if document are mandatory
+        isstartstate:
+          type: boolean
+          description: boolean to describe if the workflow can be started from thi
+            state
+        isterminatestate:
+          type: boolean
+          description: boolean to describe if the state i the last state of workflow
+        action:
+          type: array
+          item:
+            $ref: '#/component/schema/action'
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: a object hold the basic data for a trade license
+    action:
+      type: object
+      propertie:
+        uuid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: state unique identifier uuid
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: tenantid of the ulb
+        stateid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: the uuid of the state on which action i to performed
+        action:
+          type: string
+          description: the action to be performed
+        nextstateid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: the uuid of the resultant state
+        role:
+          type: array
+          description: used for search result and create only
+          item:
+            type: string
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: a object hold the basic data for a trade license
+    processinstancerequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        processinstance:
+          type: array
+          description: used for search result and create only
+          item:
+            $ref: '#/component/schema/processinstance'
+      description: contract clas to receive request. array of tradelicense item
+        are used in case of create, wherea single tradelicense item i used for update
+    processcountresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        count: 
+          type: integer
+        processinstance:
+          type: array
+          description: used for search result and create only
+          item:
+            $ref: '#/component/schema/processintanceresponse'
+      description: contract clas to send response. array of tradelicense item are
+        used in case of search result or response for create, wherea single tradelicense
+        item i used for update
+    processintanceresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        processinstance:
+          type: array
+          description: used for search result and create only
+          item:
+            $ref: '#/component/schema/processinstance'
+      description: contract clas to send response. array of tradelicense item are
+        used in case of search result or response for create, wherea single tradelicense
+        item i used for update
+    processinstancesearchcriteria:
+      type: object
+      propertie:
+        tenantid:
+          type: string
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+        businessid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: "busines id i a unique identifier of a task. eg(propertyid,\
+            \ \ntlid, servicerequestid) \n"    
+        assignee: 
+          type: string
+          description: the unique  old license number for a application.
+        id: 
+          type: array
+          description: unique identifier of application
+          item:
+            type: string
+        history: 
+          type: boolean
+          description: boolean flag to return history of the workflow
+        fromdate:
+          type: integer
+          format: int64
+          description: date from which the operation i registered 
+        todate:
+          type: integer
+          format: int64
+          description: date to which the operation i registered
+        offset:
+          type: integer
+          description: starting offset for returning search response
+        limit: 
+          type: integer
+          description: number of record to be returned
+        businessservice:
+          type: string
+          description: used for search result and create only
+        modulename: 
+          type: string
+          description: module name to which workflow application belong
+    responseentity:
+      title: responseentity
+      type: object
+      propertie:
+        body:
+          type: object
+        result:
+          type: array
+          item:
+            type: string
+        statuscode:
+          type: string
+          enum:
+            - accepted
+            - alreadyreported
+            - badgateway
+            - badrequest
+            - bandwidthlimitexceeded
+            - checkpoint
+            - conflict
+            - continue
+            - created
+            - destinationlocked
+            - expectationfailed
+            - faileddependency
+            - forbidden
+            - found
+            - gatewaytimeout
+            - gone
+            - httpversionnotsupported
+            - imused
+            - insufficientspaceonresource
+            - insufficientstorage
+            - internalservererror
+            - iamateapot
+            - lengthrequired
+            - locked
+            - loopdetected
+            - methodfailure
+            - methodnotallowed
+            - movedpermanently
+            - movedtemporarily
+            - multiplechoice
+            - multistatu
+            - networkauthenticationrequired
+            - nonauthoritativeinformation
+            - notacceptable
+            - notextended
+            - notfound
+            - notimplemented
+            - notmodified
+            - nocontent
+            - ok
+            - partialcontent
+            - payloadtoolarge
+            - paymentrequired
+            - permanentredirect
+            - preconditionfailed
+            - preconditionrequired
+            - processing
+            - proxyauthenticationrequired
+            - requestedrangenotsatisfiable
+            - requestentitytoolarge
+            - requestheaderfieldstoolarge
+            - requesttimeout
+            - requesturitoolong
+            - resetcontent
+            - seeother
+            - serviceunavailable
+            - switchingprotocol
+            - temporaryredirect
+            - tooearly
+            - toomanyrequest
+            - unauthorized
+            - unavailableforlegalreason
+            - unprocessableentity
+            - unsupportedmediatype
+            - upgraderequired
+            - uritoolong
+            - useproxy
+            - variantalsonegotiate
+        statuscountvalue:
+          type: integer
+          format: int32      
+    businessservicerequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        businessservice:
+          type: array
+          description: used for search result and create only
+          item:
+            $ref: '#/component/schema/businessservice'
+      description: contract clas to receive request. array of tradelicense item
+        are used in case of create, wherea single tradelicense item i used for update
+    businessserviceresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        businessservice:
+          type: array
+          description: used for search result and create only
+          item:
+            $ref: '#/component/schema/businessservice'
+      description: contract clas to send response. array of tradelicense item are
+        used in case of search result or response for create, wherea single tradelicense
+        item i used for update
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.
+    errorres2:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo2'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error2'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo2:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error2:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+          description: username (preferred) or userid of the user that created the
+            object
+        lastmodifiedby:
+          type: string
+          description: username (preferred) or userid of the user that last modified
+            the object
+        createdtime:
+          type: integer
+          description: epoch of the time object i created
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          description: epoch of the time object i last modified
+          format: int64
+      description: collection of audit related field used by most model
+    user:
+      required:
+      - active
+      - gender
+      - locale
+      - mobilenumber
+      - name
+      - tenantid
+      - type
+      - username
+      type: object
+      propertie:
+        id:
+          type: integer
+          description: the unique id an user.
+          format: int64
+        username:
+          maxlength: 64
+          minlength: 1
+          type: string
+          description: the unique username used for user login.
+        password:
+          maxlength: 64
+          type: string
+          description: password for user login.
+          format: password
+        salutation:
+          maxlength: 5
+          type: string
+          description: the salutation of user name. example- mr, mis, mr
+        name:
+          maxlength: 100
+          minlength: 3
+          type: string
+          description: the full name of the user.
+        gender:
+          type: string
+          description: gender of the user.
+        mobilenumber:
+          maxlength: 10
+          type: string
+          description: mobile number ofuser the user
+        emailid:
+          maxlength: 128
+          type: string
+          description: email addres of the user
+        altcontactnumber:
+          maxlength: 10
+          type: string
+          description: alternate contact number of the user
+        pan:
+          maxlength: 10
+          type: string
+          description: pan number of the user
+        aadhaarnumber:
+          maxlength: 12
+          pattern: '[0-9]'
+          type: string
+          description: aadhaar number of the user
+        permanentaddres:
+          maxlength: 300
+          type: string
+          description: permanent addres of the user.
+        permanentcity:
+          maxlength: 300
+          type: string
+          description: city of the permanent addres.
+        permanentpincode:
+          maxlength: 6
+          type: string
+          description: permanent addres pincode.
+        correspondencecity:
+          maxlength: 50
+          type: string
+          description: city of the correspondence addres.
+        correspondencepincode:
+          maxlength: 6
+          type: string
+          description: permanent addres pincode.
+        correspondenceaddres:
+          maxlength: 300
+          type: string
+          description: correspondence addres of the user.
+        active:
+          type: boolean
+          description: true if the user i active and false if the user i inactive.
+        dob:
+          type: string
+          description: data of bith of the user in dd/mm/yyyy format.
+          format: date
+        pwdexpirydate:
+          type: string
+          description: date on which the password registered will expire.
+          format: date
+          readonly: true
+        locale:
+          maxlength: 10
+          type: string
+          description: value will be set to "enin".
+        type:
+          maxlength: 20
+          type: string
+          description: system set value internally. for employee value will be alway
+            "employee". for citizen value will be "citizen".
+        signature:
+          type: string
+          description: image to be loaded for the signature of the employee
+        accountlocked:
+          type: boolean
+          description: set to true if account i locked after several incorrect password
+            attempt. false if account i not locked.
+        role:
+          type: array
+          description: list of role that are attached to the user.
+          item:
+            $ref: '#/component/schema/role'
+        fatherorhusbandname:
+          maxlength: 100
+          type: string
+          description: name of user's father or husband.
+        bloodgroup:
+          maxlength: 3
+          type: string
+          description: blood group of the user.
+        identificationmark:
+          maxlength: 300
+          type: string
+          description: any identification mark of the person.
+        photo:
+          type: string
+          description: image to be loaded for the photo of the user
+        createdby:
+          type: integer
+          description: id of the user who created the record.
+          format: int64
+        createddate:
+          type: string
+          description: date on which the user master data wa added into the system.
+          format: date
+        lastmodifiedby:
+          type: integer
+          description: id of the user who last modified the record.
+          format: int64
+        lastmodifieddate:
+          type: string
+          description: date on which the user master data wa last modified.
+          format: date
+        otpreference:
+          type: string
+          description: thi i the uuid token that we genarate a part of otp.
+        tenantid:
+          type: string
+          description: unique identifier of the tenant, like ap, ap.kurnool etc.
+    role:
+      required:
+      - name
+      - tenantid
+      type: object
+      propertie:
+        id:
+          type: integer
+          description: unique identifier of the role.
+          format: int64
+        name:
+          maxlength: 100
+          minlength: 2
+          type: string
+          description: the name of the role.
+        code:
+          maxlength: 50
+          minlength: 2
+          type: string
+          description: the code of the role.
+        description:
+          maxlength: 256
+          type: string
+          description: the description of the role.
+        createdby:
+          type: integer
+          description: id of the user who created the record.
+          format: int64
+        createddate:
+          type: string
+          description: date on which the role master data wa added into the system.
+          format: date
+        lastmodifiedby:
+          type: integer
+          description: id of the user who last modified the record.
+          format: int64
+        lastmodifieddate:
+          type: string
+          description: date on which the role master data wa last modified.
+          format: date
+        tenantid:
+          type: string
+          description: unique identifier of the tenant, like ap, ap.kurnool etc.
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        uuid:
+          type: string
+          description: system generated user id of the authenticated user.
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        password:
+          type: string
+          description: password of the user.
+        idtoken:
+          type: string
+          description: thi will be the otp.
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role2'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+    role2:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        code:
+          maxlength: 64
+          type: string
+          description: unique code of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role2'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+x-api-id: org.egov.wf.service
+x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml

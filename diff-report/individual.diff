@@ -1,68 +1,99 @@
---- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/individual-2.9.yaml	2026-04-01 11:39:04.021740586 +0530
-+++ /home/mithun/Downloads/individual.yaml	2026-04-01 11:31:01.391418706 +0530
+--- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v2/individual.norm.yaml	2026-04-01 13:55:53.525323042 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v3/individual.norm.yaml	2026-04-01 13:55:53.525323042 +0530
 @@ -1,545 +1,665 @@
 -swagger: '2.0'
 +openapi: 3.0.3
  info:
 -  version: 1.0.0
--  title: Individual Registry
+-  title: individual registry
 -  description: >
--    This module facilitates maintenance of an Individual registry.
+-    thi module facilitate maintenance of an individual registry.
 -  contact:
--    name: Digit
--    email: info@egovernments.org
--schemes:
--  - https
+-    name: digit
+-    email: info@egovernment.org
+-scheme:
+-  - http
 -x-common-path: >-
 -  https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml
-+  title: Individual Service API
++  title: individual service api
 +  version: "1.0"
- paths:
--  /individual/v1/_create:
-+
+ path:
+-  /individual/v1/create:
+-    post:
+-      summary: >-
+-        create/add a new individual
+-      description: >-
+-        create a new individual
+-      parameter:
+-        - name: individual
+-          in: body
+-          description: capture detail of individual.
+-          required: true
+-          schema:
+-            $ref: '#/definition/individualrequest'
+-        - $ref: '#/parameter/echoresource'
+-      tag:
+-        - individual
+-      response:
+-        '202':
+-          description: accepted
+-          schema:
+-            $ref: '#/definition/individualresponse'
+-        '400':
+-          description: bad request
+-          schema:
+-            $ref: >-
+-              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+-        '500':
+-          description: internal server error
+-          schema:
+-            $ref: >-
+-              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
+ 
+-  /individual/v1/bulk/create:
 +  /individual/v1:
      post:
 -      summary: >-
--        Create/Add a new Individual
+-        create/add individual
 -      description: >-
--        Create a new Individual
-+      operationId: createIndividualREST
-       parameters:
--        - name: Individual
+-        create a new individual
++      operationid: createindividualrest
+       parameter:
+-        - name: individual
 -          in: body
--          description: Capture details of Individual.
+-          description: capture detail of individual.
 -          required: true
 -          schema:
--            $ref: '#/definitions/IndividualRequest'
--        - $ref: '#/parameters/echoResource'
--      tags:
--        - Individual
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+      requestBody:
+-            $ref: '#/definition/individualbulkrequest'
+-        - $ref: '#/parameter/echoresource'
+-      tag:
+-        - individual
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/IndividualRequest"
-       responses:
++              $ref: "#/component/schema/individualrequest"
+       response:
 -        '202':
--          description: Accepted
+-          description: accepted
 -          schema:
--            $ref: '#/definitions/IndividualResponse'
+-            $ref: '#/definition/individualbulkresponse'
 -        '400':
 +        "201":
-+          description: Created
-+          headers:
-+            Location:
++          description: created
++          header:
++            location:
 +              schema:
 +                type: string
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/IndividualResponse"
++                $ref: "#/component/schema/individualresponse"
 +        "400":
-           description: Bad Request
+           description: bad request
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
@@ -70,80 +101,80 @@
 +          content:
 +            application/json:
 +              schema:
-+                oneOf:
-+                  - $ref: "#/components/schemas/ValidationErrorResponse"
-+                  - $ref: "#/components/schemas/ValidationErrorObjectResponse"
-+                  - $ref: "#/components/schemas/ErrorResponse"
++                oneof:
++                  - $ref: "#/component/schema/validationerrorresponse"
++                  - $ref: "#/component/schema/validationerrorobjectresponse"
++                  - $ref: "#/component/schema/errorresponse"
 +        "404":
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +        "409":
-+          description: Conflict
++          description: conflict
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ValidationErrorObjectResponse"
++                $ref: "#/component/schema/validationerrorobjectresponse"
 +        "500":
-           description: Internal Server Error
+           description: internal server error
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
 -
--  /individual/v1/bulk/_create:
+-  /individual/v1/update:
 -    post:
 -      summary: >-
--        Create/Add Individuals
+-        update the detail of a existing individual
 -      description: >-
--        Create a new Individuals
+-        update the detail of a existing individual
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +    get:
-+      operationId: searchIndividualsQuery
-       parameters:
--        - name: Individual
++      operationid: searchindividualsquery
+       parameter:
+-        - name: individual
 -          in: body
--          description: Capture details of Individual.
+-          description: detail for the individual.
 -          required: true
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: id
 +          in: query
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
-+        - name: individualId
++        - name: individualid
 +          in: query
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
-+        - name: givenName
++        - name: givenname
 +          in: query
 +          schema:
 +            type: string
-+        - name: mobileNumber
++        - name: mobilenumber
 +          in: query
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +        - name: gender
 +          in: query
 +          schema:
 +            type: string
-+        - name: dateOfBirth
++        - name: dateofbirth
 +          in: query
 +          schema:
 +            type: string
@@ -155,28 +186,28 @@
 +          in: query
 +          schema:
 +            type: integer
-+        - name: includeDeleted
++        - name: includedeleted
 +          in: query
            schema:
--            $ref: '#/definitions/IndividualBulkRequest'
--        - $ref: '#/parameters/echoResource'
--      tags:
--        - Individual
+-            $ref: '#/definition/individualrequest'
+-        - $ref: '#/parameter/echoresource'
+-      tag:
+-        - individual
 +            type: boolean
-       responses:
+       response:
 -        '202':
--          description: Accepted
+-          description: accepted
 -          schema:
--            $ref: '#/definitions/IndividualBulkResponse'
+-            $ref: '#/definition/individualresponse'
 -        '400':
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/IndividualSearchResponse"
++                $ref: "#/component/schema/individualsearchresponse"
 +        "400":
-           description: Bad Request
+           description: bad request
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
@@ -184,70 +215,70 @@
 +          content:
 +            application/json:
 +              schema:
-+                oneOf:
-+                  - $ref: "#/components/schemas/ValidationErrorResponse"
-+                  - $ref: "#/components/schemas/ValidationErrorObjectResponse"
-+                  - $ref: "#/components/schemas/ErrorResponse"
++                oneof:
++                  - $ref: "#/component/schema/validationerrorresponse"
++                  - $ref: "#/component/schema/validationerrorobjectresponse"
++                  - $ref: "#/component/schema/errorresponse"
 +        "404":
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +        "409":
-+          description: Conflict
++          description: conflict
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ValidationErrorObjectResponse"
++                $ref: "#/component/schema/validationerrorobjectresponse"
 +        "500":
-           description: Internal Server Error
+           description: internal server error
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
 -
--  /individual/v1/_update:
+-  /individual/v1/bulk/update:
 -    post:
 -      summary: >-
--        Update the details of a existing Individual
+-        update the detail of existing individual
 -      description: >-
--        Update the details of a existing Individual
+-        update the detail of existing individual
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +  /individual/v1/{id}:
 +    get:
-+      operationId: getIndividual
-       parameters:
--        - name: Individual
++      operationid: getindividual
+       parameter:
+-        - name: individual
 -          in: body
--          description: Details for the Individual.
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
+-          description: detail for the individual.
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: id
 +          in: path
            required: true
            schema:
--            $ref: '#/definitions/IndividualRequest'
--        - $ref: '#/parameters/echoResource'
--      tags:
--        - Individual
+-            $ref: '#/definition/individualbulkrequest'
+-        - $ref: '#/parameter/echoresource'
+-      tag:
+-        - individual
 +            type: string
-       responses:
+       response:
 -        '202':
--          description: Accepted
+-          description: accepted
 -          schema:
--            $ref: '#/definitions/IndividualResponse'
+-            $ref: '#/definition/individualbulkresponse'
 -        '400':
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/IndividualResponse"
++                $ref: "#/component/schema/individualresponse"
 +        "400":
-           description: Bad Request
+           description: bad request
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
@@ -255,75 +286,75 @@
 +          content:
 +            application/json:
 +              schema:
-+                oneOf:
-+                  - $ref: "#/components/schemas/ValidationErrorResponse"
-+                  - $ref: "#/components/schemas/ValidationErrorObjectResponse"
-+                  - $ref: "#/components/schemas/ErrorResponse"
++                oneof:
++                  - $ref: "#/component/schema/validationerrorresponse"
++                  - $ref: "#/component/schema/validationerrorobjectresponse"
++                  - $ref: "#/component/schema/errorresponse"
 +        "404":
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +        "409":
-+          description: Conflict
++          description: conflict
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ValidationErrorObjectResponse"
++                $ref: "#/component/schema/validationerrorobjectresponse"
 +        "500":
-           description: Internal Server Error
+           description: internal server error
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
 -
--  /individual/v1/bulk/_update:
+-  /individual/v1/delete:
 -    post:
 -      summary: >-
--        Update the details of existing Individuals
+-        soft delete the detail of a existing individual and nested entitie
 -      description: >-
--        Update the details of existing Individuals
+-        soft delete the detail of a existing individual and nested entitie
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +    put:
-+      operationId: updateIndividualPut
-       parameters:
--        - name: Individual
++      operationid: updateindividualput
+       parameter:
+-        - name: individual
 -          in: body
--          description: Details for the Individual.
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
+-          description: detail for the individual.
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: id
 +          in: path
            required: true
            schema:
--            $ref: '#/definitions/IndividualBulkRequest'
--        - $ref: '#/parameters/echoResource'
--      tags:
--        - Individual
+-            $ref: '#/definition/individualrequest'
+-        - $ref: '#/parameter/echoresource'
+-      tag:
+-        - individual
 +            type: string
-+      requestBody:
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/IndividualRequest"
-       responses:
++              $ref: "#/component/schema/individualrequest"
+       response:
 -        '202':
--          description: Accepted
+-          description: accepted
 -          schema:
--            $ref: '#/definitions/IndividualBulkResponse'
+-            $ref: '#/definition/individualresponse'
 -        '400':
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/IndividualResponse"
++                $ref: "#/component/schema/individualresponse"
 +        "400":
-           description: Bad Request
+           description: bad request
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
@@ -331,65 +362,65 @@
 +          content:
 +            application/json:
 +              schema:
-+                oneOf:
-+                  - $ref: "#/components/schemas/ValidationErrorResponse"
-+                  - $ref: "#/components/schemas/ValidationErrorObjectResponse"
-+                  - $ref: "#/components/schemas/ErrorResponse"
++                oneof:
++                  - $ref: "#/component/schema/validationerrorresponse"
++                  - $ref: "#/component/schema/validationerrorobjectresponse"
++                  - $ref: "#/component/schema/errorresponse"
 +        "404":
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +        "409":
-+          description: Conflict
++          description: conflict
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ValidationErrorObjectResponse"
++                $ref: "#/component/schema/validationerrorobjectresponse"
 +        "500":
-           description: Internal Server Error
+           description: internal server error
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
 -
--  /individual/v1/_delete:
+-  /individual/v1/bulk/delete:
 -    post:
 -      summary: >-
--        Soft delete the details of a existing Individual and nested entities
+-        soft delete the detail of a existing individual and nested entitie in bulk
 -      description: >-
--        Soft delete the details of a existing Individual and nested entities
+-        soft delete the detail of a existing individual and nested entitie in bulk
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +    delete:
-+      operationId: deleteIndividualByID
-       parameters:
--        - name: Individual
++      operationid: deleteindividualbyid
+       parameter:
+-        - name: individual
 -          in: body
--          description: Details for the Individual.
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
+-          description: detail for the individual.
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: id
 +          in: path
            required: true
            schema:
--            $ref: '#/definitions/IndividualRequest'
--        - $ref: '#/parameters/echoResource'
--      tags:
--        - Individual
+-            $ref: '#/definition/individualbulkrequest'
+-        - $ref: '#/parameter/echoresource'
+-      tag:
+-        - individual
 +            type: string
-       responses:
+       response:
 -        '202':
--          description: Accepted
+-          description: accepted
 -          schema:
--            $ref: '#/definitions/IndividualResponse'
+-            $ref: '#/definition/individualbulkresponse'
 -        '400':
 +        "204":
-+          description: No Content
++          description: no content
 +        "400":
-           description: Bad Request
+           description: bad request
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
@@ -397,72 +428,75 @@
 +          content:
 +            application/json:
 +              schema:
-+                oneOf:
-+                  - $ref: "#/components/schemas/ValidationErrorResponse"
-+                  - $ref: "#/components/schemas/ValidationErrorObjectResponse"
-+                  - $ref: "#/components/schemas/ErrorResponse"
++                oneof:
++                  - $ref: "#/component/schema/validationerrorresponse"
++                  - $ref: "#/component/schema/validationerrorobjectresponse"
++                  - $ref: "#/component/schema/errorresponse"
 +        "404":
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +        "409":
-+          description: Conflict
++          description: conflict
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ValidationErrorObjectResponse"
++                $ref: "#/component/schema/validationerrorobjectresponse"
 +        "500":
-           description: Internal Server Error
+           description: internal server error
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
 -
--  /individual/v1/bulk/_delete:
+-  /individual/v1/search:
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
-+  /individual/v1/configs:
++                $ref: "#/component/schema/errorresponse"
++  /individual/v1/config:
      post:
 -      summary: >-
--        Soft delete the details of a existing Individual and nested entities in bulk
+-        search existing individual
 -      description: >-
--        Soft delete the details of a existing Individual and nested entities in bulk
-+      operationId: upsertConfig
-       parameters:
--        - name: Individual
+-        search existing individual
++      operationid: upsertconfig
+       parameter:
+-        - name: individual
 -          in: body
--          description: Details for the Individual.
+-          description: individual detail.
 -          required: true
 -          schema:
--            $ref: '#/definitions/IndividualBulkRequest'
--        - $ref: '#/parameters/echoResource'
--      tags:
--        - Individual
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+      requestBody:
+-            $ref: '#/definition/individualsearchrequest'
+-        - $ref: '#/parameter/limit'
+-        - $ref: '#/parameter/offset'
+-        - $ref: '#/parameter/tenantid'
+-        - $ref: '#/parameter/lastchangedsince'
+-        - $ref: '#/parameter/includedeleted'
+-      tag:
+-        - individual
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/ConfigRequest"
-       responses:
--        '202':
--          description: Accepted
--          schema:
--            $ref: '#/definitions/IndividualBulkResponse'
--        '400':
++              $ref: "#/component/schema/configrequest"
+       response:
+-        '200':
 +        "200":
-+          description: OK
+           description: ok
+-          schema:
+-            $ref: '#/definition/individualbulksearchresponse'
+-        '400':
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/Config"
++                $ref: "#/component/schema/config"
 +        "400":
-           description: Bad Request
+           description: bad request
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
@@ -470,50 +504,50 @@
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
++                $ref: "#/component/schema/errorresponse"
 +        "500":
-           description: Internal Server Error
+           description: internal server error
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/ErrorResponse"
-+components:
-+  parameters:
-+    XTenantId:
-+      name: X-Tenant-Id
++                $ref: "#/component/schema/errorresponse"
++component:
++  parameter:
++    xtenantid:
++      name: x-tenant-id
 +      in: header
 +      required: true
 +      schema:
 +        type: string
-+    XClientId:
-+      name: X-Client-Id
++    xclientid:
++      name: x-client-id
 +      in: header
 +      required: true
 +      schema:
 +        type: string
-+  schemas:
-+    Individual:
++  schema:
++    individual:
 +      type: object
 +      required:
 +        - id
-+      properties:
++      propertie:
 +        id:
 +          type: string
-+        individualId:
++        individualid:
 +          type: string
-+        clientReferenceId:
++        clientreferenceid:
 +          type: string
 +          nullable: true
-+        givenName:
++        givenname:
 +          type: string
-+        familyName:
++        familyname:
 +          type: string
-+        otherNames:
++        othername:
 +          type: string
-+        dateOfBirth:
++        dateofbirth:
 +          type: string
 +          format: date-time
 +          nullable: true
@@ -522,19 +556,19 @@
 +        age:
 +          type: integer
 +          nullable: true
-+        bloodGroup:
++        bloodgroup:
 +          type: string
-+        mobileNumber:
++        mobilenumber:
 +          type: string
-+        mobileNumberVerified:
++        mobilenumberverified:
 +          type: boolean
-+        altContactNumber:
++        altcontactnumber:
 +          type: string
 +        email:
 +          type: string
-+        emailVerified:
++        emailverified:
 +          type: boolean
-+        zoneInfo:
++        zoneinfo:
 +          type: string
 +        locale:
 +          type: string
@@ -546,17 +580,17 @@
 +          type: string
 +        active:
 +          type: boolean
-+        fatherName:
++        fathername:
 +          type: string
-+        husbandName:
++        husbandname:
 +          type: string
 +        relationship:
 +          type: string
 +        photo:
 +          type: string
-+        userId:
++        userid:
 +          type: string
-+        userUuid:
++        useruuid:
 +          type: string
 +        username:
 +          type: string
@@ -564,55 +598,55 @@
 +          type: string
 +        type:
 +          type: string
-+        roles:
++        role:
 +          type: object
-+          additionalProperties: {}
-+        isSystemUser:
++          additionalpropertie: {}
++        issystemuser:
 +          type: boolean
-+        additionalDetails:
++        additionaldetail:
 +          type: object
-+          additionalProperties: {}
-+        createdBy:
++          additionalpropertie: {}
++        createdby:
 +          type: string
-+        lastModifiedBy:
++        lastmodifiedby:
 +          type: string
-+        createdTime:
++        createdtime:
 +          type: integer
 +          format: int64
-+        lastModifiedTime:
++        lastmodifiedtime:
 +          type: integer
 +          format: int64
-+        rowVersion:
++        rowversion:
 +          type: integer
-+        address:
++        addres:
 +          type: array
-+          items:
-+            $ref: "#/components/schemas/Address"
-+        identifiers:
++          item:
++            $ref: "#/component/schema/addres"
++        identifier:
 +          type: array
-+          items:
-+            $ref: "#/components/schemas/Identifier"
-+        additionalFields:
-+          allOf:
-+            - $ref: "#/components/schemas/AdditionalFields"
++          item:
++            $ref: "#/component/schema/identifier"
++        additionalfield:
++          allof:
++            - $ref: "#/component/schema/additionalfield"
 +          nullable: true
-+        auditDetails:
-+          allOf:
-+            - $ref: "#/components/schemas/AuditDetails"
++        auditdetail:
++          allof:
++            - $ref: "#/component/schema/auditdetail"
 +          nullable: true
-+    Address:
++    addres:
 +      type: object
 +      required:
 +        - id
-+      properties:
++      propertie:
 +        id:
 +          type: string
-+        clientReferenceId:
++        clientreferenceid:
 +          type: string
 +          nullable: true
-+        tenantId:
++        tenantid:
 +          type: string
-+        doorNo:
++        doorno:
 +          type: string
 +        latitude:
 +          type: number
@@ -622,15 +656,15 @@
 +          type: number
 +          format: double
 +          nullable: true
-+        locationAccuracy:
++        locationaccuracy:
 +          type: number
 +          format: double
 +          nullable: true
 +        type:
 +          type: string
-+        addressLine1:
++        addressline1:
 +          type: string
-+        addressLine2:
++        addressline2:
 +          type: string
 +        landmark:
 +          type: string
@@ -640,7 +674,7 @@
 +          type: string
 +        pincode:
 +          type: string
-+        buildingName:
++        buildingname:
 +          type: string
 +        street:
 +          type: string
@@ -648,168 +682,125 @@
 +          type: string
 +        formatted:
 +          type: string
-+        localityCode:
++        localitycode:
 +          type: string
-+        wardCode:
++        wardcode:
 +          type: string
-+        createdBy:
++        createdby:
 +          type: string
-+        lastModifiedBy:
++        lastmodifiedby:
 +          type: string
-+        createdTime:
++        createdtime:
 +          type: integer
 +          format: int64
-+        lastModifiedTime:
++        lastmodifiedtime:
 +          type: integer
 +          format: int64
-+    Identifier:
++    identifier:
 +      type: object
 +      required:
 +        - id
-+      properties:
++      propertie:
 +        id:
 +          type: string
-+        identifierType:
++        identifiertype:
 +          type: string
-+        identifierId:
++        identifierid:
 +          type: string
-+        individualId:
++        individualid:
 +          type: string
-+        createdBy:
++        createdby:
 +          type: string
-+        lastModifiedBy:
++        lastmodifiedby:
 +          type: string
-+        createdTime:
++        createdtime:
 +          type: integer
 +          format: int64
-+        lastModifiedTime:
++        lastmodifiedtime:
 +          type: integer
 +          format: int64
 +        active:
 +          type: boolean
-+    AdditionalFields:
++    additionalfield:
 +      type: object
-+      properties:
-+        fields:
++      propertie:
++        field:
 +          type: array
-+          items:
-+            $ref: "#/components/schemas/Field"
-+    Field:
++          item:
++            $ref: "#/component/schema/field"
++    field:
 +      type: object
-+      properties:
++      propertie:
 +        key:
 +          type: string
 +        value:
 +          type: string
-+    AuditDetails:
++    auditdetail:
 +      type: object
-+      properties:
-+        createdBy:
++      propertie:
++        createdby:
 +          type: string
-+        createdTime:
++        createdtime:
 +          type: integer
 +          format: int64
-+        lastModifiedBy:
++        lastmodifiedby:
 +          type: string
-+        lastModifiedTime:
++        lastmodifiedtime:
 +          type: integer
 +          format: int64
-+    Config:
++    config:
 +      type: object
 +      required:
 +        - id
-+        - tenantId
-+      properties:
++        - tenantid
++      propertie:
 +        id:
 +          type: integer
 +          format: int64
-+        tenantId:
++        tenantid:
 +          type: string
-+        mobileRegex:
++        mobileregex:
 +          type: string
-+        nameRegex:
++        nameregex:
 +          type: string
-+        uniquenessCriteria: {}
-+        createdTime:
++        uniquenesscriteria: {}
++        createdtime:
 +          type: integer
 +          format: int64
  
--  /individual/v1/_search:
--    post:
--      summary: >-
--        Search existing Individual
--      description: >-
--        Search existing Individual
--      parameters:
--        - name: Individual
--          in: body
--          description: Individual details.
--          required: true
--          schema:
--            $ref: '#/definitions/IndividualSearchRequest'
--        - $ref: '#/parameters/limit'
--        - $ref: '#/parameters/offset'
--        - $ref: '#/parameters/tenantId'
--        - $ref: '#/parameters/lastChangedSince'
--        - $ref: '#/parameters/includeDeleted'
--      tags:
-+
-+    IndividualRequest:
-+      type: object
-+      required:
-         - Individual
--      responses:
--        '200':
--          description: Ok
--          schema:
--            $ref: '#/definitions/IndividualBulkSearchResponse'
--        '400':
--          description: Bad Request
--          schema:
--            $ref: >-
--              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
--        '500':
--          description: Internal Server Error
--          schema:
--            $ref: >-
--              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
-+      properties:
-+        Individual:
-+          $ref: "#/components/schemas/Individual"
- 
--parameters:
--  tenantId:
--    name: tenantId
+-parameter:
+-  tenantid:
+-    name: tenantid
 -    in: query
--    description: Unique id for a tenant.
+-    description: unique id for a tenant.
 -    required: true
 -    type: string
 -    format: varchar
--  lastChangedSince:
--    name: lastChangedSince
+-  lastchangedsince:
+-    name: lastchangedsince
 -    description: |
--      epoch of the time since when the changes on the object should be picked up. Search results from this parameter should include both newly created objects since this time as well as any modified objects since this time. This criterion is included to help polling clients to get the changes in system since a last time they synchronized with the platform.
+-      epoch of the time since when the change on the object should be picked up. search result from thi parameter should include both newly created object since thi time a well a any modified object since thi time. thi criterion i included to help polling client to get the change in system since a last time they synchronized with the platform.
 -    in: query
 -    required: false
 -    type: integer
 -    format: int64
--  echoResource:
--    name: echoResource
+-  echoresource:
+-    name: echoresource
 -    in: query
 -    type: boolean
 -    required: false
 -    default: true
--    description: Client can specify if the resource in request body needs to be sent back in the response. This is being used to limit amount of data that needs to flow back from the server to the client in low bandwidth scenarios. Server will always send the server generated id for validated requests.
--  serverHandlesErrors:
--    name: serverHandlesErrors
+-    description: client can specify if the resource in request body need to be sent back in the response. thi i being used to limit amount of data that need to flow back from the server to the client in low bandwidth scenario. server will alway send the server generated id for validated request.
+-  serverhandleserror:
+-    name: serverhandleserror
 -    in: query
 -    type: boolean
 -    required: false
 -    default: false
--    description: Client can specify that it is incapable of handling any errors with the requests and server should route these for manual intervention if required.
+-    description: client can specify that it i incapable of handling any error with the request and server should route these for manual intervention if required.
 -  limit:
 -    name: limit
--    description: Pagination - limit records in response
+-    description: pagination - limit record in response
 -    in: query
 -    type: integer
 -    minimum: 0
@@ -817,338 +808,347 @@
 -    required: true
 -  offset:
 -    name: offset
--    description: Pagination - offset from which records should be returned in response
+-    description: pagination - offset from which record should be returned in response
 -    in: query
 -    type: integer
 -    minimum: 0
 -    required: true
--  includeDeleted:
--    name: includeDeleted
--    description: Used in search APIs to specify if (soft) deleted records should be included in search results.
+-  includedeleted:
+-    name: includedeleted
+-    description: used in search api to specify if (soft) deleted record should be included in search result.
 -    in: query
 -    type: boolean
 -    default: false
 -    required: false
-+    IndividualResponse:
-+      type: object
-+      properties:
-+        Individuals:
-+          $ref: "#/components/schemas/Individual"
  
--definitions:
--  boundaryCode:
+-definition:
+-  boundarycode:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/boundaryCode'
 -  id:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/id'
--  idForSearch:
+-  idforsearch:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/idForSearch'
--  clientReferenceIdForSearch:
+-  clientreferenceidforsearch:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/clientReferenceIdForSearch'
--  clientReferenceId:
+-  clientreferenceid:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/clientReferenceId'
 -  gender:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/gender'
--  dateOfBirth:
+-  dateofbirth:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/dateDDMMYYYY'
--  tenantId:
+-  tenantid:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/tenantId'
--  eventTimestamp:
+-  eventtimestamp:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/eventTimestamp'
--  isDeleted:
+-  isdeleted:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/isDeleted'
--  rowVersion:
+-  rowversion:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/rowVersion'
--  apiOperation:
+-  apioperation:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/apiOperation'
--  additionalFields:
+-  additionalfield:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/additionalFields'
--  Address:
+-  addres:
 -    $ref: 'https://raw.githubusercontent.com/digit-egov/health-api-specs/main/contracts/common.yaml#/definitions/Address'
 -  name:
 -    type: object
--    properties:
--      givenName:
+-    propertie:
+-      givenname:
 -        type: string
--        minLength: 2
--        maxLength: 200
--        description: Given name of individual
--      familyName:
+-        minlength: 2
+-        maxlength: 200
+-        description: given name of individual
+-      familyname:
 -        type: string
--        minLength: 2
--        maxLength: 200
--        description: Family name of individual
--      otherNames:
+-        minlength: 2
+-        maxlength: 200
+-        description: family name of individual
+-      othername:
 -        type: string
--        minLength: 0
--        maxLength: 200
--        description: Other names of individual
--  Individual:
--    description: A representation of an Individual.
+-        minlength: 0
+-        maxlength: 200
+-        description: other name of individual
+-  individual:
+-    description: a representation of an individual.
 -    type: object
 -    required:
 -      - name
--    properties:
+-    propertie:
 -      id:
--        $ref: '#/definitions/id'
--      tenantId:
--        $ref: '#/definitions/tenantId'
--      clientReferenceId:
--        $ref: '#/definitions/clientReferenceId'
--      userId:
--        $ref: '#/definitions/id'
+-        $ref: '#/definition/id'
+-      tenantid:
+-        $ref: '#/definition/tenantid'
+-      clientreferenceid:
+-        $ref: '#/definition/clientreferenceid'
+-      userid:
+-        $ref: '#/definition/id'
 -      name:
--        $ref: '#/definitions/name'
--      dateOfBirth:
--        $ref: '#/definitions/dateOfBirth'
+-        $ref: '#/definition/name'
+-      dateofbirth:
+-        $ref: '#/definition/dateofbirth'
 -      gender:
--        $ref: '#/definitions/gender'
--      bloodGroup:
+-        $ref: '#/definition/gender'
+-      bloodgroup:
 -        type: string
--        description: Blood group of the user.
--        maxLength: 3
--        items:
+-        description: blood group of the user.
+-        maxlength: 3
+-        item:
 -          type: string
 -          enum:
--            - A+
--            - B+
--            - O+
--            - AB+
--            - A-
--            - B-
--            - AB-
--            - O-
--          example: AB+
--      mobileNumber:
+-            - a+
+-            - b+
+-            - o+
+-            - ab+
+-            - a-
+-            - b-
+-            - ab-
+-            - o-
+-          example: ab+
+-      mobilenumber:
 -        type: string
--        description: Mobile number of the user
--        maxLength: 20
--      altContactNumber:
+-        description: mobile number of the user
+-        maxlength: 20
+-      altcontactnumber:
 -        type: string
--        description: Alternate contact number of the user
--        maxLength: 16
+-        description: alternate contact number of the user
+-        maxlength: 16
 -      email:
 -        type: string
 -        format: email
--        minLength: 5
--        maxLength: 200
--      address:
+-        minlength: 5
+-        maxlength: 200
+-      addres:
 -        type: array
--        items:
--          $ref: '#/definitions/Address'
--      fatherName:
+-        item:
+-          $ref: '#/definition/addres'
+-      fathername:
 -        type: string
--        description: Individual's father's name - if available
--        maxLength: 100
--      husbandName:
+-        description: individual's father's name - if available
+-        maxlength: 100
+-      husbandname:
 -        type: string
--        description: Individual's husband's name - if applicable
--        maxLength: 100
--      identifiers:
+-        description: individual's husband's name - if applicable
+-        maxlength: 100
+-      identifier:
 -        type: array
--        items:
--          $ref: '#/definitions/Identifier'
--      skills:
+-        item:
+-          $ref: '#/definition/identifier'
+-      skill:
 -        type: array
--        items:
--          $ref: '#/definitions/Skill'
+-        item:
+-          $ref: '#/definition/skill'
 -      photo:
 -        type: string
--        description: Filestore service uuid holding individual's photograph
--      additionalFields:
--        $ref: '#/definitions/additionalFields'
--      isDeleted:
--        $ref: '#/definitions/isDeleted'
--      rowVersion:
--        $ref: '#/definitions/rowVersion'
--      auditDetails:
+-        description: filestore service uuid holding individual's photograph
+-      additionalfield:
+-        $ref: '#/definition/additionalfield'
+-      isdeleted:
+-        $ref: '#/definition/isdeleted'
+-      rowversion:
+-        $ref: '#/definition/rowversion'
+-      auditdetail:
 -        $ref: 'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/AuditDetails'
--  IndividualSearch:
--    description: A representation of an Individual.
+-  individualsearch:
+-    description: a representation of an individual.
 -    type: object
--    properties:
+-    propertie:
 -      id:
--        $ref: '#/definitions/idForSearch'
--      clientReferenceId:
--        $ref: '#/definitions/clientReferenceIdForSearch'
+-        $ref: '#/definition/idforsearch'
+-      clientreferenceid:
+-        $ref: '#/definition/clientreferenceidforsearch'
 -      name:
--        $ref: '#/definitions/name'
--      dateOfBirth:
--        $ref: '#/definitions/dateOfBirth'
+-        $ref: '#/definition/name'
+-      dateofbirth:
+-        $ref: '#/definition/dateofbirth'
 -      gender:
--        $ref: '#/definitions/gender'
+-        $ref: '#/definition/gender'
 -      identifier:
--        $ref: '#/definitions/Identifier'
--      boundaryCode:
--        $ref: '#/definitions/boundaryCode'
--  Identifier:
+-        $ref: '#/definition/identifier'
+-      boundarycode:
+-        $ref: '#/definition/boundarycode'
+-  identifier:
 -    type: object
 -    required:
 -      - type
 -      - id
--    properties:
--      identifierType:
+-    propertie:
+-      identifiertype:
 -        type: string
--        example: 'SYSTEM_GENERATED'
--        minLength: 2
--        maxLength: 64
--      identifierId:
+-        example: 'systemgenerated'
+-        minlength: 2
+-        maxlength: 64
+-      identifierid:
 -        type: string
--        example: 'ABCD-1212'
--        minLength: 2
--        maxLength: 64
--  IndividualRequest:
+-        example: 'abcd-1212'
+-        minlength: 2
+-        maxlength: 64
+-  individualrequest:
 -    type: object
--    properties:
--      RequestInfo:
+-    propertie:
+-      requestinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
--      Individual:
+-      individual:
 -        type: object
--        $ref: '#/definitions/Individual'
+-        $ref: '#/definition/individual'
 -    required:
--      - RequestInfo
--      - Individual
--  IndividualBulkRequest:
+-      - requestinfo
+-      - individual
+-  individualbulkrequest:
 -    type: object
--    properties:
--      RequestInfo:
+-    propertie:
+-      requestinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
--      Individuals:
+-      individual:
 -        type: array
--        minItems: 1
--        items:
--          $ref: '#/definitions/Individual'
+-        minitem: 1
+-        item:
+-          $ref: '#/definition/individual'
 -    required:
--      - RequestInfo
--      - Individual
--  IndividualSearchRequest:
+-      - requestinfo
+-      - individual
+-  individualsearchrequest:
 -    type: object
--    properties:
--      RequestInfo:
+-    propertie:
+-      requestinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
--      Individual:
--        $ref: '#/definitions/IndividualSearch'
+-      individual:
+-        $ref: '#/definition/individualsearch'
 -    required:
--      - RequestInfo
--      - Individual
--  IndividualResponse:
+-      - requestinfo
+-      - individual
+-  individualresponse:
 -    type: object
--    properties:
--      ResponseInfo:
+-    propertie:
+-      responseinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ResponseInfo
--      Individual:
+-      individual:
 -        type: object
--        $ref: '#/definitions/Individual'
+-        $ref: '#/definition/individual'
 -    required:
--      - ResponseInfo
--  IndividualBulkResponse:
+-      - responseinfo
+-  individualbulkresponse:
 -    type: object
--    properties:
--      ResponseInfo:
+-    propertie:
+-      responseinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ResponseInfo
 -    required:
--      - ResponseInfo
--  IndividualBulkSearchResponse:
+-      - responseinfo
+-  individualbulksearchresponse:
 -    type: object
--    properties:
--      ResponseInfo:
+-    propertie:
+-      responseinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ResponseInfo
--      Individuals:
+-      individual:
 -        type: array
--        items:
--          $ref: '#/definitions/Individual'
+-        item:
+-          $ref: '#/definition/individual'
 -    required:
--      - ResponseInfo
--  Skill:
+-      - responseinfo
+-  skill:
 -    type: object
 -    required: [type]
--    properties:
+-    propertie:
 -      id:
--        $ref: '#/definitions/id'
+-        $ref: '#/definition/id'
 -      type:
 -        type: string
 -        description: skill type of the individual
--        minLength: 2
--        maxLength: 64
+-        minlength: 2
+-        maxlength: 64
 -      level:
 -        type: string
 -        description: skill level of the individual
--        minLength: 2
--        maxLength: 64
+-        minlength: 2
+-        maxlength: 64
 -      experience:
 -        type: string
 -        description: experience of the individual
--        minLength: 2
--        maxLength: 64
-+    IndividualSearchResponse:
+-        minlength: 2
+-        maxlength: 64
++    individualrequest:
 +      type: object
 +      required:
-+        - Individuals
-+        - totalCount
-+      properties:
-+        Individuals:
++        - individual
++      propertie:
++        individual:
++          $ref: "#/component/schema/individual"
++
++    individualresponse:
++      type: object
++      propertie:
++        individual:
++          $ref: "#/component/schema/individual"
++
++    individualsearchresponse:
++      type: object
++      required:
++        - individual
++        - totalcount
++      propertie:
++        individual:
 +          type: array
-+          items:
-+            $ref: "#/components/schemas/Individual"
-+        totalCount:
++          item:
++            $ref: "#/component/schema/individual"
++        totalcount:
 +          type: integer
 +          format: int64
-+    ErrorResponse:
++    errorresponse:
 +      type: object
-+      properties:
-+        Errors:
++      propertie:
++        error:
 +          type: array
-+          items:
-+            $ref: "#/components/schemas/Error"
-+    Error:
++          item:
++            $ref: "#/component/schema/error"
++    error:
 +      type: object
 +      required:
 +        - code
 +        - message
-+      properties:
++      propertie:
 +        code:
 +          type: string
 +        message:
 +          type: string
 +        description:
 +          type: string
-+        params:
++        param:
 +          type: object
-+          additionalProperties: {}
-+    ValidationErrorResponse:
++          additionalpropertie: {}
++    validationerrorresponse:
 +      type: object
 +      required:
 +        - error
-+        - details
-+      properties:
++        - detail
++      propertie:
 +        error:
 +          type: string
-+        details:
++        detail:
 +          type: array
-+          items:
++          item:
 +            type: string
-+    ValidationErrorObjectResponse:
++    validationerrorobjectresponse:
 +      type: object
 +      required:
 +        - error
-+        - errors
-+      properties:
++        - error
++      propertie:
 +        error:
 +          type: string
-+        errors:
++        error:
 +          type: array
-+          items:
-+            $ref: "#/components/schemas/ValidationErrorItem"
-+    ValidationErrorItem:
++          item:
++            $ref: "#/component/schema/validationerroritem"
++    validationerroritem:
 +      type: object
 +      required:
 +        - message
-+      properties:
++      propertie:
 +        index:
 +          type: integer
 +          nullable: true
@@ -1157,19 +1157,19 @@
 +        message:
 +          type: string
 +        value: {}
-+    ConfigRequest:
++    configrequest:
 +      type: object
 +      required:
-+        - mobileRegex
-+        - nameRegex
-+        - uniquenessCriteria
-+      properties:
-+        mobileRegex:
++        - mobileregex
++        - nameregex
++        - uniquenesscriteria
++      propertie:
++        mobileregex:
 +          type: string
-+        nameRegex:
++        nameregex:
 +          type: string
-+        uniquenessCriteria:
++        uniquenesscriteria:
 +          type: array
-+          items:
++          item:
 +            type: string
 \ No newline at end of file

@@ -1,86 +1,82 @@
-
-
-==================== idgen.diff ====================
-
---- "/home/mithun/Desktop/spec-diff/DIGIT-Specs/Common Services/id-generation.yaml"	2026-03-23 10:50:25.033727367 +0530
-+++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/idgen.yaml	2026-03-23 10:51:46.198660142 +0530
+--- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v2/idgen.norm.yaml	2026-04-01 13:55:53.524323054 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v3/idgen.norm.yaml	2026-04-01 13:55:53.524323054 +0530
 @@ -1,330 +1,540 @@
 -openapi: 3.0.1
 +openapi: 3.0.0
  info:
--  title: ID Generation service
--  description: "This service generates a unique ID/Code given the needed format e.g.\
--    \ an id wit format AP-PT-2017/04/11-000001-23 where format is can be decomposed\
--    \ as (- is used as a separator in the above example) -\n  \n  AP - Fixed string\
--    \ indicating the tenant\n  \n  PT - fixed string indicating module\n  \n  2017/04/11\
--    \ - Date field indicating YYYY/MM/DD\n  \n  000001 - local sequence number\n \
--    \ \n  23 - two random digits\n\n  This can be indicated to IDGen service as an\
--    \ ID needed in the format (square brackets indicate the parts that will be replaced\
--    \ by the svc to generate the new id) -\n  AP-PT-[YYYY/MM/DD]-[SEQ_ACK_NUM]-[d{2}]\n\
--    \  \n  Please note that are replaceable elements will be enclosed within []. Following\
--    \ construct are supported - \n      \n      1. Date patterns as per java SimpleDateFormat\
+-  title: id generation service
+-  description: "thi service generate a unique id/code given the needed format e.g.\
+-    \ an id wit format ap-pt-2017/04/11-000001-23 where format i can be decomposed\
+-    \ a (- i used a a separator in the above example) -\n  \n  ap - fixed string\
+-    \ indicating the tenant\n  \n  pt - fixed string indicating module\n  \n  2017/04/11\
+-    \ - date field indicating yyyy/mm/dd\n  \n  000001 - local sequence number\n \
+-    \ \n  23 - two random digit\n\n  thi can be indicated to idgen service a an\
+-    \ id needed in the format (square bracket indicate the part that will be replaced\
+-    \ by the svc to generate the new id) -\n  ap-pt-[yyyy/mm/dd]-[seqacknum]-[d{2}]\n\
+-    \  \n  please note that are replaceable element will be enclosed within []. following\
+-    \ construct are supported - \n      \n      1. date pattern a per java simpledateformat\
 -    \ (https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html)\n \
--    \     2. Regex patterns as per Java regex paterns (http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html)\n\
--    \      3. SEQ_ where X is the name of a sequence to be used, e.g. SEQ_ACK_NUM\n\
--    \      4. Static elements will be without enclosing square brackets\n  \n"
+-    \     2. regex pattern a per java regex patern (http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html)\n\
+-    \      3. seq where x i the name of a sequence to be used, e.g. seqacknum\n\
+-    \      4. static element will be without enclosing square bracket\n  \n"
 -  contact:
--    name: Pranav
+-    name: pranav
 -  version: 1.0.0
-+  title: ID Generator Service API
++  title: id generator service api
 +  version: 3.0.0
 +  description: |
-+    A DIGIT microservice that generates unique, human-readable IDs from user-defined templates. 
-+    It supports formatted dates, scoped and padded sequences (Postgres-backed for concurrency safety), 
-+    random segments with flexible charsets, and dynamic variable substitution.
++    a digit microservice that generate unique, human-readable id from user-defined template. 
++    it support formatted date, scoped and padded sequence (postgre-backed for concurrency safety), 
++    random segment with flexible charset, and dynamic variable substitution.
 +    
- servers:
+ server:
 -- url: https://dev.digit.org/egov-idgen/
 +  - url: http://localhost:8080/idgen
-+    description: Local development server
++    description: local development server
 +  - url: https://api.example.com/idgen
-+    description: Production server
++    description: production server
 +
 +security:
-+  - BearerAuth: []
++  - bearerauth: []
 +
-+tags:
-+  - name: Template Management
-+    description: Operations for managing ID generation templates
-+  - name: ID Generation
-+    description: Operations for generating IDs from templates
++tag:
++  - name: template management
++    description: operation for managing id generation template
++  - name: id generation
++    description: operation for generating id from template
 +
- paths:
--  /id/_generate:
+ path:
+-  /id/generate:
 +  /v1/template:
      post:
-       tags:
--      - Property
--      summary: Create new id.
--      description: API to generate new id based on the id formats passed.
-+        - Template Management
-+      summary: Create a new ID generation template
+       tag:
+-      - property
+-      summary: create new id.
+-      description: api to generate new id based on the id format passed.
++        - template management
++      summary: create a new id generation template
 +      description: |
-+        Registers a new ID generation template with configuration and initializes its sequence.
-+        Creates version v1 of the template.
-+      operationId: createTemplate
-+      parameters:
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ClientIdHeader'
-       requestBody:
++        register a new id generation template with configuration and initialize it sequence.
++        create version v1 of the template.
++      operationid: createtemplate
++      parameter:
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/clientidheader'
+       requestbody:
 +        required: true
          content:
 -          '*/*':
 +          application/json:
              schema:
--              $ref: '#/components/schemas/IdGenerationRequest'
-+              $ref: '#/components/schemas/IDGenTemplateRequest'
-+            examples:
-+              receiptId:
-+                summary: Receipt ID Template
+-              $ref: '#/component/schema/idgenerationrequest'
++              $ref: '#/component/schema/idgentemplaterequest'
++            example:
++              receiptid:
++                summary: receipt id template
 +                value:
-+                  templateCode: "receipt-id"
++                  templatecode: "receipt-id"
 +                  config:
-+                    template: "{tenant}-{DATE:yyyy-mm-dd}-{SEQ}-{RAND}"
++                    template: "{tenant}-{date:yyyy-mm-dd}-{seq}-{rand}"
 +                    sequence:
 +                      scope: "daily"
 +                      start: 1
@@ -89,13 +85,13 @@
 +                        char: "0"
 +                    random:
 +                      length: 4
-+                      charset: "A-Z0-9"
-+              orgId:
-+                summary: Organization ID Template
++                      charset: "a-z0-9"
++              orgid:
++                summary: organization id template
 +                value:
-+                  templateCode: "orgId"
++                  templatecode: "orgid"
 +                  config:
-+                    template: "{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}"
++                    template: "{org}-{date:yyyymmdd}-{seq}-{rand}"
 +                    sequence:
 +                      scope: "daily"
 +                      start: 1
@@ -104,21 +100,21 @@
 +                        char: "0"
 +                    random:
 +                      length: 2
-+                      charset: "A-Z0-9"
-+      responses:
++                      charset: "a-z0-9"
++      response:
 +        '201':
-+          description: Template created successfully
++          description: template created successfully
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/IDGenTemplateResponse'
++                $ref: '#/component/schema/idgentemplateresponse'
 +              example:
 +                id: "550e8400-e29b-41d4-a716-446655440000"
-+                tenantId: "pg"
-+                templateCode: "receipt-id"
++                tenantid: "pg"
++                templatecode: "receipt-id"
 +                version: "v1"
 +                config:
-+                  template: "{tenant}-{DATE:yyyy-mm-dd}-{SEQ}-{RAND}"
++                  template: "{tenant}-{date:yyyy-mm-dd}-{seq}-{rand}"
 +                  sequence:
 +                    scope: "daily"
 +                    start: 1
@@ -127,50 +123,50 @@
 +                      char: "0"
 +                  random:
 +                    length: 4
-+                    charset: "A-Z0-9"
-+                auditDetails:
-+                  createdBy: "550e8400-e29b-41d4-a716-446655440000"
-+                  createdTime: 1704067200000
++                    charset: "a-z0-9"
++                auditdetail:
++                  createdby: "550e8400-e29b-41d4-a716-446655440000"
++                  createdtime: 1704067200000
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '409':
-+          description: Conflict (duplicate code within tenant)
++          description: conflict (duplicate code within tenant)
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +    
 +    put:
-+      tags:
-+        - Template Management
-+      summary: Update an existing template
++      tag:
++        - template management
++      summary: update an existing template
 +      description: |
-+        Creates a new immutable version of an existing template's configuration.
-+        Increments the version number (e.g., v1 -> v2).
-+      operationId: updateTemplate
-+      parameters:
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - $ref: '#/components/parameters/ClientIdHeader'
-+      requestBody:
++        create a new immutable version of an existing template's configuration.
++        increment the version number (e.g., v1 -> v2).
++      operationid: updatetemplate
++      parameter:
++        - $ref: '#/component/parameter/tenantidheader'
++        - $ref: '#/component/parameter/clientidheader'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/IDGenTemplateRequest'
++              $ref: '#/component/schema/idgentemplaterequest'
 +            example:
-+              templateCode: "orgId"
++              templatecode: "orgid"
 +              config:
-+                template: "{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}"
++                template: "{org}-{date:yyyymmdd}-{seq}-{rand}"
 +                sequence:
 +                  scope: "daily"
 +                  start: 1
@@ -179,83 +175,83 @@
 +                    char: "0"
 +                random:
 +                  length: 3
-+                  charset: "A-Z0-9"
-+      responses:
++                  charset: "a-z0-9"
++      response:
 +        '201':
-+          description: Template updated successfully (new version created)
++          description: template updated successfully (new version created)
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/IDGenTemplateResponse'
++                $ref: '#/component/schema/idgentemplateresponse'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '404':
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +    
 +    get:
-+      tags:
-+        - Template Management
-+      summary: Search templates
++      tag:
++        - template management
++      summary: search template
 +      description: |
-+        Search for templates by various criteria.
++        search for template by variou criteria.
 +        
-+        **Search Behavior:**
-+        - If only tenantId is provided: returns latest version of each template
-+        - If templateCode is provided without version: returns latest version of that template
-+        - If ids are provided: returns those specific template rows
-+        - If version is provided: templateCode is required
-+      operationId: searchTemplates
-+      parameters:
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - name: templateCode
++        **search behavior:**
++        - if only tenantid i provided: return latest version of each template
++        - if templatecode i provided without version: return latest version of that template
++        - if id are provided: return those specific template row
++        - if version i provided: templatecode i required
++      operationid: searchtemplate
++      parameter:
++        - $ref: '#/component/parameter/tenantidheader'
++        - name: templatecode
 +          in: query
-+          description: Template code to search for
++          description: template code to search for
 +          schema:
 +            type: string
-+          example: "orgId"
-+        - name: ids
++          example: "orgid"
++        - name: id
 +          in: query
-+          description: Comma-separated list of template UUIDs
++          description: comma-separated list of template uuid
 +          schema:
 +            type: string
 +          example: "da880db9-369e-484d-b4d0-37c6274485dd,bea96bb4-a4ec-449e-8b60-9e79869e2700"
 +        - name: version
 +          in: query
-+          description: Template version (requires templateCode)
++          description: template version (require templatecode)
 +          schema:
 +            type: string
 +            pattern: '^v\d+$'
 +          example: "v1"
-+      responses:
++      response:
 +        '200':
-+          description: Templates found
++          description: template found
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: '#/components/schemas/IDGenTemplateResponse'
++                item:
++                  $ref: '#/component/schema/idgentemplateresponse'
 +              example:
 +                - id: "550e8400-e29b-41d4-a716-446655440000"
-+                  tenantId: "pg"
-+                  templateCode: "orgId"
++                  tenantid: "pg"
++                  templatecode: "orgid"
 +                  version: "v1"
 +                  config:
-+                    template: "{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}"
++                    template: "{org}-{date:yyyymmdd}-{seq}-{rand}"
 +                    sequence:
 +                      scope: "daily"
 +                      start: 1
@@ -264,573 +260,573 @@
 +                        char: "0"
 +                    random:
 +                      length: 2
-+                      charset: "A-Z0-9"
-+                  auditDetails:
-+                    createdBy: "550e8400-e29b-41d4-a716-446655440000"
-+                    createdTime: 1704067200000
++                      charset: "a-z0-9"
++                  auditdetail:
++                    createdby: "550e8400-e29b-41d4-a716-446655440000"
++                    createdtime: 1704067200000
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +    
 +    delete:
-+      tags:
-+        - Template Management
-+      summary: Delete a template version
++      tag:
++        - template management
++      summary: delete a template version
 +      description: |
-+        Delete a specific version of a template.
++        delete a specific version of a template.
 +        
-+        **Deletion Semantics:**
-+        - Deleting a non-latest version: only that versioned row is removed
-+        - Deleting the latest version when other versions exist: only the latest row is removed
-+        - Deleting the only version: template, scope resets, sequence lookup, and Postgres sequence are fully cleaned up
-+      operationId: deleteTemplate
-+      parameters:
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+        - name: templateCode
++        **deletion semantic:**
++        - deleting a non-latest version: only that versioned row i removed
++        - deleting the latest version when other version exist: only the latest row i removed
++        - deleting the only version: template, scope reset, sequence lookup, and postgre sequence are fully cleaned up
++      operationid: deletetemplate
++      parameter:
++        - $ref: '#/component/parameter/tenantidheader'
++        - name: templatecode
 +          in: query
 +          required: true
-+          description: Template code to delete
++          description: template code to delete
 +          schema:
 +            type: string
-+          example: "orgId"
++          example: "orgid"
 +        - name: version
 +          in: query
 +          required: true
-+          description: Template version to delete
++          description: template version to delete
 +          schema:
 +            type: string
 +            pattern: '^v\d+$'
 +          example: "v2"
-+      responses:
++      response:
 +        '200':
-+          description: Template deleted successfully
++          description: template deleted successfully
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '404':
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +  
 +  /v1/generate:
 +    post:
-+      tags:
-+        - ID Generation
-+      summary: Generate an ID from a template
++      tag:
++        - id generation
++      summary: generate an id from a template
 +      description: |
-+        Generates a unique ID from a registered template using optional variables.
-+        Uses the latest version of the template for the given tenant.
-+      operationId: generateId
-+      parameters:
-+        - $ref: '#/components/parameters/TenantIdHeader'
-+      requestBody:
++        generate a unique id from a registered template using optional variable.
++        use the latest version of the template for the given tenant.
++      operationid: generateid
++      parameter:
++        - $ref: '#/component/parameter/tenantidheader'
++      requestbody:
          required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/GenerateIDRequest'
-+            examples:
-+              withVariables:
-+                summary: Generate with variables
++              $ref: '#/component/schema/generateidrequest'
++            example:
++              withvariable:
++                summary: generate with variable
 +                value:
-+                  templateCode: "receipt-id"
-+                  variables:
++                  templatecode: "receipt-id"
++                  variable:
 +                    tenant: "pb"
-+                    dept: "REV"
-+              orgId:
-+                summary: Generate organization ID
++                    dept: "rev"
++              orgid:
++                summary: generate organization id
 +                value:
-+                  templateCode: "orgId"
-+                  variables:
-+                    ORG: "PG"
-       responses:
++                  templatecode: "orgid"
++                  variable:
++                    org: "pg"
+       response:
 -        201:
--          description: Id generated sucessfully.
+-          description: id generated sucessfully.
 +        '200':
-+          description: ID generated successfully
++          description: id generated successfully
            content:
 -            '*/*':
 +            application/json:
                schema:
--                $ref: '#/components/schemas/IdGenerationResponse'
+-                $ref: '#/component/schema/idgenerationresponse'
 -        400:
--          description: Invalid input.
-+                $ref: '#/components/schemas/GenerateIDResponse'
-+              examples:
-+                receiptId:
-+                  summary: Receipt ID generated
+-          description: invalid input.
++                $ref: '#/component/schema/generateidresponse'
++              example:
++                receiptid:
++                  summary: receipt id generated
 +                  value:
-+                    tenantId: "pb"
-+                    templateCode: "receipt-id"
++                    tenantid: "pb"
++                    templatecode: "receipt-id"
 +                    version: "v3"
-+                    id: "pb-2025-09-22-000123-A9XZ"
-+                orgId:
-+                  summary: Organization ID generated
++                    id: "pb-2025-09-22-000123-a9xz"
++                orgid:
++                  summary: organization id generated
 +                  value:
-+                    tenantId: "pg"
-+                    templateCode: "orgId"
++                    tenantid: "pg"
++                    templatecode: "orgid"
 +                    version: "v1"
-+                    id: "PG-20250703-0001-A9"
++                    id: "pg-20250703-0001-a9"
 +        '400':
-+          description: Bad Request
++          description: bad request
            content:
 -            '*/*':
 +            application/json:
                schema:
--                $ref: '#/components/schemas/IDGenErrorRes'
--      x-codegen-request-body-name: idRequests
-+                $ref: '#/components/schemas/Error'
+-                $ref: '#/component/schema/idgenerrorre'
+-      x-codegen-request-body-name: idrequest
++                $ref: '#/component/schema/error'
 +        '500':
-+          description: Generation failed
++          description: generation failed
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/Error'
++                $ref: '#/component/schema/error'
 +
- components:
-+  securitySchemes:
-+    BearerAuth:
+ component:
++  securityscheme:
++    bearerauth:
 +      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
 +
-+  parameters:
-+    TenantIdHeader:
++  parameter:
++    tenantidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
 +    
-+    ClientIdHeader:
++    clientidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
 +  
-   schemas:
--    IdRequest:
+   schema:
+-    idrequest:
 -      required:
--      - idName
--      - tenantId
-+    IDGenTemplateRequest:
+-      - idname
+-      - tenantid
++    idgentemplaterequest:
        type: object
 +      required:
-+        - templateCode
++        - templatecode
 +        - config
-       properties:
--        idName:
+       propertie:
+-        idname:
 -          type: string
 -          description: |
--            It would indicate the type of id, we would like to generate, ex upic no or acknowledgement number. Please nite that the id format can also be configured with idGen service with theis name in case calling services wishes to do so, so as to not needing to pass the format each time. In such a case if the format is passed at the runtime then the passed format will take precedence over configured format. idName should be namespaced with module/functionality e.g. propertytax.acknumber or propertytax.assessmentnumber
--        tenantId:
-+        templateCode:
+-            it would indicate the type of id, we would like to generate, ex upic no or acknowledgement number. please nite that the id format can also be configured with idgen service with thei name in case calling service wishe to do so, so a to not needing to pas the format each time. in such a case if the format i passed at the runtime then the passed format will take precedence over configured format. idname should be namespaced with module/functionality e.g. propertytax.acknumber or propertytax.assessmentnumber
+-        tenantid:
++        templatecode:
            type: string
 -          description: |
--            tenantid for which Id has to be generated. Please note that an id configuration can be overwritten for a particular tenant using tenantid prefix,  e.g. mycity.propertytax.acknumber configuration will be evaluated for mycity if both propertytax.acknumber and mycity.propertytax.acknumber are configured
+-            tenantid for which id ha to be generated. please note that an id configuration can be overwritten for a particular tenant using tenantid prefix,  e.g. mycity.propertytax.acknumber configuration will be evaluated for mycity if both propertytax.acknumber and mycity.propertytax.acknumber are configured
 -        format:
 -          type: string
--          description: format of the id to be generated. Supported as per the description
+-          description: format of the id to be generated. supported a per the description
 -            of the service.
 -        count:
 -          type: integer
--          description: count for ids
--    IdResponse:
-+          description: Unique identifier for the template
+-          description: count for id
+-    idresponse:
++          description: unique identifier for the template
 +          example: "receipt-id"
 +        config:
-+          $ref: '#/components/schemas/IDGenTemplateConfig'
++          $ref: '#/component/schema/idgentemplateconfig'
 +    
-+    IDGenTemplateResponse:
++    idgentemplateresponse:
        type: object
-       properties:
+       propertie:
          id:
            type: string
--          description: This is the generated id
--    IdGenerationRequest:
+-          description: thi i the generated id
+-    idgenerationrequest:
 -      type: object
--      properties:
--        requestInfo:
--          $ref: '#/components/schemas/RequestInfo'
--        idRequests:
+-      propertie:
+-        requestinfo:
+-          $ref: '#/component/schema/requestinfo'
+-        idrequest:
 -          type: array
--          items:
--            $ref: '#/components/schemas/IdRequest'
--      description: Contract class to receive request.
--    IdGenerationResponse:
+-          item:
+-            $ref: '#/component/schema/idrequest'
+-      description: contract clas to receive request.
+-    idgenerationresponse:
 +          format: uuid
-+          description: Unique identifier for this template version
++          description: unique identifier for thi template version
 +          example: "550e8400-e29b-41d4-a716-446655440000"
-+        tenantId:
++        tenantid:
 +          type: string
-+          description: Tenant identifier
++          description: tenant identifier
 +          example: "pg"
-+        templateCode:
++        templatecode:
 +          type: string
-+          description: Template code
++          description: template code
 +          example: "receipt-id"
 +        version:
 +          type: string
 +          pattern: '^v\d+$'
-+          description: Template version
++          description: template version
 +          example: "v1"
 +        config:
-+          $ref: '#/components/schemas/IDGenTemplateConfig'
-+        auditDetails:
-+          $ref: '#/components/schemas/AuditDetails'
++          $ref: '#/component/schema/idgentemplateconfig'
++        auditdetail:
++          $ref: '#/component/schema/auditdetail'
 +    
-+    IDGenTemplateConfig:
++    idgentemplateconfig:
        type: object
--      properties:
--        responseInfo:
--          $ref: '#/components/schemas/ResponseInfo'
--        idResponses:
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo'
+-        idresponse:
 -          type: array
--          items:
--            $ref: '#/components/schemas/IdResponse'
--      description: Contract class to send response.
--    IDGenErrorRes:
--      allOf:
--      - $ref: '#/components/schemas/ErrorRes'
+-          item:
+-            $ref: '#/component/schema/idresponse'
+-      description: contract clas to send response.
+-    idgenerrorre:
+-      allof:
+-      - $ref: '#/component/schema/errorre'
 -      - type: object
--        properties:
--          codes:
+-        propertie:
+-          code:
 -            type: string
 -            enum:
--            - InvalidIDFormat
--            - IDSeqOverflow
--            - IDSeqNotFound
--    RequestInfo:
+-            - invalididformat
+-            - idseqoverflow
+-            - idseqnotfound
+-    requestinfo:
        required:
 -      - action
--      - apiId
--      - msgId
--      - ts
+-      - apiid
+-      - msgid
+-      - t
 -      - ver
 -      type: object
 +        - template
-       properties:
--        apiId:
--          maxLength: 128
+       propertie:
+-        apiid:
+-          maxlength: 128
 +        template:
            type: string
--          description: unique API ID
+-          description: unique api id
 -        ver:
--          maxLength: 32
+-          maxlength: 32
 -          type: string
--          description: API version - for HTTP based request this will be same as used
+-          description: api version - for http based request thi will be same a used
 -            in path
--        ts:
+-        t:
 +          description: |
-+            Template pattern containing static text and dynamic tokens.
++            template pattern containing static text and dynamic token.
 +            
-+            **Supported Tokens:**
-+            - `{VARIABLE}`: Client-supplied variable (e.g., {ORG}, {tenant}, {dept})
-+            - `{DATE:format}`: Current date with format keyword
-+            - `{SEQ}`: Sequence counter (scoped and padded via config)
-+            - `{RAND}`: Random string (from configured charset)
++            **supported token:**
++            - `{variable}`: client-supplied variable (e.g., {org}, {tenant}, {dept})
++            - `{date:format}`: current date with format keyword
++            - `{seq}`: sequence counter (scoped and padded via config)
++            - `{rand}`: random string (from configured charset)
 +            
-+            **Date Format Keywords:**
++            **date format keyword:**
 +            - yyyymmdd, ddmmyyyy, yyyy-mm-dd, dd-mm-yyyy
 +            - yyyy/mm/dd, dd/mm/yyyy, yyyy.mm.dd, dd.mm.yyyy
 +            - mmyyyy, mm-yyyy, yyyy-mm, yyyy, yy
-+          example: "{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}"
++          example: "{org}-{date:yyyymmdd}-{seq}-{rand}"
 +        sequence:
-+          $ref: '#/components/schemas/SequenceConfig'
++          $ref: '#/component/schema/sequenceconfig'
 +        random:
-+          $ref: '#/components/schemas/RandomConfig'
++          $ref: '#/component/schema/randomconfig'
 +    
-+    SequenceConfig:
++    sequenceconfig:
 +      type: object
-+      properties:
++      propertie:
 +        scope:
 +          type: string
 +          enum: [global, daily, monthly, yearly]
 +          default: global
-+          description: When the counter resets
++          description: when the counter reset
 +          example: "daily"
 +        start:
            type: integer
 -          description: time in epoch
 -          format: int64
 -        action:
--          maxLength: 32
+-          maxlength: 32
 -          type: string
--          description: API action to be performed like _create, _update, _search (denoting
--            POST, PUT, GET) or _oauth etc
+-          description: api action to be performed like create, update, search (denoting
+-            post, put, get) or oauth etc
 -        did:
--          maxLength: 1024
+-          maxlength: 1024
 -          type: string
--          description: Device ID from which the API is called
+-          description: device id from which the api i called
 -        key:
--          maxLength: 256
+-          maxlength: 256
 -          type: string
--          description: API key (API key provided to the caller in case of server to
+-          description: api key (api key provided to the caller in case of server to
 -            server communication)
--        msgId:
--          maxLength: 256
+-        msgid:
+-          maxlength: 256
 -          type: string
--          description: Unique request message id from the caller
--        requesterId:
--          maxLength: 256
+-          description: unique request message id from the caller
+-        requesterid:
+-          maxlength: 256
 -          type: string
--          description: UserId of the user calling
--        authToken:
+-          description: userid of the user calling
+-        authtoken:
 -          type: string
 -          description: //session/jwt/saml token/oauth token - the usual value that
--            would go into HTTP bearer token
--        userInfo:
--          $ref: '#/components/schemas/UserInfo'
--        correlationId:
+-            would go into http bearer token
+-        userinfo:
+-          $ref: '#/component/schema/userinfo'
+-        correlationid:
 -          type: string
--          readOnly: true
--      description: RequestInfo should be used to carry meta information about the
--        requests to the server as described in the fields below. All eGov APIs will
--        use requestinfo as a part of the request body to carry this meta information.
--        Some of this information will be returned back from the server as part of
--        the ResponseInfo in the response body to ensure correlation.
--    UserInfo:
+-          readonly: true
+-      description: requestinfo should be used to carry meta information about the
+-        request to the server a described in the field below. all egov api will
+-        use requestinfo a a part of the request body to carry thi meta information.
+-        some of thi information will be returned back from the server a part of
+-        the responseinfo in the response body to ensure correlation.
+-    userinfo:
 -      required:
 -      - primaryrole
--      - tenantId
--      - userName
+-      - tenantid
+-      - username
 +          minimum: 1
 +          default: 1
-+          description: Initial value when sequence is first used or after reset
++          description: initial value when sequence i first used or after reset
 +          example: 1
 +        padding:
-+          $ref: '#/components/schemas/PaddingConfig'
++          $ref: '#/component/schema/paddingconfig'
 +    
-+    PaddingConfig:
++    paddingconfig:
        type: object
-       properties:
--        tenantId:
+       propertie:
+-        tenantid:
 -          type: string
--          description: Unique Identifier of the tenant to which user primarily belongs
+-          description: unique identifier of the tenant to which user primarily belong
 -        id:
 +        length:
            type: integer
--          description: User id of the authenticated user. Will be deprecated in future
+-          description: user id of the authenticated user. will be deprecated in future
 -          format: int32
--        userName:
+-        username:
 -          type: string
--          description: Unique user name of the authenticated user
+-          description: unique user name of the authenticated user
 -        mobile:
 -          type: string
 -          description: mobile number of the autheticated user
 -        email:
 -          type: string
--          description: email address of the authenticated user
+-          description: email addres of the authenticated user
 -        primaryrole:
 -          type: array
--          description: List of all the roles for the primary tenant
--          items:
--            $ref: '#/components/schemas/Role'
--        additionalroles:
+-          description: list of all the role for the primary tenant
+-          item:
+-            $ref: '#/component/schema/role'
+-        additionalrole:
 -          type: array
--          description: array of additional tenantids authorized for the authenticated
+-          description: array of additional tenantid authorized for the authenticated
 -            user
--          items:
--            $ref: '#/components/schemas/TenantRole'
--      description: This is acting ID token of the authenticated user on the server.
--        Any value provided by the clients will be ignored and actual user based on
+-          item:
+-            $ref: '#/component/schema/tenantrole'
+-      description: thi i acting id token of the authenticated user on the server.
+-        any value provided by the client will be ignored and actual user based on
 -        authtoken will be used on the server.
--    Role:
+-    role:
 -      required:
 -      - name
 +          minimum: 1
-+          description: Minimum width in characters
++          description: minimum width in character
 +          example: 4
 +        char:
 +          type: string
-+          minLength: 1
-+          maxLength: 1
++          minlength: 1
++          maxlength: 1
 +          default: "0"
-+          description: Character used for left-padding
++          description: character used for left-padding
 +          example: "0"
 +    
-+    RandomConfig:
++    randomconfig:
        type: object
-       properties:
+       propertie:
 -        name:
--          maxLength: 64
+-          maxlength: 64
 -          type: string
--          description: Unique name of the role
+-          description: unique name of the role
 -        description:
 +        length:
 +          type: integer
 +          minimum: 0
 +          default: 0
-+          description: Number of random characters to generate
++          description: number of random character to generate
 +          example: 2
 +        charset:
            type: string
 -          description: brief description of the role
 -      description: |
--        minimal representation of the Roles in the system to be carried along in UserInfo with RequestInfo meta data. Actual authorization service to extend this to have more role related attributes
--    TenantRole:
+-        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+-    tenantrole:
 -      required:
--      - roles
--      - tenantId
+-      - role
+-      - tenantid
 +          description: |
-+            Allowed characters for random generation.
-+            Supports ranges like A-Z, a-z, 0-9 and combinations like A-Za-z0-9
-+          example: "A-Z0-9"
++            allowed character for random generation.
++            support range like a-z, a-z, 0-9 and combination like a-za-z0-9
++          example: "a-z0-9"
 +    
-+    GenerateIDRequest:
++    generateidrequest:
        type: object
 +      required:
-+        - templateCode
-       properties:
--        tenantId:
-+        templateCode:
++        - templatecode
+       propertie:
+-        tenantid:
++        templatecode:
            type: string
 -          description: tenantid for the tenant
--        roles:
+-        role:
 -          type: array
--          description: Roles assigned for a particular tenant - array of role codes/names
--          items:
--            $ref: '#/components/schemas/Role'
--      description: User role carries the tenant related role information for the user.
--        A user can have multiple roles per tenant based on the need of the tenant.
--        A user may also have multiple roles for multiple tenants.
--    ResponseInfo:
+-          description: role assigned for a particular tenant - array of role code/name
+-          item:
+-            $ref: '#/component/schema/role'
+-      description: user role carrie the tenant related role information for the user.
+-        a user can have multiple role per tenant based on the need of the tenant.
+-        a user may also have multiple role for multiple tenant.
+-    responseinfo:
 -      required:
--      - apiId
--      - status
--      - ts
+-      - apiid
+-      - statu
+-      - t
 -      - ver
-+          description: Template code to use for ID generation
++          description: template code to use for id generation
 +          example: "receipt-id"
-+        variables:
++        variable:
 +          type: object
-+          additionalProperties:
++          additionalpropertie:
 +            type: string
-+          description: Map of variable names to values for token substitution
++          description: map of variable name to value for token substitution
 +          example:
 +            tenant: "pb"
-+            dept: "REV"
++            dept: "rev"
 +    
-+    GenerateIDResponse:
++    generateidresponse:
        type: object
-       properties:
--        apiId:
--          maxLength: 128
-+        tenantId:
+       propertie:
+-        apiid:
+-          maxlength: 128
++        tenantid:
            type: string
--          description: unique API ID
+-          description: unique api id
 -        ver:
--          maxLength: 32
-+          description: Tenant identifier
+-          maxlength: 32
++          description: tenant identifier
 +          example: "pb"
-+        templateCode:
++        templatecode:
 +          type: string
-+          description: Template code used
++          description: template code used
 +          example: "receipt-id"
 +        version:
 +          type: string
 +          pattern: '^v\d+$'
-+          description: Template version used
++          description: template version used
 +          example: "v3"
 +        id:
            type: string
--          description: API version
--        ts:
+-          description: api version
+-        t:
 -          type: integer
 -          description: response time in epoch
 -          format: int64
--        resMsgId:
--          maxLength: 256
+-        resmsgid:
+-          maxlength: 256
 -          type: string
--          description: unique response message id (UUID) - will usually be the correlation
+-          description: unique response message id (uuid) - will usually be the correlation
 -            id from the server
--        msgId:
--          maxLength: 256
+-        msgid:
+-          maxlength: 256
 -          type: string
 -          description: message id of the request
--        status:
+-        statu:
 -          type: string
--          description: status of request processing - to be enhanced in futuer to
--            include INPROGRESS
+-          description: statu of request processing - to be enhanced in futuer to
+-            include inprogres
 -          enum:
--          - SUCCESSFUL
--          - FAILED
--      description: ResponseInfo should be used to carry metadata information about
--        the response from the server. apiId, ver and msgId in ResponseInfo should
--        always correspond to the same values in respective request's RequestInfo.
--    ErrorRes:
+-          - successful
+-          - failed
+-      description: responseinfo should be used to carry metadata information about
+-        the response from the server. apiid, ver and msgid in responseinfo should
+-        alway correspond to the same value in respective request's requestinfo.
+-    errorre:
 -      required:
--      - ResponseInfo
+-      - responseinfo
 -      type: object
--      properties:
--        ResponseInfo:
--          $ref: '#/components/schemas/ResponseInfo'
--        Errors:
+-      propertie:
+-        responseinfo:
+-          $ref: '#/component/schema/responseinfo'
+-        error:
 -          type: array
--          description: Error response array corresponding to Request Object array.
--            In case of single object submission or _search related paths this may
+-          description: error response array corresponding to request object array.
+-            in case of single object submission or search related path thi may
 -            be an array of one error element
--          items:
--            $ref: '#/components/schemas/Error'
--      description: All APIs will return ErrorRes in case of failure which will carry
--        ResponseInfo as metadata and Error object as actual representation of error.
--        In case of bulk apis, some apis may chose to return the array of Error objects
+-          item:
+-            $ref: '#/component/schema/error'
+-      description: all api will return errorre in case of failure which will carry
+-        responseinfo a metadata and error object a actual representation of error.
+-        in case of bulk api, some api may chose to return the array of error object
 -        to indicate individual failure.
-+          description: Generated unique ID
-+          example: "pb-2025-09-22-000123-A9XZ"
++          description: generated unique id
++          example: "pb-2025-09-22-000123-a9xz"
 +    
-+    AuditDetails:
++    auditdetail:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
 +    
-     Error:
+     error:
 -      required:
 -      - code
 -      - message
 -      type: object
--      properties:
+-      propertie:
 -        code:
 -          type: string
--          description: Error Code will be module specific error label/code to identiffy
--            the error. All modules should also publish the Error codes with their
--            specific localized values in localization service to ensure clients can
--            print locale specific error messages. Example for error code would be
--            User.NotFound to indicate User Not Found by User/Authentication service.
--            All services must declare their possible Error Codes with brief description
--            in the error response section of their API path.
+-          description: error code will be module specific error label/code to identiffy
+-            the error. all module should also publish the error code with their
+-            specific localized value in localization service to ensure client can
+-            print locale specific error message. example for error code would be
+-            user.notfound to indicate user not found by user/authentication service.
+-            all service must declare their possible error code with brief description
+-            in the error response section of their api path.
 -        message:
 -          type: string
--          description: English locale message of the error code. Clients should make
+-          description: english locale message of the error code. client should make
 -            a separate call to get the other locale description if configured with
--            the service. Clients may choose to cache these locale specific messages
--            to enhance performance with a reasonable TTL (May be defined by the localization
+-            the service. client may choose to cache these locale specific message
+-            to enhance performance with a reasonable ttl (may be defined by the localization
 -            service based on tenant + module combination).
 -        description:
 -          type: string
--          description: Optional long description of the error to help clients take
--            remedial action. This will not be available as part of localization service.
--        params:
+-          description: optional long description of the error to help client take
+-            remedial action. thi will not be available a part of localization service.
+-        param:
 -          type: array
--          description: Some error messages may carry replaceable fields (say $1, $2)
--            to provide more context to the message. E.g. Format related errors may
--            want to indicate the actual field for which the format is invalid. Client's
--            should use the values in the param array to replace those fields.
--          items:
+-          description: some error message may carry replaceable field (say $1, $2)
+-            to provide more context to the message. e.g. format related error may
+-            want to indicate the actual field for which the format i invalid. client's
+-            should use the value in the param array to replace those field.
+-          item:
 -            type: string
--      description: Error object will be returned as a part of reponse body in conjunction
--        with ResponseInfo as part of ErrorResponse whenever the request processing
--        status in the ResponseInfo is FAILED. HTTP return in this scenario will usually
--        be HTTP 400.
+-      description: error object will be returned a a part of reponse body in conjunction
+-        with responseinfo a part of errorresponse whenever the request processing
+-        statu in the responseinfo i failed. http return in thi scenario will usually
+-        be http 400.
 \ No newline at end of file
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
 +  

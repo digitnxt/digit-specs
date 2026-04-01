@@ -1,0 +1,521 @@
+openapi: 3.0.3
+info:
+  title: otp service api
+  version: "3.0.0"
+  description: >
+    otp generation, resend, verification and management api.
+    delivery i delegated to a notification service. otp are stored hashed.
+server:
+  - url: https://api.example.com
+    description: primary production server
+
+tag:
+  - name: otp
+    description: otp generation and verification operation
+
+security:
+  - bearerauth: []
+
+component:
+  securityscheme:
+    bearerauth:
+      type: http
+      scheme: bearer
+      bearerformat: jwt
+
+  header:
+    x-response-time:
+      description: time taken to generate the response (in m)
+      schema:
+        type: string
+    x-response-timestamp:
+      description: timestamp when the response wa generated
+      schema:
+        type: string
+        format: date-time
+    x-request-id:
+      description: unique request identifier
+      schema:
+        type: string
+    x-correlation-id:
+      description: correlation id to track request acros service
+      schema:
+        type: string
+    x-tenant-id:
+      description: tenant identifier
+      schema:
+        type: string
+    x-rate-limit:
+      description: rate limit for the api
+      schema:
+        type: integer
+    x-rate-limit-remaining:
+      description: number of request remaining in the current window
+      schema:
+        type: integer
+    x-rate-limit-reset:
+      description: time (in second) until rate limit reset
+      schema:
+        type: integer
+
+  parameter:
+    tenantheader:
+      name: x-tenant-id
+      in: header
+      description: "the tenant id for the request."
+      required: true
+      schema:
+        type: string
+    requestid:
+      name: x-request-id
+      in: header
+      description: client-provided idempotency / correlation id
+      required: false
+      schema:
+        type: string
+
+  schema:
+    generateotprequest:
+      type: object
+      required:
+        - destination
+        - destinationtype
+        - purpose
+      propertie:
+        destination:
+          type: string
+          description: e.164 phone number or email addres (canonicalized)
+        destinationtype:
+          type: string
+          enum: [phone, email, push]
+        purpose:
+          type: string
+          description: e.g. login, mfa, passwordreset, transaction
+        otplength:
+          type: integer
+          description: optional override (default configured per tenant)
+          minimum: 4
+          maximum: 10
+        otpcharset:
+          type: string
+          enum: [digit, alphanumeric, base32]
+          description: optional override
+        clientmetadata:
+          type: object
+          additionalpropertie: true
+
+    generateotpresponse:
+      type: object
+      propertie:
+        requestid:
+          type: string
+        destination:
+          type: string
+        resendallowedafter:
+          type: string
+          format: date-time
+        expiresat:
+          type: string
+          format: date-time
+        statu:
+          type: string
+          enum: [pending, failed]
+        message:
+          type: string
+
+    resendotprequest:
+      type: object
+      required:
+        - requestid
+      propertie:
+        requestid:
+          type: string
+        clientmetadata:
+          type: object
+          additionalpropertie: true
+
+    resendotpresponse:
+      type: object
+      propertie:
+        requestid:
+          type: string
+        resendcount:
+          type: integer
+        resendallowedafter:
+          type: string
+          format: date-time
+        expiresat:
+          type: string
+          format: date-time
+        statu:
+          type: string
+
+    verifyotprequest:
+      type: object
+      required:
+        - requestid
+        - otp
+      propertie:
+        requestid:
+          type: string
+        otp:
+          type: string
+          description: otp code supplied by user
+        clientmetadata:
+          type: object
+          additionalpropertie: true
+
+    verifyotpresponse:
+      type: object
+      propertie:
+        requestid:
+          type: string
+        statu:
+          type: string
+          enum: [verified, invalid, expired, locked]
+        verifiedat:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    invalidateotprequest:
+      type: object
+      required:
+        - requestid
+      propertie:
+        requestid:
+          type: string
+        reason:
+          type: string
+
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+              
+  response:
+    toomanyrequest:
+      description: too many request
+      header:
+        x-response-time:
+          $ref: '#/component/header/x-response-time'
+        x-response-timestamp:
+          $ref: '#/component/header/x-response-timestamp'
+        x-request-id:
+          $ref: '#/component/header/x-request-id'
+        x-correlation-id:
+          $ref: '#/component/header/x-correlation-id'
+        x-tenant-id:
+          $ref: '#/component/header/x-tenant-id'
+        x-rate-limit:
+          $ref: '#/component/header/x-rate-limit'
+        x-rate-limit-remaining:
+          $ref: '#/component/header/x-rate-limit-remaining'
+        x-rate-limit-reset:
+          $ref: '#/component/header/x-rate-limit-reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/component/schema/error'
+
+    notfound:
+      description: not found
+      header:
+        x-response-time:
+          $ref: '#/component/header/x-response-time'
+        x-response-timestamp:
+          $ref: '#/component/header/x-response-timestamp'
+        x-request-id:
+          $ref: '#/component/header/x-request-id'
+        x-correlation-id:
+          $ref: '#/component/header/x-correlation-id'
+        x-tenant-id:
+          $ref: '#/component/header/x-tenant-id'
+        x-rate-limit:
+          $ref: '#/component/header/x-rate-limit'
+        x-rate-limit-remaining:
+          $ref: '#/component/header/x-rate-limit-remaining'
+        x-rate-limit-reset:
+          $ref: '#/component/header/x-rate-limit-reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/component/schema/error'
+
+    badrequest:
+      description: bad request
+      header:
+        x-response-time:
+          $ref: '#/component/header/x-response-time'
+        x-response-timestamp:
+          $ref: '#/component/header/x-response-timestamp'
+        x-request-id:
+          $ref: '#/component/header/x-request-id'
+        x-correlation-id:
+          $ref: '#/component/header/x-correlation-id'
+        x-tenant-id:
+          $ref: '#/component/header/x-tenant-id'
+        x-rate-limit:
+          $ref: '#/component/header/x-rate-limit'
+        x-rate-limit-remaining:
+          $ref: '#/component/header/x-rate-limit-remaining'
+        x-rate-limit-reset:
+          $ref: '#/component/header/x-rate-limit-reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/component/schema/error'
+
+    unauthorized:
+      description: unauthorized
+      header:
+        x-response-time:
+          $ref: '#/component/header/x-response-time'
+        x-response-timestamp:
+          $ref: '#/component/header/x-response-timestamp'
+        x-request-id:
+          $ref: '#/component/header/x-request-id'
+        x-correlation-id:
+          $ref: '#/component/header/x-correlation-id'
+        x-tenant-id:
+          $ref: '#/component/header/x-tenant-id'
+        x-rate-limit:
+          $ref: '#/component/header/x-rate-limit'
+        x-rate-limit-remaining:
+          $ref: '#/component/header/x-rate-limit-remaining'
+        x-rate-limit-reset:
+          $ref: '#/component/header/x-rate-limit-reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/component/schema/error'
+
+path:
+  /v3/otp/generate:
+    post:
+      tag: [otp]
+      summary: generate an otp and send via notification service
+      description: >
+        create an otprecord, store hashed otp, call notification service.
+        return a requestid for subsequent operation.
+      operationid: generateotp
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - $ref: '#/component/parameter/requestid'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/generateotprequest'
+      response:
+        '201':
+          description: otp generated
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/generateotpresponse'
+        '400':
+          $ref: '#/component/response/badrequest'
+        '429':
+          $ref: '#/component/response/toomanyrequest'
+        '503':
+          description: notification service temporarily unavailable
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /v3/otp/resend:
+    post:
+      tag: [otp]
+      summary: resend an existing otp or create a new one per config
+      operationid: resendotp
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - $ref: '#/component/parameter/requestid'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/resendotprequest'
+      response:
+        '200':
+          description: resent
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/resendotpresponse'
+        '400':
+          $ref: '#/component/response/badrequest'
+        '404':
+          $ref: '#/component/response/notfound'
+        '429':
+          $ref: '#/component/response/toomanyrequest'
+
+  /v3/otp/verify:
+    post:
+      tag: [otp]
+      summary: verify an otp for a requestid
+      operationid: verifyotp
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - $ref: '#/component/parameter/requestid'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/verifyotprequest'
+      response:
+        '200':
+          description: verified or failed with statu
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/verifyotpresponse'
+        '400':
+          $ref: '#/component/response/badrequest'
+        '401':
+          $ref: '#/component/response/unauthorized'
+        '423':
+          description: locked due to too many attempt
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '404':
+          $ref: '#/component/response/notfound'
+
+  /v3/otp/invalidate:
+    post:
+      tag: [otp]
+      summary: invalidate an otp (admin or system)
+      operationid: invalidateotp
+      parameter:
+        - $ref: '#/component/parameter/tenantheader'
+        - $ref: '#/component/parameter/requestid'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/invalidateotprequest'
+      response:
+        '200':
+          description: invalidated
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  requestid:
+                    type: string
+                  statu:
+                    type: string
+        '404':
+          $ref: '#/component/response/notfound'
+        '401':
+          $ref: '#/component/response/unauthorized'

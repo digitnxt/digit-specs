@@ -1,0 +1,799 @@
+openapi: 3.0.3
+info:
+  title: hrm employee service api
+  version: "3.0"
+path:
+  /employee/v3:
+    post:
+      operationid: createemployee
+      description: create one or more employee. accept an array of employee request.
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - $ref: "#/component/parameter/authorization"
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              item:
+                $ref: "#/component/schema/createemployeerequest"
+      response:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: "#/component/schema/employeeresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+    get:
+      operationid: searchemployee
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: uuid
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+              format: uuid
+        - name: code
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+        - name: department
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+        - name: designation
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+        - name: phone
+          in: query
+          schema:
+            type: string
+        - name: isactive
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sortby
+          in: query
+          description: "valid value: code, createdat, updatedat, employeetype, statu"
+          schema:
+            type: string
+            default: createdtime
+        - name: sortorder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: "#/component/schema/employeeresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+  /employee/v3/{id}:
+    get:
+      operationid: getemployeebyuuid
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeresponse"
+        "400":
+          description: bad request (invalid uuid)
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+    put:
+      operationid: updateemployee
+      description: full replace of an employee. delete existing jurisdiction and recreate from request.
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - $ref: "#/component/parameter/authorization"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/createemployeerequest"
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+    patch:
+      operationid: patchemployee
+      description: partial update of mutable employee field.
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/updateemployeerequest"
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+    delete:
+      operationid: harddeleteemployee
+      description: permanently delete an employee and all associated jurisdiction.
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      response:
+        "204":
+          description: no content
+        "400":
+          description: bad request (invalid uuid)
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+  /employee/v3/{id}/deactivate:
+    post:
+      operationid: deactivateemployee
+      description: set isactive to false for the employee.
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/deactivationdetail"
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+  /employee/v3/{id}/reactivate:
+    post:
+      operationid: reactivateemployee
+      description: set isactive to true for the employee.
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/reactivationdetail"
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/employeeerrorresponse"
+  /employee/v3/jurisdiction:
+    post:
+      operationid: createjurisdiction
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/createjurisdictionrequest"
+      response:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  jurisdiction:
+                    $ref: "#/component/schema/jurisdictionresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+    get:
+      operationid: searchjurisdiction
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+              format: uuid
+        - name: employeeid
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeid
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+              format: uuid
+        - name: isactive
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sortby
+          in: query
+          schema:
+            type: string
+            default: createdtime
+        - name: sortorder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  jurisdiction:
+                    type: array
+                    item:
+                      $ref: "#/component/schema/jurisdictionresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+  /employee/v3/jurisdiction/{uuid}:
+    get:
+      operationid: getjurisdictionbyuuid
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  jurisdiction:
+                    $ref: "#/component/schema/jurisdictionresponse"
+        "400":
+          description: bad request (invalid uuid)
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+    put:
+      operationid: replacejurisdiction
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/updatejurisdictionrequest"
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  jurisdiction:
+                    $ref: "#/component/schema/jurisdictionresponse"
+        "400":
+          description: bad request (invalid uuid)
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/jurisdictionerrorresponse"
+component:
+  parameter:
+    xtenantid:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+    xclientid:
+      name: x-client-id
+      in: header
+      required: false
+      schema:
+        type: string
+    authorization:
+      name: authorization
+      in: header
+      required: true
+      description: bearer token for keycloak user validation
+      schema:
+        type: string
+  schema:
+    createemployeerequest:
+      type: object
+      propertie:
+        code:
+          type: string
+          description: if omitted, auto-generated via idgen service
+          minlength: 2
+          maxlength: 64
+        userid:
+          type: string
+        individualid:
+          type: string
+        statu:
+          type: string
+          enum: [active, inactive, suspended]
+        employeetype:
+          type: string
+          enum: [permanent, contract, temporary]
+        dateofappointment:
+          type: string
+          format: date-time
+          nullable: true
+        department:
+          type: string
+        designation:
+          type: string
+        isactive:
+          type: boolean
+          nullable: true
+        jurisdiction:
+          type: array
+          nullable: true
+          item:
+            $ref: "#/component/schema/jurisdiction"
+    updateemployeerequest:
+      type: object
+      description: partial update field for patch. all field are optional.
+      propertie:
+        employeestatu:
+          type: string
+          enum: [active, inactive, suspended]
+          nullable: true
+        employeetype:
+          type: string
+          enum: [permanent, contract, temporary]
+          nullable: true
+        phone:
+          type: string
+          pattern: "^[6-9][0-9]{9}$"
+          nullable: true
+        emailid:
+          type: string
+          format: email
+          nullable: true
+        isactive:
+          type: boolean
+          nullable: true
+    employeeresponse:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        userid:
+          type: string
+        individualid:
+          type: string
+        statu:
+          type: string
+        employeetype:
+          type: string
+        dateofappointment:
+          type: string
+          format: date-time
+          nullable: true
+        department:
+          type: string
+        designation:
+          type: string
+        isactive:
+          type: boolean
+        auditdetail:
+          allof:
+            - $ref: "#/component/schema/auditdetail"
+          nullable: true
+        jurisdiction:
+          type: array
+          nullable: true
+          item:
+            $ref: "#/component/schema/jurisdictionresponse"
+    deactivationdetail:
+      type: object
+      required:
+        - reasonfordeactivation
+        - effectivefrom
+      propertie:
+        reasonfordeactivation:
+          type: string
+        effectivefrom:
+          type: string
+          format: date-time
+        remark:
+          type: string
+    reactivationdetail:
+      type: object
+      required:
+        - reasonforreactivation
+        - effectivefrom
+      propertie:
+        reasonforreactivation:
+          type: string
+        effectivefrom:
+          type: string
+          format: date-time
+        remark:
+          type: string
+    jurisdiction:
+      type: object
+      description: jurisdiction a embedded in employee create/update request
+      propertie:
+        id:
+          type: string
+          format: uuid
+        employeeid:
+          type: string
+        boundaryrelation:
+          type: array
+          item:
+            type: string
+        isactive:
+          type: boolean
+        tenantid:
+          type: string
+        createdat:
+          type: integer
+          format: int64
+        updatedat:
+          type: integer
+          format: int64
+          nullable: true
+        auditdetail:
+          allof:
+            - $ref: "#/component/schema/auditdetail"
+          nullable: true
+    createjurisdictionrequest:
+      type: object
+      required:
+        - employeeid
+        - boundaryrelation
+      propertie:
+        employeeid:
+          type: string
+        boundaryrelation:
+          type: array
+          minitem: 1
+          item:
+            type: string
+        isactive:
+          type: boolean
+          nullable: true
+    updatejurisdictionrequest:
+      type: object
+      propertie:
+        employeeid:
+          type: string
+        boundaryrelation:
+          type: array
+          minitem: 1
+          nullable: true
+          item:
+            type: string
+        isactive:
+          type: boolean
+          nullable: true
+    jurisdictionresponse:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+        employeeid:
+          type: string
+        boundaryrelation:
+          type: array
+          item:
+            type: string
+        isactive:
+          type: boolean
+        tenantid:
+          type: string
+        createdat:
+          type: integer
+          format: int64
+        updatedat:
+          type: integer
+          format: int64
+          nullable: true
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+        createdtime:
+          type: integer
+          format: int64
+        lastmodifiedby:
+          type: string
+        lastmodifiedtime:
+          type: integer
+          format: int64
+    employeeerrorresponse:
+      type: object
+      description: "error format from employee handler: {\"error\": \"message string\"}"
+      propertie:
+        error:
+          type: string
+    jurisdictionerrorresponse:
+      type: object
+      description: "error format from jurisdiction handler: {\"error\": {\"code\": \"...\", \"message\": \"...\"}}"
+      propertie:
+        error:
+          type: object
+          propertie:
+            code:
+              type: string
+            message:
+              type: string

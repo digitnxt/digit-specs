@@ -1,827 +1,827 @@
---- /home/mithun/Desktop/tenantmgmt/Digit-Core/core-services/tenant-management/src/main/resources/TenantManagement.yml	2026-04-01 11:20:01.178855545 +0530
-+++ /home/mithun/Desktop/spec-diff/digit-specs/v3.0.0/account.yaml	2026-03-23 10:51:46.197660202 +0530
+--- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v2/account.norm.yaml	2026-04-01 13:55:53.498323369 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v3/account.norm.yaml	2026-04-01 13:55:53.498323369 +0530
 @@ -1,177 +1,646 @@
--serviceMaps:
--  serviceName: tenant-Service
--  mappings:
+-servicemap:
+-  servicename: tenant-service
+-  mapping:
 -    - version: 1.0
--      description: Persists the tenant entity data
--      fromTopic: create-tenant
--      isTransaction: true
--      queryMaps:
--        - query: INSERT INTO tenant (id, tenantId, code, name, email, additionalAttributes, isactive, createdBy, lastModifiedBy, createdTime, lastModifiedTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
--          basePath: $.tenant
--          jsonMaps:
+-      description: persist the tenant entity data
+-      fromtopic: create-tenant
+-      istransaction: true
+-      querymap:
+-        - query: insert into tenant (id, tenantid, code, name, email, additionalattribute, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+-          basepath: $.tenant
+-          jsonmap:
 -
--            - jsonPath: $.tenant.id
+-            - jsonpath: $.tenant.id
 -
--            - jsonPath: $.tenant.code
+-            - jsonpath: $.tenant.code
 -
--            - jsonPath: $.tenant.code
+-            - jsonpath: $.tenant.code
 -
--            - jsonPath: $.tenant.name
+-            - jsonpath: $.tenant.name
 -
--            - jsonPath: $.tenant.email
+-            - jsonpath: $.tenant.email
 -
--            - jsonPath: $.tenant.additionalAttributes
--              type: JSON
--              dbType: JSONB
+-            - jsonpath: $.tenant.additionalattribute
+-              type: json
+-              dbtype: jsonb
 -
--            - jsonPath: $.tenant.isActive
+-            - jsonpath: $.tenant.isactive
 -
--            - jsonPath: $.tenant.auditDetails.createdBy
+-            - jsonpath: $.tenant.auditdetail.createdby
 -
--            - jsonPath: $.tenant.auditDetails.lastModifiedBy
+-            - jsonpath: $.tenant.auditdetail.lastmodifiedby
 -
--            - jsonPath: $.tenant.auditDetails.createdTime
+-            - jsonpath: $.tenant.auditdetail.createdtime
 -
--            - jsonPath: $.tenant.auditDetails.lastModifiedTime
--
--    - version: 1.0
--      description: Persists the create sub tenant entity data
--      fromTopic: create-sub-tenant
--      isTransaction: true
--      queryMaps:
--        - query: INSERT INTO tenant (id, tenantId, code, name, email, additionalAttributes, isactive, createdBy, lastModifiedBy, createdTime, lastModifiedTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
--          basePath: $.tenant
--          jsonMaps:
--            - jsonPath: $.tenant.id
--
--            - jsonPath: $.tenant.tenantId
--
--            - jsonPath: $.tenant.code
--
--            - jsonPath: $.tenant.name
--
--            - jsonPath: $.tenant.email
--
--            - jsonPath: $.tenant.additionalAttributes
--              type: JSON
--              dbType: JSONB
--
--            - jsonPath: $.tenant.isActive
--
--            - jsonPath: $.tenant.auditDetails.createdBy
--
--            - jsonPath: $.tenant.auditDetails.lastModifiedBy
--
--            - jsonPath: $.tenant.auditDetails.createdTime
--
--            - jsonPath: $.tenant.auditDetails.lastModifiedTime
+-            - jsonpath: $.tenant.auditdetail.lastmodifiedtime
 -
 -    - version: 1.0
--      description: Update the tenant entity data
--      fromTopic: update-tenant
--      isTransaction: true
--      queryMaps:
--        - query: UPDATE tenant SET additionalAttributes = ? , isActive = ? , lastModifiedBy = ? , lastModifiedTime = ? WHERE code = ?;
--          basePath: $.tenant
--          jsonMaps:
--            - jsonPath: $.tenant.additionalAttributes
--              type: JSON
--              dbType: JSONB
+-      description: persist the create sub tenant entity data
+-      fromtopic: create-sub-tenant
+-      istransaction: true
+-      querymap:
+-        - query: insert into tenant (id, tenantid, code, name, email, additionalattribute, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+-          basepath: $.tenant
+-          jsonmap:
+-            - jsonpath: $.tenant.id
 -
--            - jsonPath: $.tenant.isActive
+-            - jsonpath: $.tenant.tenantid
 -
--            - jsonPath: $.tenant.auditDetails.lastModifiedBy
+-            - jsonpath: $.tenant.code
 -
--            - jsonPath: $.tenant.auditDetails.lastModifiedTime
+-            - jsonpath: $.tenant.name
 -
--            - jsonPath: $.tenant.code
+-            - jsonpath: $.tenant.email
 -
--    - version: 1.0
--      description: Persists the create tenant config data
--      fromTopic: create-tenant-config
--      isTransaction: true
--      queryMaps:
--        - query: INSERT INTO tenant_config (id, code, otpLength, name, languages, defaultLoginType, enableUserBasedLogin, additionalAttributes, isActive, createdBy, lastModifiedBy, createdTime, lastModifiedTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
--          basePath: $.tenantConfig
--          jsonMaps:
--            - jsonPath: $.tenantConfig.id
+-            - jsonpath: $.tenant.additionalattribute
+-              type: json
+-              dbtype: jsonb
 -
--            - jsonPath: $.tenantConfig.code
+-            - jsonpath: $.tenant.isactive
 -
--            - jsonPath: $.tenantConfig.otpLength
+-            - jsonpath: $.tenant.auditdetail.createdby
 -
--            - jsonPath: $.tenantConfig.name
+-            - jsonpath: $.tenant.auditdetail.lastmodifiedby
 -
--            - jsonPath: $.tenantConfig.languages
--              type: JSON
--              dbType: JSONB
+-            - jsonpath: $.tenant.auditdetail.createdtime
 -
--            - jsonPath: $.tenantConfig.defaultLoginType
--
--            - jsonPath: $.tenantConfig.enableUserBasedLogin
--
--            - jsonPath: $.tenantConfig.additionalAttributes
--              type: JSON
--              dbType: JSONB
--
--            - jsonPath: $.tenantConfig.isActive
--
--            - jsonPath: $.tenantConfig.auditDetails.createdBy
--
--            - jsonPath: $.tenantConfig.auditDetails.lastModifiedBy
--
--            - jsonPath: $.tenantConfig.auditDetails.createdTime
--
--            - jsonPath: $.tenantConfig.auditDetails.lastModifiedTime
--        - query: INSERT INTO tenant_documents (id, tenantConfigId, tenantId, type, fileStoreId, url, isActive, createdBy, lastModifiedBy, createdTime, lastModifiedTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
--          basePath: $.tenantConfig.documents.*
--          jsonMaps:
--            - jsonPath: $.tenantConfig.documents.*.id
--
--            - jsonPath: $.tenantConfig.documents.*.tenantConfigId
--
--            - jsonPath: $.tenantConfig.documents.*.tenantId
--
--            - jsonPath: $.tenantConfig.documents.*.type
--
--            - jsonPath: $.tenantConfig.documents.*.fileStoreId
--
--            - jsonPath: $.tenantConfig.documents.*.url
--
--            - jsonPath: $.tenantConfig.documents.*.isActive
--
--            - jsonPath: $.tenantConfig.documents.*.auditDetails.createdBy
--
--            - jsonPath: $.tenantConfig.documents.*.auditDetails.lastModifiedBy
--
--            - jsonPath: $.tenantConfig.documents.*.auditDetails.createdTime
--
--            - jsonPath: $.tenantConfig.documents.*.auditDetails.lastModifiedTime
+-            - jsonpath: $.tenant.auditdetail.lastmodifiedtime
 -
 -    - version: 1.0
--      description: Update the tenant config
--      fromTopic: update-tenant-config
--      isTransaction: true
--      queryMaps:
--        - query: UPDATE tenant_config SET isActive  = ? , lastModifiedBy = ? , lastModifiedTime = ? WHERE code = ?;
--          basePath: $.tenantConfig
--          jsonMaps:
--            - jsonPath: $.tenantConfig.isActive
+-      description: update the tenant entity data
+-      fromtopic: update-tenant
+-      istransaction: true
+-      querymap:
+-        - query: update tenant set additionalattribute = ? , isactive = ? , lastmodifiedby = ? , lastmodifiedtime = ? where code = ?;
+-          basepath: $.tenant
+-          jsonmap:
+-            - jsonpath: $.tenant.additionalattribute
+-              type: json
+-              dbtype: jsonb
 -
--            - jsonPath: $.tenantConfig.auditDetails.lastModifiedBy
+-            - jsonpath: $.tenant.isactive
 -
--            - jsonPath: $.tenantConfig.auditDetails.lastModifiedTime
+-            - jsonpath: $.tenant.auditdetail.lastmodifiedby
 -
--            - jsonPath: $.tenantConfig.code
--        - query: UPDATE tenant_documents SET fileStoreId  = ? , url = ? , lastModifiedBy = ? , lastModifiedTime = ? WHERE id = ?;
--          basePath: $.tenantConfig.documents.*
--          jsonMaps:
--            - jsonPath: $.tenantConfig.documents.*.fileStoreId
+-            - jsonpath: $.tenant.auditdetail.lastmodifiedtime
 -
--            - jsonPath: $.tenantConfig.documents.*.url
+-            - jsonpath: $.tenant.code
 -
--            - jsonPath: $.tenantConfig.documents.*.auditDetails.lastModifiedBy
+-    - version: 1.0
+-      description: persist the create tenant config data
+-      fromtopic: create-tenant-config
+-      istransaction: true
+-      querymap:
+-        - query: insert into tenantconfig (id, code, otplength, name, language, defaultlogintype, enableuserbasedlogin, additionalattribute, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+-          basepath: $.tenantconfig
+-          jsonmap:
+-            - jsonpath: $.tenantconfig.id
 -
--            - jsonPath: $.tenantConfig.documents.*.auditDetails.lastModifiedTime
+-            - jsonpath: $.tenantconfig.code
 -
--            - jsonPath: $.tenantConfig.documents.*.id
+-            - jsonpath: $.tenantconfig.otplength
+-
+-            - jsonpath: $.tenantconfig.name
+-
+-            - jsonpath: $.tenantconfig.language
+-              type: json
+-              dbtype: jsonb
+-
+-            - jsonpath: $.tenantconfig.defaultlogintype
+-
+-            - jsonpath: $.tenantconfig.enableuserbasedlogin
+-
+-            - jsonpath: $.tenantconfig.additionalattribute
+-              type: json
+-              dbtype: jsonb
+-
+-            - jsonpath: $.tenantconfig.isactive
+-
+-            - jsonpath: $.tenantconfig.auditdetail.createdby
+-
+-            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedby
+-
+-            - jsonpath: $.tenantconfig.auditdetail.createdtime
+-
+-            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedtime
+-        - query: insert into tenantdocument (id, tenantconfigid, tenantid, type, filestoreid, url, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+-          basepath: $.tenantconfig.document.*
+-          jsonmap:
+-            - jsonpath: $.tenantconfig.document.*.id
+-
+-            - jsonpath: $.tenantconfig.document.*.tenantconfigid
+-
+-            - jsonpath: $.tenantconfig.document.*.tenantid
+-
+-            - jsonpath: $.tenantconfig.document.*.type
+-
+-            - jsonpath: $.tenantconfig.document.*.filestoreid
+-
+-            - jsonpath: $.tenantconfig.document.*.url
+-
+-            - jsonpath: $.tenantconfig.document.*.isactive
+-
+-            - jsonpath: $.tenantconfig.document.*.auditdetail.createdby
+-
+-            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedby
+-
+-            - jsonpath: $.tenantconfig.document.*.auditdetail.createdtime
+-
+-            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedtime
+-
+-    - version: 1.0
+-      description: update the tenant config
+-      fromtopic: update-tenant-config
+-      istransaction: true
+-      querymap:
+-        - query: update tenantconfig set isactive  = ? , lastmodifiedby = ? , lastmodifiedtime = ? where code = ?;
+-          basepath: $.tenantconfig
+-          jsonmap:
+-            - jsonpath: $.tenantconfig.isactive
+-
+-            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedby
+-
+-            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedtime
+-
+-            - jsonpath: $.tenantconfig.code
+-        - query: update tenantdocument set filestoreid  = ? , url = ? , lastmodifiedby = ? , lastmodifiedtime = ? where id = ?;
+-          basepath: $.tenantconfig.document.*
+-          jsonmap:
+-            - jsonpath: $.tenantconfig.document.*.filestoreid
+-
+-            - jsonpath: $.tenantconfig.document.*.url
+-
+-            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedby
+-
+-            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedtime
+-
+-            - jsonpath: $.tenantconfig.document.*.id
 +openapi: 3.0.3
 +info:
-+  title: Account Management API
++  title: account management api
 +  version: 3.0.0
 +  description: |
-+    API for managing accounts and their configuration settings.
-+    This API supports:
-+    - Onboarding new accounts
-+    - Updating account metadata
-+    - Managing authentication and feature toggles per account via configurations
-+servers:
++    api for managing account and their configuration setting.
++    thi api support:
++    - onboarding new account
++    - updating account metadata
++    - managing authentication and feature toggle per account via configuration
++server:
 +  - url: https://api.example.com
-+    description: Production server
++    description: production server
 +  - url: https://staging-api.example.com
-+    description: Staging server
-+tags:
-+  - name: Account
++    description: staging server
++tag:
++  - name: account
 +    description: |
-+      Operations related to account lifecycle management such as onboarding,
-+      updating account information, and fetching account details.
-+  - name: AccountConfig
++      operation related to account lifecycle management such a onboarding,
++      updating account information, and fetching account detail.
++  - name: accountconfig
 +    description: |
-+      Operations to manage per-account global configuration settings example 
-+      authentication methods, login policies, feature flags, and more.
-+paths:
++      operation to manage per-account global configuration setting example 
++      authentication method, login policie, feature flag, and more.
++path:
 +  /account/v1:
 +    post:
-+      summary: Create a new account
-+      operationId: createAccount
-+      tags: 
-+        - Account
-+      requestBody:
++      summary: create a new account
++      operationid: createaccount
++      tag: 
++        - account
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/AccountRequest'
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/AccountIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-+      responses:
++              $ref: '#/component/schema/accountrequest'
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/accountidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
++      response:
 +        '201':
-+          description: Created
++          description: created
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/AccountResponse'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Account-ID:
-+              $ref: '#/components/headers/X-Account-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/accountresponse'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-account-id:
++              $ref: '#/component/header/x-account-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +    get:
-+      summary: Get list of accounts
-+      tags: 
-+        - Account
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/AccountIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
++      summary: get list of account
++      tag: 
++        - account
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/accountidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
 +        - in: query
 +          name: code
 +          schema:
 +            type: string
-+          description: Filter accounts by code
++          description: filter account by code
 +          required: false
 +        - in: query
 +          name: name
 +          schema:
 +            type: string
-+          description: Filter accounts by name
++          description: filter account by name
 +          required: false
-+      responses:
++      response:
 +        '200':
-+          description: List of accounts
++          description: list of account
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/AccountResponse'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Account-ID:
-+              $ref: '#/components/headers/X-Account-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/accountresponse'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-account-id:
++              $ref: '#/component/header/x-account-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +    delete:
-+      summary: Delete account (realm + account + config)
-+      tags: 
-+        - Account
-+      operationId: deleteAccount
-+      parameters:
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/AccountIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
++      summary: delete account (realm + account + config)
++      tag: 
++        - account
++      operationid: deleteaccount
++      parameter:
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/accountidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
 +        - in: query
-+          name: tenantCode
++          name: tenantcode
 +          schema:
 +            type: string
-+          description: Account code to delete
++          description: account code to delete
 +          required: true
-+      responses:
++      response:
 +        '204':
-+          description: Account deleted successfully
++          description: account deleted successfully
 +          content:
 +            application/json:
 +              schema:
 +                type: object
-+                properties:
++                propertie:
 +                  message:
 +                    type: string
-+                    example: Account, realm, and configuration deleted successfully
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Account-ID:
-+              $ref: '#/components/headers/X-Account-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                    example: account, realm, and configuration deleted successfully
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-account-id:
++              $ref: '#/component/header/x-account-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +  /account/v1/{id}:
 +    put:
-+      summary: Update account by ID
-+      tags: 
-+        - Account
-+      operationId: updateAccount
-+      parameters: 
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/AccountIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
++      summary: update account by id
++      tag: 
++        - account
++      operationid: updateaccount
++      parameter: 
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/accountidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
 +        - name: id
 +          in: path
 +          required: true
 +          schema:
 +            type: string
-+          description: Account ID
-+      requestBody:
++          description: account id
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/AccountRequest'
-+      responses:
++              $ref: '#/component/schema/accountrequest'
++      response:
 +        '200':
-+          description: Account updated successfully
++          description: account updated successfully
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/AccountResponse'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Account-ID:
-+              $ref: '#/components/headers/X-Account-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/accountresponse'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-account-id:
++              $ref: '#/component/header/x-account-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +  /account/v1/config:
 +    post:
-+      summary: Create account configuration
-+      tags: 
-+        - AccountConfig
-+      operationId: createAccountConfig
-+      requestBody:
++      summary: create account configuration
++      tag: 
++        - accountconfig
++      operationid: createaccountconfig
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/AccountConfigRequest'
-+      parameters:
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/AccountIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-+      responses:
++              $ref: '#/component/schema/accountconfigrequest'
++      parameter:
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/accountidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
++      response:
 +        '201':
-+          description: Account configuration created successfully
++          description: account configuration created successfully
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/AccountConfigResponse'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Account-ID:
-+              $ref: '#/components/headers/X-Account-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/accountconfigresponse'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-account-id:
++              $ref: '#/component/header/x-account-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +    get:
-+      summary: Get account configuration by account code
-+      tags: 
-+        - AccountConfig
-+      operationId: getAccountConfig
-+      parameters:
++      summary: get account configuration by account code
++      tag: 
++        - accountconfig
++      operationid: getaccountconfig
++      parameter:
 +        - name: code
 +          in: query
 +          required: false
-+          description: Filter by account code
++          description: filter by account code
 +          schema:
 +            type: string
 +        - name: name
 +          in: query
 +          required: false
-+          description: Filter by configuration name
++          description: filter by configuration name
 +          schema:
 +            type: string
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/AccountIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-+      responses:
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/accountidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
++      response:
 +        '200':
-+          description: Account configurations
++          description: account configuration
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/AccountConfigResponse'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Account-ID:
-+              $ref: '#/components/headers/X-Account-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/accountconfigresponse'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-account-id:
++              $ref: '#/component/header/x-account-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +  /account/v1/config/{id}:
 +    put:
-+      summary: Update account configuration
-+      tags: 
-+        - AccountConfig
-+      operationId: updateAccountConfig
-+      parameters:
++      summary: update account configuration
++      tag: 
++        - accountconfig
++      operationid: updateaccountconfig
++      parameter:
 +        - name: id
 +          in: path
 +          required: true
-+          description: Unique identifier of the account configuration
++          description: unique identifier of the account configuration
 +          schema:
 +            type: string
-+        - $ref: '#/components/parameters/RequestIdHeader'
-+        - $ref: '#/components/parameters/CorrelationIdHeader'
-+        - $ref: '#/components/parameters/UserAgentHeader'
-+        - $ref: '#/components/parameters/AccountIdHeader'
-+        - $ref: '#/components/parameters/ForwardedForHeader'
-+        - $ref: '#/components/parameters/ClientId'
-+        - $ref: '#/components/parameters/ClientSecret'
-+        - $ref: '#/components/parameters/TimeStamp'
-+      requestBody:
++        - $ref: '#/component/parameter/requestidheader'
++        - $ref: '#/component/parameter/correlationidheader'
++        - $ref: '#/component/parameter/useragentheader'
++        - $ref: '#/component/parameter/accountidheader'
++        - $ref: '#/component/parameter/forwardedforheader'
++        - $ref: '#/component/parameter/clientid'
++        - $ref: '#/component/parameter/clientsecret'
++        - $ref: '#/component/parameter/timestamp'
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: '#/components/schemas/AccountConfigRequest'
-+      responses:
++              $ref: '#/component/schema/accountconfigrequest'
++      response:
 +        '200':
-+          description: Account configuration updated successfully
++          description: account configuration updated successfully
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/AccountConfigResponse'
-+          headers:
-+            X-Response-Time:
-+              $ref: '#/components/headers/X-Response-Time'
-+            X-Response-Timestamp:
-+              $ref: '#/components/headers/X-Response-Timestamp'
-+            X-Request-ID:
-+              $ref: '#/components/headers/X-Request-ID'
-+            X-Correlation-ID:
-+              $ref: '#/components/headers/X-Correlation-ID'
-+            X-Account-ID:
-+              $ref: '#/components/headers/X-Account-ID'
-+            X-Rate-Limit:
-+              $ref: '#/components/headers/X-Rate-Limit'
-+            X-Rate-Limit-Remaining:
-+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-+            X-Rate-Limit-Reset:
-+              $ref: '#/components/headers/X-Rate-Limit-Reset'
++                $ref: '#/component/schema/accountconfigresponse'
++          header:
++            x-response-time:
++              $ref: '#/component/header/x-response-time'
++            x-response-timestamp:
++              $ref: '#/component/header/x-response-timestamp'
++            x-request-id:
++              $ref: '#/component/header/x-request-id'
++            x-correlation-id:
++              $ref: '#/component/header/x-correlation-id'
++            x-account-id:
++              $ref: '#/component/header/x-account-id'
++            x-rate-limit:
++              $ref: '#/component/header/x-rate-limit'
++            x-rate-limit-remaining:
++              $ref: '#/component/header/x-rate-limit-remaining'
++            x-rate-limit-reset:
++              $ref: '#/component/header/x-rate-limit-reset'
 +        '400':
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '404':
-+          description: Account configuration not found
++          description: account configuration not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
++                $ref: '#/component/schema/errorresponse'
 +        '500':
-+          description: Internal server error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: '#/components/schemas/ErrorResponse'
-+components:
-+  securitySchemes:
-+    BearerAuth:
++                $ref: '#/component/schema/errorresponse'
++component:
++  securityscheme:
++    bearerauth:
 +      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
-+  parameters:
-+    RequestIdHeader:
++  parameter:
++    requestidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
-+    CorrelationIdHeader:
++    correlationidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
-+    UserAgentHeader:
++    useragentheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
-+    AccountIdHeader:
++    accountidheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
-+    ForwardedForHeader:
++    forwardedforheader:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
-+    ClientId:
++    clientid:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
-+    ClientSecret:
++    clientsecret:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
-+    TimeStamp:
++    timestamp:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
-+  headers:
-+    X-Response-Time:
++  header:
++    x-response-time:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
-+    X-Response-Timestamp:
++    x-response-timestamp:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
-+    X-Request-ID:
++    x-request-id:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
-+    X-Correlation-ID:
++    x-correlation-id:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
-+    X-Account-ID:
++    x-account-id:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
-+    X-Rate-Limit:
++    x-rate-limit:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
-+    X-Rate-Limit-Remaining:
++    x-rate-limit-remaining:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
-+    X-Rate-Limit-Reset:
++    x-rate-limit-reset:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
-+  schemas:
-+    Error:
++  schema:
++    error:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
-+    ErrorResponse:
++    errorresponse:
 +      type: object
-+      properties:
-+        Errors:
++      propertie:
++        error:
 +          type: array
-+          items:
-+            $ref: '#/components/schemas/Error'
-+    AuditDetail:
++          item:
++            $ref: '#/component/schema/error'
++    auditdetail:
 +      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
-+    Document:
++    document:
 +      type: object
-+      properties:
++      propertie:
 +        id:
 +          type: string
-+          description: Document ID
-+        tenantId:
++          description: document id
++        tenantid:
 +          type: string
-+          description: Account ID
-+        tenantConfigId:
++          description: account id
++        tenantconfigid:
 +          type: string
-+          description: Account Config ID
++          description: account config id
 +        type:
 +          type: string
-+          description: Document type
-+        fileStoreId:
++          description: document type
++        filestoreid:
 +          type: string
-+          description: File store ID
++          description: file store id
 +        url:
 +          type: string
-+          description: Document URL
-+        isActive:
++          description: document url
++        isactive:
 +          type: boolean
-+          description: Whether document is active
-+        auditDetails:
-+          $ref: '#/components/schemas/AuditDetail'
-+    Account:
++          description: whether document i active
++        auditdetail:
++          $ref: '#/component/schema/auditdetail'
++    account:
 +      type: object
-+      description: Details of an account
++      description: detail of an account
 +      required:
 +        - name
 +        - email
-+      properties:
++      propertie:
 +        id:
 +          type: string
-+          description: Unique identifier for the account
-+          minLength: 2
-+          maxLength: 128
++          description: unique identifier for the account
++          minlength: 2
++          maxlength: 128
 +        code:
 +          type: string
-+          description: Unique code for the account
-+          minLength: 1
-+          maxLength: 50
++          description: unique code for the account
++          minlength: 1
++          maxlength: 50
 +        name:
 +          type: string
-+          description: Display name for the account
-+          minLength: 1
-+          maxLength: 50
++          description: display name for the account
++          minlength: 1
++          maxlength: 50
 +        email:
 +          type: string
-+          description: Contact email address of the account
++          description: contact email addres of the account
 +          format: email
-+          maxLength: 64
-+        additionalAttributes:
++          maxlength: 64
++        additionalattribute:
 +          type: object
-+          description: Any additional metadata as key-value pairs
-+          additionalProperties: true
-+        isActive:
++          description: any additional metadata a key-value pair
++          additionalpropertie: true
++        isactive:
 +          type: boolean
-+          description: Flag indicating whether the account is active
-+        tenantId:
++          description: flag indicating whether the account i active
++        tenantid:
 +          type: string
-+          description: Tenant ID
-+        createdBy:
++          description: tenant id
++        createdby:
 +          type: string
-+          description: User who created the account
-+        lastModifiedBy:
++          description: user who created the account
++        lastmodifiedby:
 +          type: string
-+          description: User who last modified the account
-+        createdTime:
++          description: user who last modified the account
++        createdtime:
 +          type: integer
 +          format: int64
-+          description: Creation timestamp
-+        lastModifiedTime:
++          description: creation timestamp
++        lastmodifiedtime:
 +          type: integer
 +          format: int64
-+          description: Last modification timestamp
-+    AccountRequest:
++          description: last modification timestamp
++    accountrequest:
 +      type: object
-+      properties:
++      propertie:
 +        tenant:
-+          $ref: '#/components/schemas/Account'
-+    AccountResponse:
++          $ref: '#/component/schema/account'
++    accountresponse:
 +      type: object
-+      properties:
-+        tenants:
++      propertie:
++        tenant:
 +          type: array
-+          items:
-+            $ref: '#/components/schemas/Account'
-+    AccountConfig:
++          item:
++            $ref: '#/component/schema/account'
++    accountconfig:
 +      type: object
-+      description: Details of account-specific configuration
-+      properties:
++      description: detail of account-specific configuration
++      propertie:
 +        id:
 +          type: string
-+          description: Unique identifier of this account configuration
-+        defaultLoginType:
++          description: unique identifier of thi account configuration
++        defaultlogintype:
 +          type: string
-+          description: Default login type
-+        otpLength:
++          description: default login type
++        otplength:
 +          type: string
-+          description: OTP length
++          description: otp length
 +        code:
 +          type: string
-+          description: Configuration code
++          description: configuration code
 +        name:
 +          type: string
-+          description: Configuration name
-+        enableUserBasedLogin:
++          description: configuration name
++        enableuserbasedlogin:
 +          type: boolean
-+          description: Enable user-based login
-+        additionalAttributes:
++          description: enable user-based login
++        additionalattribute:
 +          type: object
-+          description: Arbitrary metadata as key-value pairs
-+          additionalProperties: true
-+        documents:
++          description: arbitrary metadata a key-value pair
++          additionalpropertie: true
++        document:
 +          type: array
-+          description: List of document requirements or references for the account
-+          items:
-+            $ref: '#/components/schemas/Document'
-+        isActive:
++          description: list of document requirement or reference for the account
++          item:
++            $ref: '#/component/schema/document'
++        isactive:
 +          type: boolean
-+          description: Indicates if the account configuration is currently active
-+        languages:
++          description: indicate if the account configuration i currently active
++        language:
 +          type: array
-+          items:
++          item:
 +            type: string
-+          description: Supported languages
-+        auditDetails:
-+          $ref: '#/components/schemas/AuditDetail'
-+    AccountConfigRequest:
++          description: supported language
++        auditdetail:
++          $ref: '#/component/schema/auditdetail'
++    accountconfigrequest:
 +      type: object
-+      properties:
-+        tenantConfig:
-+          $ref: '#/components/schemas/AccountConfig'
-+    AccountConfigResponse:
++      propertie:
++        tenantconfig:
++          $ref: '#/component/schema/accountconfig'
++    accountconfigresponse:
 +      type: object
-+      properties:
-+        tenantConfigs:
++      propertie:
++        tenantconfig:
 +          type: array
-+          items:
-+            $ref: '#/components/schemas/AccountConfig'
++          item:
++            $ref: '#/component/schema/accountconfig'
 \ No newline at end of file

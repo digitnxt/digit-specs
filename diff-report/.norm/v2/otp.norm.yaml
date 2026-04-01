@@ -1,0 +1,368 @@
+openapi: 3.0.1
+info:
+  title: egov otp service
+  description: egov-otp service api - contain create , validate and search end point
+  contact:
+    name: egov
+    email: info@egovernment.org
+  version: 1.1.0
+server:
+- url: /egov-otp/
+path:
+  /otp/v1/create:
+    post:
+      tag:
+      - otpconfig
+      summary: create otp configuration entry
+      description: create otp configuration thi api i internaly call from v1/send
+        end point, thi  end point present in user-otp service no need of explicity
+        call
+      requestbody:
+        description: required parameter have to be populated
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/createotpconfigreq'
+        required: true
+      response:
+        200:
+          description: request acknowledged sucessfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/otpconfigre'
+        400:
+          description: request failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: otpconfig
+  /otp/v1/validate:
+    post:
+      tag:
+      - otpconfig
+      summary: validate otp configuration entry
+      description: validate otp configuration thi end point i validate the otp respect
+        to mobilenumber
+      requestbody:
+        description: required parameter have to be populated
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/createotpconfigreq'
+        required: true
+      response:
+        200:
+          description: request acknowledged sucessfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/otpconfigre'
+        400:
+          description: request failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: otpconfig
+  /otp/v1/search:
+    post:
+      tag:
+      - otpconfig
+      summary: search otp configuration entry using uuid
+      description: search the mobile number and otp using uuid ,uuid nothing but otp
+        reference number
+      requestbody:
+        description: required parameter have to be populated
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/createotpconfigreq'
+        required: true
+      response:
+        200:
+          description: request acknowledged sucessfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/otpconfigre'
+        400:
+          description: request failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+      x-codegen-request-body-name: otpconfig
+component:
+  schema:
+    createotp:
+      required:
+      - identity
+      - tenantid
+      type: object
+      propertie:
+        otp:
+          type: string
+          description: thi i the five digit otp number ,thi i mandatory in validate
+            end point should pas otp value in  /otp/v1/validate end point, in other
+            end point it i read only
+        uuid:
+          type: string
+          description: thi i otp reference id, thi i mandatory in search end point
+            (/otp/v1/search), and in other end point it i read only.
+        identity:
+          type: string
+          description: identity i  username or mobile number. thi i  mandatory
+            field in create and validate end point end point i(/otp/v1/create, and
+            /otp/v1/validat) and optional field in /otp/v1/search end point
+        tenantid:
+          type: string
+          description: unique identifier of the tenantid to which user primarily belong
+            and it i mandatory field in all the end point shoiuld pas thi value
+        isvalidationsuccessful:
+          type: string
+          description: it return true or false  thi i optional or read only property
+            in all end point,
+    createotpconfigreq:
+      required:
+      - requestinfo
+      - otp
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        otp:
+          $ref: '#/component/schema/createotp'
+    otpconfigre:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        otp:
+          type: array
+          item:
+            $ref: '#/component/schema/createotp'
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        id:
+          type: integer
+          description: user id of the authenticated user. will be deprecated in future
+          format: int32
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+    role:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml
+x-api-id: org.egov.egov-otp

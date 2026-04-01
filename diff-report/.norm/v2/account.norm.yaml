@@ -1,0 +1,177 @@
+servicemap:
+  servicename: tenant-service
+  mapping:
+    - version: 1.0
+      description: persist the tenant entity data
+      fromtopic: create-tenant
+      istransaction: true
+      querymap:
+        - query: insert into tenant (id, tenantid, code, name, email, additionalattribute, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          basepath: $.tenant
+          jsonmap:
+
+            - jsonpath: $.tenant.id
+
+            - jsonpath: $.tenant.code
+
+            - jsonpath: $.tenant.code
+
+            - jsonpath: $.tenant.name
+
+            - jsonpath: $.tenant.email
+
+            - jsonpath: $.tenant.additionalattribute
+              type: json
+              dbtype: jsonb
+
+            - jsonpath: $.tenant.isactive
+
+            - jsonpath: $.tenant.auditdetail.createdby
+
+            - jsonpath: $.tenant.auditdetail.lastmodifiedby
+
+            - jsonpath: $.tenant.auditdetail.createdtime
+
+            - jsonpath: $.tenant.auditdetail.lastmodifiedtime
+
+    - version: 1.0
+      description: persist the create sub tenant entity data
+      fromtopic: create-sub-tenant
+      istransaction: true
+      querymap:
+        - query: insert into tenant (id, tenantid, code, name, email, additionalattribute, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          basepath: $.tenant
+          jsonmap:
+            - jsonpath: $.tenant.id
+
+            - jsonpath: $.tenant.tenantid
+
+            - jsonpath: $.tenant.code
+
+            - jsonpath: $.tenant.name
+
+            - jsonpath: $.tenant.email
+
+            - jsonpath: $.tenant.additionalattribute
+              type: json
+              dbtype: jsonb
+
+            - jsonpath: $.tenant.isactive
+
+            - jsonpath: $.tenant.auditdetail.createdby
+
+            - jsonpath: $.tenant.auditdetail.lastmodifiedby
+
+            - jsonpath: $.tenant.auditdetail.createdtime
+
+            - jsonpath: $.tenant.auditdetail.lastmodifiedtime
+
+    - version: 1.0
+      description: update the tenant entity data
+      fromtopic: update-tenant
+      istransaction: true
+      querymap:
+        - query: update tenant set additionalattribute = ? , isactive = ? , lastmodifiedby = ? , lastmodifiedtime = ? where code = ?;
+          basepath: $.tenant
+          jsonmap:
+            - jsonpath: $.tenant.additionalattribute
+              type: json
+              dbtype: jsonb
+
+            - jsonpath: $.tenant.isactive
+
+            - jsonpath: $.tenant.auditdetail.lastmodifiedby
+
+            - jsonpath: $.tenant.auditdetail.lastmodifiedtime
+
+            - jsonpath: $.tenant.code
+
+    - version: 1.0
+      description: persist the create tenant config data
+      fromtopic: create-tenant-config
+      istransaction: true
+      querymap:
+        - query: insert into tenantconfig (id, code, otplength, name, language, defaultlogintype, enableuserbasedlogin, additionalattribute, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          basepath: $.tenantconfig
+          jsonmap:
+            - jsonpath: $.tenantconfig.id
+
+            - jsonpath: $.tenantconfig.code
+
+            - jsonpath: $.tenantconfig.otplength
+
+            - jsonpath: $.tenantconfig.name
+
+            - jsonpath: $.tenantconfig.language
+              type: json
+              dbtype: jsonb
+
+            - jsonpath: $.tenantconfig.defaultlogintype
+
+            - jsonpath: $.tenantconfig.enableuserbasedlogin
+
+            - jsonpath: $.tenantconfig.additionalattribute
+              type: json
+              dbtype: jsonb
+
+            - jsonpath: $.tenantconfig.isactive
+
+            - jsonpath: $.tenantconfig.auditdetail.createdby
+
+            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedby
+
+            - jsonpath: $.tenantconfig.auditdetail.createdtime
+
+            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedtime
+        - query: insert into tenantdocument (id, tenantconfigid, tenantid, type, filestoreid, url, isactive, createdby, lastmodifiedby, createdtime, lastmodifiedtime) value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          basepath: $.tenantconfig.document.*
+          jsonmap:
+            - jsonpath: $.tenantconfig.document.*.id
+
+            - jsonpath: $.tenantconfig.document.*.tenantconfigid
+
+            - jsonpath: $.tenantconfig.document.*.tenantid
+
+            - jsonpath: $.tenantconfig.document.*.type
+
+            - jsonpath: $.tenantconfig.document.*.filestoreid
+
+            - jsonpath: $.tenantconfig.document.*.url
+
+            - jsonpath: $.tenantconfig.document.*.isactive
+
+            - jsonpath: $.tenantconfig.document.*.auditdetail.createdby
+
+            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedby
+
+            - jsonpath: $.tenantconfig.document.*.auditdetail.createdtime
+
+            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedtime
+
+    - version: 1.0
+      description: update the tenant config
+      fromtopic: update-tenant-config
+      istransaction: true
+      querymap:
+        - query: update tenantconfig set isactive  = ? , lastmodifiedby = ? , lastmodifiedtime = ? where code = ?;
+          basepath: $.tenantconfig
+          jsonmap:
+            - jsonpath: $.tenantconfig.isactive
+
+            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedby
+
+            - jsonpath: $.tenantconfig.auditdetail.lastmodifiedtime
+
+            - jsonpath: $.tenantconfig.code
+        - query: update tenantdocument set filestoreid  = ? , url = ? , lastmodifiedby = ? , lastmodifiedtime = ? where id = ?;
+          basepath: $.tenantconfig.document.*
+          jsonmap:
+            - jsonpath: $.tenantconfig.document.*.filestoreid
+
+            - jsonpath: $.tenantconfig.document.*.url
+
+            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedby
+
+            - jsonpath: $.tenantconfig.document.*.auditdetail.lastmodifiedtime
+
+            - jsonpath: $.tenantconfig.document.*.id

@@ -1,0 +1,905 @@
+openapi: 3.0.1
+info:
+  title: egov user event system.
+  description: "api for event information. thi module handle below functionality.\
+    \ \n1. create/update new event\n2. search existing event\n3. an event in the system\
+    \ include -\n   a. system generated event like change in state of a complaint,\
+    \ pt or tl etc.\n   b. public message broadcast\n   c. event that happen within\
+    \ an ulb and are published on mseva.\n   d. any other event that are to be notified\
+    \ to the user.\n"
+  contact:
+    name: egovernment foundation
+    email: contact@egovernment.org
+  version: 1.0.0
+server:
+- url: /user-event
+tag:
+- name: event
+  description: api required for event handling.
+path:
+  /v1/event/search:
+    post:
+      tag:
+        - event
+      summary: search
+      operationid: searchusingpost
+      parameter:
+        - name: eventtype
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: fromdate
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: id
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: iscitizensearch
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: iseventscountcall
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: name
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: offset
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: postedby
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: recepient
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: referenceid
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: role
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: source
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: statu
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: tenantid
+          in: query
+          required: true
+          style: form
+          schema:
+            type: string
+        - name: todate
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: userid
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/requestinfowrapper'
+      response:
+        '200':
+          description: ok
+          content:
+            '*/*':
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found
+  /v1/event/create:
+    post:
+      tag:
+      - event
+      summary: create new event
+      requestbody:
+        description: detail for the new event + requestinfo meta data.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/eventrequest'
+        required: true
+      response:
+        201:
+          description: reponseinfo with event created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/eventresponse'
+        400:
+          description: event creation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: eventrequest
+  /v1/event/update:
+    post:
+      tag:
+      - event
+      summary: update existing event
+      description: thi api i used to update existing event in the system.
+      requestbody:
+        description: detail for the new event + requestinfo meta data.
+        content:
+          '*/*':
+            schema:
+              $ref: '#/component/schema/eventrequest'
+        required: true
+      response:
+        201:
+          description: reponseinfo with event updated sudcessfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/eventresponse'
+        400:
+          description: event(s) updation failed
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorres2'
+      x-codegen-request-body-name: eventrequest
+  /v1/event/lat/update:
+    post:
+      tag:
+        - event
+      summary: updatellt
+      operationid: updatelltusingpost
+      requestbody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/requestinfowrapper'
+      response:
+        '200':
+          description: ok
+          content:
+            '*/*':
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found    
+  /v1/event/notification/count:
+    post:
+      tag:
+        - event
+      summary: count
+      operationid: countusingpost
+      parameter:
+        - name: eventtype
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: fromdate
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: id
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: iscitizensearch
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: iseventscountcall
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: name
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: offset
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: postedby
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: recepient
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: referenceid
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: role
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: source
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: statu
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+        - name: tenantid
+          in: query
+          required: true
+          style: form
+          schema:
+            type: string
+        - name: todate
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: userid
+          in: query
+          required: false
+          style: pipedelimited
+          schema:
+            type: array
+            item:
+              type: string
+      requestbody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/requestinfowrapper'
+      response:
+        '200':
+          description: ok
+          content:
+            '*/*':
+              schema:
+                type: object
+        '201':
+          description: created
+        '401':
+          description: unauthorized
+        '403':
+          description: forbidden
+        '404':
+          description: not found        
+component:
+  schema:
+    requestinfowrapper:
+      title: requestinfowrapper
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+    action:
+      required:
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier of ulb
+        id:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: unique identifier of the action (uuid)
+        eventid:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: event id for which thi action i applicable.
+        actionurl:
+          type: array
+          description: array of action url and label.
+          item:
+            $ref: '#/component/schema/actionitem'
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: object hold that hold basic data for action associated to an
+        event.
+    event:
+      required:
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: unique identifier of ulb
+        id:
+          maxlength: 64
+          minlength: 2
+          type: string
+          description: unique identifier of the event (uuid)
+        eventtype:
+          maxlength: 32
+          minlength: 2
+          type: string
+          description: thi mdm master data to diffrenciate the category of event
+            which i namespaced.
+        description:
+          maxlength: 1024
+          minlength: 2
+          type: string
+          description: description of the event
+        statu:
+          type: string
+          description: statu of the event in the system. can hold one of the following
+            enum value.
+          enum:
+          - active
+          - inactive
+          - canceled
+        torole:
+          type: array
+          description: array of role of the receipient of thi notification.
+          item:
+            type: string
+        touser:
+          type: array
+          description: array of id (uuid) of the receipient of thi notification.
+          item:
+            type: string
+        action:
+          $ref: '#/component/schema/action'
+        eventdetail:
+          $ref: '#/component/schema/eventdetail'
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+      description: a object hold the basic data for an event.
+    actionitem:
+      type: object
+      propertie:
+        actionurl:
+          maxlength: 128
+          minlength: 2
+          type: string
+          description: thi i redirection url.
+        code:
+          maxlength: 32
+          minlength: 2
+          type: string
+          description: code i to fetch localisation name for each action. thi i
+            applicable only if there are more then one action are available for single
+            event.
+      description: object that hold basic data for actionable url associated to an
+        action.
+    eventdetail:
+      type: object
+      propertie:
+        fromdate:
+          maxlength: 32
+          minlength: 2
+          type: string
+          description: start date of event.
+        todate:
+          maxlength: 32
+          minlength: 2
+          type: string
+          description: end date of event.
+        latitude:
+          type: number
+          description: latitude value of the location.
+        longitude:
+          type: number
+          description: longitude value of the location.
+        document:
+          type: array
+          description: list of file store id.
+          item:
+            type: string
+      description: object that hold detail such a time, venue etc of an event.
+    eventrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: '#/component/schema/requestinfo'
+        event:
+          type: array
+          description: array of event to be created in the system.
+          item:
+            $ref: '#/component/schema/event'
+      description: contract clas to receive request. array of event item are used
+        in case of create and update
+    eventresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo2'
+        event:
+          type: array
+          description: array of event to be received from the system.
+          item:
+            $ref: '#/component/schema/event'
+      description: contract clas to send response. array of event item are used
+        in case of search result or response for create and update
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.
+    errorres2:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo2'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error2'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo2:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error2:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+          description: username (preferred) or userid of the user that created the
+            object
+        lastmodifiedby:
+          type: string
+          description: username (preferred) or userid of the user that last modified
+            the object
+        createdtime:
+          type: integer
+          description: epoch of the time object i created
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          description: epoch of the time object i last modified
+          format: int64
+      description: collection of audit related field used by most model
+    requestinfo:
+      required:
+      - action
+      - apiid
+      - msgid
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version - for http based request thi will be same a used
+            in path
+        t:
+          type: integer
+          description: time in epoch
+          format: int64
+        action:
+          maxlength: 32
+          type: string
+          description: api action to be performed like create, update, search (denoting
+            post, put, get) or oauth etc
+        did:
+          maxlength: 1024
+          type: string
+          description: device id from which the api i called
+        key:
+          maxlength: 256
+          type: string
+          description: api key (api key provided to the caller in case of server to
+            server communication)
+        msgid:
+          maxlength: 256
+          type: string
+          description: unique request message id from the caller
+        requesterid:
+          maxlength: 256
+          type: string
+          description: userid of the user calling
+        authtoken:
+          type: string
+          description: //session/jwt/saml token/oauth token - the usual value that
+            would go into http bearer token
+        userinfo:
+          $ref: '#/component/schema/userinfo'
+        correlationid:
+          type: string
+          readonly: true
+      description: requestinfo should be used to carry meta information about the
+        request to the server a described in the field below. all egov api will
+        use requestinfo a a part of the request body to carry thi meta information.
+        some of thi information will be returned back from the server a part of
+        the responseinfo in the response body to ensure correlation.
+    userinfo:
+      required:
+      - primaryrole
+      - tenantid
+      - username
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique identifier of the tenant to which user primarily belong
+        uuid:
+          type: string
+          description: system generated user id of the authenticated user.
+        username:
+          type: string
+          description: unique user name of the authenticated user
+        password:
+          type: string
+          description: password of the user.
+        idtoken:
+          type: string
+          description: thi will be the otp.
+        mobile:
+          type: string
+          description: mobile number of the autheticated user
+        email:
+          type: string
+          description: email addres of the authenticated user
+        primaryrole:
+          type: array
+          description: list of all the role for the primary tenant
+          item:
+            $ref: '#/component/schema/role'
+        additionalrole:
+          type: array
+          description: array of additional tenantid authorized for the authenticated
+            user
+          item:
+            $ref: '#/component/schema/tenantrole'
+      description: thi i acting id token of the authenticated user on the server.
+        any value provided by the client will be ignored and actual user based on
+        authtoken will be used on the server.
+    role:
+      required:
+      - name
+      type: object
+      propertie:
+        name:
+          maxlength: 64
+          type: string
+          description: unique name of the role
+        code:
+          maxlength: 64
+          type: string
+          description: unique code of the role
+        description:
+          type: string
+          description: brief description of the role
+      description: |
+        minimal representation of the role in the system to be carried along in userinfo with requestinfo meta data. actual authorization service to extend thi to have more role related attribute
+    tenantrole:
+      required:
+      - role
+      - tenantid
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenantid for the tenant
+        role:
+          type: array
+          description: role assigned for a particular tenant - array of role code/name
+          item:
+            $ref: '#/component/schema/role'
+      description: user role carrie the tenant related role information for the user.
+        a user can have multiple role per tenant based on the need of the tenant.
+        a user may also have multiple role for multiple tenant.
+x-api-id: org.egov.user.event
+x-common-path: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml

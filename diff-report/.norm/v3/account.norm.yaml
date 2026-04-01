@@ -1,0 +1,646 @@
+openapi: 3.0.3
+info:
+  title: account management api
+  version: 3.0.0
+  description: |
+    api for managing account and their configuration setting.
+    thi api support:
+    - onboarding new account
+    - updating account metadata
+    - managing authentication and feature toggle per account via configuration
+server:
+  - url: https://api.example.com
+    description: production server
+  - url: https://staging-api.example.com
+    description: staging server
+tag:
+  - name: account
+    description: |
+      operation related to account lifecycle management such a onboarding,
+      updating account information, and fetching account detail.
+  - name: accountconfig
+    description: |
+      operation to manage per-account global configuration setting example 
+      authentication method, login policie, feature flag, and more.
+path:
+  /account/v1:
+    post:
+      summary: create a new account
+      operationid: createaccount
+      tag: 
+        - account
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/accountrequest'
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/accountidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/accountresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-account-id:
+              $ref: '#/component/header/x-account-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+    get:
+      summary: get list of account
+      tag: 
+        - account
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/accountidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: code
+          schema:
+            type: string
+          description: filter account by code
+          required: false
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: filter account by name
+          required: false
+      response:
+        '200':
+          description: list of account
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/accountresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-account-id:
+              $ref: '#/component/header/x-account-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+    delete:
+      summary: delete account (realm + account + config)
+      tag: 
+        - account
+      operationid: deleteaccount
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/accountidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: tenantcode
+          schema:
+            type: string
+          description: account code to delete
+          required: true
+      response:
+        '204':
+          description: account deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  message:
+                    type: string
+                    example: account, realm, and configuration deleted successfully
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-account-id:
+              $ref: '#/component/header/x-account-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+  /account/v1/{id}:
+    put:
+      summary: update account by id
+      tag: 
+        - account
+      operationid: updateaccount
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/accountidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: account id
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/accountrequest'
+      response:
+        '200':
+          description: account updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/accountresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-account-id:
+              $ref: '#/component/header/x-account-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+  /account/v1/config:
+    post:
+      summary: create account configuration
+      tag: 
+        - accountconfig
+      operationid: createaccountconfig
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/accountconfigrequest'
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/accountidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '201':
+          description: account configuration created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/accountconfigresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-account-id:
+              $ref: '#/component/header/x-account-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+    get:
+      summary: get account configuration by account code
+      tag: 
+        - accountconfig
+      operationid: getaccountconfig
+      parameter:
+        - name: code
+          in: query
+          required: false
+          description: filter by account code
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          description: filter by configuration name
+          schema:
+            type: string
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/accountidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: account configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/accountconfigresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-account-id:
+              $ref: '#/component/header/x-account-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+  /account/v1/config/{id}:
+    put:
+      summary: update account configuration
+      tag: 
+        - accountconfig
+      operationid: updateaccountconfig
+      parameter:
+        - name: id
+          in: path
+          required: true
+          description: unique identifier of the account configuration
+          schema:
+            type: string
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/accountidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/accountconfigrequest'
+      response:
+        '200':
+          description: account configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/accountconfigresponse'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-account-id:
+              $ref: '#/component/header/x-account-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '404':
+          description: account configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/errorresponse'
+component:
+  securityscheme:
+    bearerauth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+  parameter:
+    requestidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+    correlationidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+    useragentheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+    accountidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    forwardedforheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+    clientid:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+    clientsecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+    timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+  header:
+    x-response-time:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+    x-response-timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+    x-request-id:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+    x-correlation-id:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+    x-account-id:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+    x-rate-limit:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+    x-rate-limit-remaining:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+    x-rate-limit-reset:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+  schema:
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+    errorresponse:
+      type: object
+      propertie:
+        error:
+          type: array
+          item:
+            $ref: '#/component/schema/error'
+    auditdetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
+    document:
+      type: object
+      propertie:
+        id:
+          type: string
+          description: document id
+        tenantid:
+          type: string
+          description: account id
+        tenantconfigid:
+          type: string
+          description: account config id
+        type:
+          type: string
+          description: document type
+        filestoreid:
+          type: string
+          description: file store id
+        url:
+          type: string
+          description: document url
+        isactive:
+          type: boolean
+          description: whether document i active
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    account:
+      type: object
+      description: detail of an account
+      required:
+        - name
+        - email
+      propertie:
+        id:
+          type: string
+          description: unique identifier for the account
+          minlength: 2
+          maxlength: 128
+        code:
+          type: string
+          description: unique code for the account
+          minlength: 1
+          maxlength: 50
+        name:
+          type: string
+          description: display name for the account
+          minlength: 1
+          maxlength: 50
+        email:
+          type: string
+          description: contact email addres of the account
+          format: email
+          maxlength: 64
+        additionalattribute:
+          type: object
+          description: any additional metadata a key-value pair
+          additionalpropertie: true
+        isactive:
+          type: boolean
+          description: flag indicating whether the account i active
+        tenantid:
+          type: string
+          description: tenant id
+        createdby:
+          type: string
+          description: user who created the account
+        lastmodifiedby:
+          type: string
+          description: user who last modified the account
+        createdtime:
+          type: integer
+          format: int64
+          description: creation timestamp
+        lastmodifiedtime:
+          type: integer
+          format: int64
+          description: last modification timestamp
+    accountrequest:
+      type: object
+      propertie:
+        tenant:
+          $ref: '#/component/schema/account'
+    accountresponse:
+      type: object
+      propertie:
+        tenant:
+          type: array
+          item:
+            $ref: '#/component/schema/account'
+    accountconfig:
+      type: object
+      description: detail of account-specific configuration
+      propertie:
+        id:
+          type: string
+          description: unique identifier of thi account configuration
+        defaultlogintype:
+          type: string
+          description: default login type
+        otplength:
+          type: string
+          description: otp length
+        code:
+          type: string
+          description: configuration code
+        name:
+          type: string
+          description: configuration name
+        enableuserbasedlogin:
+          type: boolean
+          description: enable user-based login
+        additionalattribute:
+          type: object
+          description: arbitrary metadata a key-value pair
+          additionalpropertie: true
+        document:
+          type: array
+          description: list of document requirement or reference for the account
+          item:
+            $ref: '#/component/schema/document'
+        isactive:
+          type: boolean
+          description: indicate if the account configuration i currently active
+        language:
+          type: array
+          item:
+            type: string
+          description: supported language
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    accountconfigrequest:
+      type: object
+      propertie:
+        tenantconfig:
+          $ref: '#/component/schema/accountconfig'
+    accountconfigresponse:
+      type: object
+      propertie:
+        tenantconfig:
+          type: array
+          item:
+            $ref: '#/component/schema/accountconfig'

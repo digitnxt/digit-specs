@@ -1,0 +1,345 @@
+openapi: 3.0.1
+info:
+  title: filestore serivce api
+  description: |
+    api available for filestore service
+      -  upload different kind of file to server including image and different document type.
+  contact:
+    name: egovernment foundation
+    email: contact@egovernment.org
+  version: 2.0.0
+server:
+- url: /filestore/v1
+path:
+  /file:
+    post:
+      tag:
+      - upload file
+      summary: upload different kind of file to server.
+      description: the endpoint for uploading file in the system.
+      requestbody:
+        content:
+          multipart/form-data:
+            schema:
+              required:
+              - file
+              - tenantid
+              propertie:
+                file:
+                  type: string
+                  description: the file to upload.
+                  format: binary
+                tenantid:
+                  type: string
+                  description: unique ulb identifier.
+                module:
+                  type: string
+                  description: module name.
+                tag:
+                  type: string
+                  description: tag name.
+        required: true
+      response:
+        200:
+          description: succes response with filestoreid and tenantid.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/uploadfileresponse'
+        400:
+          description: error response in case of failure.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+  /file/url:
+    get:
+      tag:
+      - search
+      summary: search file url based on tenantid and filestoreid.
+      description: search file url.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: filestoreid
+        in: query
+        description: unique filestoreid.
+        required: true
+        schema:
+          type: string
+      response:
+        200:
+          description: list of url to acces the uploaded file which i map to particular
+            fielstoreid.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/filestoreidresponse'
+        400:
+          description: error response in case of failure.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+  /file/tag:
+    get:
+      tag:
+      - search
+      summary: search file url based on tenantid and tag name.
+      description: search file url.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: tag
+        in: query
+        description: tag name.
+        required: true
+        schema:
+          type: string
+      response:
+        200:
+          description: list of url to acces the uploaded file which i map to particular
+            tag name.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/tagfileresponse'
+        400:
+          description: error response in case of failure.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+  /file/metadata:
+    get:
+      tag:
+      - search
+      summary: get metadata of file based on tenantid and filestoreid.
+      description: metadata of file.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: filestoreid
+        in: query
+        description: unique filestoreid.
+        required: true
+        schema:
+          type: string
+      response:
+        200:
+          description: metadata of file map to particulare filestoreid.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/metadataresponse'
+        400:
+          description: error response in case of failure.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+  /file/id:
+    get:
+      tag:
+      - search
+      summary: search file url based on tenantid and filestoreid.
+      description: search file url.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          type: string
+          format: varchar
+      - name: filestoreid
+        in: query
+        description: filestore id.
+        required: true
+        schema:
+          type: string
+      response:
+        200:
+          description: return file binary.
+          content: {}
+        400:
+          description: error response in case of failure.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/errorre'
+component:
+  schema:
+    filestoreidresponse:
+      required:
+      - filestoreid
+      type: object
+      propertie:
+        filestoreid:
+          type: array
+          item:
+            type: string
+      description: a list of value
+    uploadfileresponse:
+      type: object
+      propertie:
+        file:
+          type: array
+          item:
+            $ref: '#/component/schema/uploadfile'
+    tagfileresponse:
+      type: object
+      propertie:
+        file:
+          type: array
+          item:
+            $ref: '#/component/schema/tagfile'
+    metadataresponse:
+      type: object
+      propertie:
+        filename:
+          type: string
+          description: file name.
+        contetnttype:
+          type: string
+          description: contetnt type of file.
+        tenantid:
+          type: string
+          description: unique ulb identifier.
+        resource:
+          type: string
+          description: resource.
+        filesize:
+          type: string
+          description: file size.
+      description: response data cobtain detail of file.
+    uploadfile:
+      type: object
+      propertie:
+        filestoreid:
+          type: string
+          description: filestore id of the particular file.
+        tenantid:
+          type: string
+          description: unique ulb identifier.
+      description: upload file response data with filestoreid and tenantid.
+    tagfile:
+      type: object
+      propertie:
+        url:
+          type: string
+          description: url to acces the particular file belong to the tag.
+        contetnttype:
+          type: string
+          description: contetnt type of file.
+      description: upload file response data with url and contetnt type of file.
+    errorre:
+      required:
+      - responseinfo
+      type: object
+      propertie:
+        responseinfo:
+          $ref: '#/component/schema/responseinfo'
+        error:
+          type: array
+          description: error response array corresponding to request object array.
+            in case of single object submission or search related path thi may
+            be an array of one error element
+          item:
+            $ref: '#/component/schema/error'
+      description: all api will return errorre in case of failure which will carry
+        responseinfo a metadata and error object a actual representation of error.
+        in case of bulk api, some api may chose to return the array of error object
+        to indicate individual failure.
+    responseinfo:
+      required:
+      - apiid
+      - statu
+      - t
+      - ver
+      type: object
+      propertie:
+        apiid:
+          maxlength: 128
+          type: string
+          description: unique api id
+        ver:
+          maxlength: 32
+          type: string
+          description: api version
+        t:
+          type: integer
+          description: response time in epoch
+          format: int64
+        resmsgid:
+          maxlength: 256
+          type: string
+          description: unique response message id (uuid) - will usually be the correlation
+            id from the server
+        msgid:
+          maxlength: 256
+          type: string
+          description: message id of the request
+        statu:
+          type: string
+          description: statu of request processing - to be enhanced in futuer to
+            include inprogres
+          enum:
+          - successful
+          - failed
+      description: responseinfo should be used to carry metadata information about
+        the response from the server. apiid, ver and msgid in responseinfo should
+        alway correspond to the same value in respective request's requestinfo.
+    error:
+      required:
+      - code
+      - message
+      type: object
+      propertie:
+        code:
+          type: string
+          description: error code will be module specific error label/code to identiffy
+            the error. all module should also publish the error code with their
+            specific localized value in localization service to ensure client can
+            print locale specific error message. example for error code would be
+            user.notfound to indicate user not found by user/authentication service.
+            all service must declare their possible error code with brief description
+            in the error response section of their api path.
+        message:
+          type: string
+          description: english locale message of the error code. client should make
+            a separate call to get the other locale description if configured with
+            the service. client may choose to cache these locale specific message
+            to enhance performance with a reasonable ttl (may be defined by the localization
+            service based on tenant + module combination).
+        description:
+          type: string
+          description: optional long description of the error to help client take
+            remedial action. thi will not be available a part of localization service.
+        param:
+          type: array
+          description: some error message may carry replaceable field (say $1, $2)
+            to provide more context to the message. e.g. format related error may
+            want to indicate the actual field for which the format i invalid. client's
+            should use the value in the param array to replace those field.
+          item:
+            type: string
+      description: error object will be returned a a part of reponse body in conjunction
+        with responseinfo a part of errorresponse whenever the request processing
+        statu in the responseinfo i failed. http return in thi scenario will usually
+        be http 400.

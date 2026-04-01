@@ -1,0 +1,540 @@
+openapi: 3.0.0
+info:
+  title: id generator service api
+  version: 3.0.0
+  description: |
+    a digit microservice that generate unique, human-readable id from user-defined template. 
+    it support formatted date, scoped and padded sequence (postgre-backed for concurrency safety), 
+    random segment with flexible charset, and dynamic variable substitution.
+    
+server:
+  - url: http://localhost:8080/idgen
+    description: local development server
+  - url: https://api.example.com/idgen
+    description: production server
+
+security:
+  - bearerauth: []
+
+tag:
+  - name: template management
+    description: operation for managing id generation template
+  - name: id generation
+    description: operation for generating id from template
+
+path:
+  /v1/template:
+    post:
+      tag:
+        - template management
+      summary: create a new id generation template
+      description: |
+        register a new id generation template with configuration and initialize it sequence.
+        create version v1 of the template.
+      operationid: createtemplate
+      parameter:
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/clientidheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/idgentemplaterequest'
+            example:
+              receiptid:
+                summary: receipt id template
+                value:
+                  templatecode: "receipt-id"
+                  config:
+                    template: "{tenant}-{date:yyyy-mm-dd}-{seq}-{rand}"
+                    sequence:
+                      scope: "daily"
+                      start: 1
+                      padding:
+                        length: 6
+                        char: "0"
+                    random:
+                      length: 4
+                      charset: "a-z0-9"
+              orgid:
+                summary: organization id template
+                value:
+                  templatecode: "orgid"
+                  config:
+                    template: "{org}-{date:yyyymmdd}-{seq}-{rand}"
+                    sequence:
+                      scope: "daily"
+                      start: 1
+                      padding:
+                        length: 4
+                        char: "0"
+                    random:
+                      length: 2
+                      charset: "a-z0-9"
+      response:
+        '201':
+          description: template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/idgentemplateresponse'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                tenantid: "pg"
+                templatecode: "receipt-id"
+                version: "v1"
+                config:
+                  template: "{tenant}-{date:yyyy-mm-dd}-{seq}-{rand}"
+                  sequence:
+                    scope: "daily"
+                    start: 1
+                    padding:
+                      length: 6
+                      char: "0"
+                  random:
+                    length: 4
+                    charset: "a-z0-9"
+                auditdetail:
+                  createdby: "550e8400-e29b-41d4-a716-446655440000"
+                  createdtime: 1704067200000
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '409':
+          description: conflict (duplicate code within tenant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+    
+    put:
+      tag:
+        - template management
+      summary: update an existing template
+      description: |
+        create a new immutable version of an existing template's configuration.
+        increment the version number (e.g., v1 -> v2).
+      operationid: updatetemplate
+      parameter:
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/clientidheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/idgentemplaterequest'
+            example:
+              templatecode: "orgid"
+              config:
+                template: "{org}-{date:yyyymmdd}-{seq}-{rand}"
+                sequence:
+                  scope: "daily"
+                  start: 1
+                  padding:
+                    length: 3
+                    char: "0"
+                random:
+                  length: 3
+                  charset: "a-z0-9"
+      response:
+        '201':
+          description: template updated successfully (new version created)
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/idgentemplateresponse'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+    
+    get:
+      tag:
+        - template management
+      summary: search template
+      description: |
+        search for template by variou criteria.
+        
+        **search behavior:**
+        - if only tenantid i provided: return latest version of each template
+        - if templatecode i provided without version: return latest version of that template
+        - if id are provided: return those specific template row
+        - if version i provided: templatecode i required
+      operationid: searchtemplate
+      parameter:
+        - $ref: '#/component/parameter/tenantidheader'
+        - name: templatecode
+          in: query
+          description: template code to search for
+          schema:
+            type: string
+          example: "orgid"
+        - name: id
+          in: query
+          description: comma-separated list of template uuid
+          schema:
+            type: string
+          example: "da880db9-369e-484d-b4d0-37c6274485dd,bea96bb4-a4ec-449e-8b60-9e79869e2700"
+        - name: version
+          in: query
+          description: template version (require templatecode)
+          schema:
+            type: string
+            pattern: '^v\d+$'
+          example: "v1"
+      response:
+        '200':
+          description: template found
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/idgentemplateresponse'
+              example:
+                - id: "550e8400-e29b-41d4-a716-446655440000"
+                  tenantid: "pg"
+                  templatecode: "orgid"
+                  version: "v1"
+                  config:
+                    template: "{org}-{date:yyyymmdd}-{seq}-{rand}"
+                    sequence:
+                      scope: "daily"
+                      start: 1
+                      padding:
+                        length: 4
+                        char: "0"
+                    random:
+                      length: 2
+                      charset: "a-z0-9"
+                  auditdetail:
+                    createdby: "550e8400-e29b-41d4-a716-446655440000"
+                    createdtime: 1704067200000
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+    
+    delete:
+      tag:
+        - template management
+      summary: delete a template version
+      description: |
+        delete a specific version of a template.
+        
+        **deletion semantic:**
+        - deleting a non-latest version: only that versioned row i removed
+        - deleting the latest version when other version exist: only the latest row i removed
+        - deleting the only version: template, scope reset, sequence lookup, and postgre sequence are fully cleaned up
+      operationid: deletetemplate
+      parameter:
+        - $ref: '#/component/parameter/tenantidheader'
+        - name: templatecode
+          in: query
+          required: true
+          description: template code to delete
+          schema:
+            type: string
+          example: "orgid"
+        - name: version
+          in: query
+          required: true
+          description: template version to delete
+          schema:
+            type: string
+            pattern: '^v\d+$'
+          example: "v2"
+      response:
+        '200':
+          description: template deleted successfully
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+  
+  /v1/generate:
+    post:
+      tag:
+        - id generation
+      summary: generate an id from a template
+      description: |
+        generate a unique id from a registered template using optional variable.
+        use the latest version of the template for the given tenant.
+      operationid: generateid
+      parameter:
+        - $ref: '#/component/parameter/tenantidheader'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/generateidrequest'
+            example:
+              withvariable:
+                summary: generate with variable
+                value:
+                  templatecode: "receipt-id"
+                  variable:
+                    tenant: "pb"
+                    dept: "rev"
+              orgid:
+                summary: generate organization id
+                value:
+                  templatecode: "orgid"
+                  variable:
+                    org: "pg"
+      response:
+        '200':
+          description: id generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/generateidresponse'
+              example:
+                receiptid:
+                  summary: receipt id generated
+                  value:
+                    tenantid: "pb"
+                    templatecode: "receipt-id"
+                    version: "v3"
+                    id: "pb-2025-09-22-000123-a9xz"
+                orgid:
+                  summary: organization id generated
+                  value:
+                    tenantid: "pg"
+                    templatecode: "orgid"
+                    version: "v1"
+                    id: "pg-20250703-0001-a9"
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: generation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+component:
+  securityscheme:
+    bearerauth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+
+  parameter:
+    tenantidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    
+    clientidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+  
+  schema:
+    idgentemplaterequest:
+      type: object
+      required:
+        - templatecode
+        - config
+      propertie:
+        templatecode:
+          type: string
+          description: unique identifier for the template
+          example: "receipt-id"
+        config:
+          $ref: '#/component/schema/idgentemplateconfig'
+    
+    idgentemplateresponse:
+      type: object
+      propertie:
+        id:
+          type: string
+          format: uuid
+          description: unique identifier for thi template version
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        tenantid:
+          type: string
+          description: tenant identifier
+          example: "pg"
+        templatecode:
+          type: string
+          description: template code
+          example: "receipt-id"
+        version:
+          type: string
+          pattern: '^v\d+$'
+          description: template version
+          example: "v1"
+        config:
+          $ref: '#/component/schema/idgentemplateconfig'
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    
+    idgentemplateconfig:
+      type: object
+      required:
+        - template
+      propertie:
+        template:
+          type: string
+          description: |
+            template pattern containing static text and dynamic token.
+            
+            **supported token:**
+            - `{variable}`: client-supplied variable (e.g., {org}, {tenant}, {dept})
+            - `{date:format}`: current date with format keyword
+            - `{seq}`: sequence counter (scoped and padded via config)
+            - `{rand}`: random string (from configured charset)
+            
+            **date format keyword:**
+            - yyyymmdd, ddmmyyyy, yyyy-mm-dd, dd-mm-yyyy
+            - yyyy/mm/dd, dd/mm/yyyy, yyyy.mm.dd, dd.mm.yyyy
+            - mmyyyy, mm-yyyy, yyyy-mm, yyyy, yy
+          example: "{org}-{date:yyyymmdd}-{seq}-{rand}"
+        sequence:
+          $ref: '#/component/schema/sequenceconfig'
+        random:
+          $ref: '#/component/schema/randomconfig'
+    
+    sequenceconfig:
+      type: object
+      propertie:
+        scope:
+          type: string
+          enum: [global, daily, monthly, yearly]
+          default: global
+          description: when the counter reset
+          example: "daily"
+        start:
+          type: integer
+          minimum: 1
+          default: 1
+          description: initial value when sequence i first used or after reset
+          example: 1
+        padding:
+          $ref: '#/component/schema/paddingconfig'
+    
+    paddingconfig:
+      type: object
+      propertie:
+        length:
+          type: integer
+          minimum: 1
+          description: minimum width in character
+          example: 4
+        char:
+          type: string
+          minlength: 1
+          maxlength: 1
+          default: "0"
+          description: character used for left-padding
+          example: "0"
+    
+    randomconfig:
+      type: object
+      propertie:
+        length:
+          type: integer
+          minimum: 0
+          default: 0
+          description: number of random character to generate
+          example: 2
+        charset:
+          type: string
+          description: |
+            allowed character for random generation.
+            support range like a-z, a-z, 0-9 and combination like a-za-z0-9
+          example: "a-z0-9"
+    
+    generateidrequest:
+      type: object
+      required:
+        - templatecode
+      propertie:
+        templatecode:
+          type: string
+          description: template code to use for id generation
+          example: "receipt-id"
+        variable:
+          type: object
+          additionalpropertie:
+            type: string
+          description: map of variable name to value for token substitution
+          example:
+            tenant: "pb"
+            dept: "rev"
+    
+    generateidresponse:
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: tenant identifier
+          example: "pb"
+        templatecode:
+          type: string
+          description: template code used
+          example: "receipt-id"
+        version:
+          type: string
+          pattern: '^v\d+$'
+          description: template version used
+          example: "v3"
+        id:
+          type: string
+          description: generated unique id
+          example: "pb-2025-09-22-000123-a9xz"
+    
+    auditdetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
+    
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+  

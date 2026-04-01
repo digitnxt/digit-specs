@@ -1,0 +1,665 @@
+openapi: 3.0.3
+info:
+  title: individual service api
+  version: "1.0"
+path:
+
+  /individual/v1:
+    post:
+      operationid: createindividualrest
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/individualrequest"
+      response:
+        "201":
+          description: created
+          header:
+            location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/individualresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                oneof:
+                  - $ref: "#/component/schema/validationerrorresponse"
+                  - $ref: "#/component/schema/validationerrorobjectresponse"
+                  - $ref: "#/component/schema/errorresponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+        "409":
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/validationerrorobjectresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+    get:
+      operationid: searchindividualsquery
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+        - name: individualid
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+        - name: givenname
+          in: query
+          schema:
+            type: string
+        - name: mobilenumber
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            item:
+              type: string
+        - name: gender
+          in: query
+          schema:
+            type: string
+        - name: dateofbirth
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: includedeleted
+          in: query
+          schema:
+            type: boolean
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/individualsearchresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                oneof:
+                  - $ref: "#/component/schema/validationerrorresponse"
+                  - $ref: "#/component/schema/validationerrorobjectresponse"
+                  - $ref: "#/component/schema/errorresponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+        "409":
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/validationerrorobjectresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+  /individual/v1/{id}:
+    get:
+      operationid: getindividual
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/individualresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                oneof:
+                  - $ref: "#/component/schema/validationerrorresponse"
+                  - $ref: "#/component/schema/validationerrorobjectresponse"
+                  - $ref: "#/component/schema/errorresponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+        "409":
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/validationerrorobjectresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+    put:
+      operationid: updateindividualput
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/individualrequest"
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/individualresponse"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                oneof:
+                  - $ref: "#/component/schema/validationerrorresponse"
+                  - $ref: "#/component/schema/validationerrorobjectresponse"
+                  - $ref: "#/component/schema/errorresponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+        "409":
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/validationerrorobjectresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+    delete:
+      operationid: deleteindividualbyid
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      response:
+        "204":
+          description: no content
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                oneof:
+                  - $ref: "#/component/schema/validationerrorresponse"
+                  - $ref: "#/component/schema/validationerrorobjectresponse"
+                  - $ref: "#/component/schema/errorresponse"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+        "409":
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/validationerrorobjectresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+  /individual/v1/config:
+    post:
+      operationid: upsertconfig
+      parameter:
+        - $ref: "#/component/parameter/xtenantid"
+        - $ref: "#/component/parameter/xclientid"
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/component/schema/configrequest"
+      response:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/config"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+        "500":
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/component/schema/errorresponse"
+component:
+  parameter:
+    xtenantid:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+    xclientid:
+      name: x-client-id
+      in: header
+      required: true
+      schema:
+        type: string
+  schema:
+    individual:
+      type: object
+      required:
+        - id
+      propertie:
+        id:
+          type: string
+        individualid:
+          type: string
+        clientreferenceid:
+          type: string
+          nullable: true
+        givenname:
+          type: string
+        familyname:
+          type: string
+        othername:
+          type: string
+        dateofbirth:
+          type: string
+          format: date-time
+          nullable: true
+        gender:
+          type: string
+        age:
+          type: integer
+          nullable: true
+        bloodgroup:
+          type: string
+        mobilenumber:
+          type: string
+        mobilenumberverified:
+          type: boolean
+        altcontactnumber:
+          type: string
+        email:
+          type: string
+        emailverified:
+          type: boolean
+        zoneinfo:
+          type: string
+        locale:
+          type: string
+        picture:
+          type: string
+        profile:
+          type: string
+        website:
+          type: string
+        active:
+          type: boolean
+        fathername:
+          type: string
+        husbandname:
+          type: string
+        relationship:
+          type: string
+        photo:
+          type: string
+        userid:
+          type: string
+        useruuid:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        type:
+          type: string
+        role:
+          type: object
+          additionalpropertie: {}
+        issystemuser:
+          type: boolean
+        additionaldetail:
+          type: object
+          additionalpropertie: {}
+        createdby:
+          type: string
+        lastmodifiedby:
+          type: string
+        createdtime:
+          type: integer
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          format: int64
+        rowversion:
+          type: integer
+        addres:
+          type: array
+          item:
+            $ref: "#/component/schema/addres"
+        identifier:
+          type: array
+          item:
+            $ref: "#/component/schema/identifier"
+        additionalfield:
+          allof:
+            - $ref: "#/component/schema/additionalfield"
+          nullable: true
+        auditdetail:
+          allof:
+            - $ref: "#/component/schema/auditdetail"
+          nullable: true
+    addres:
+      type: object
+      required:
+        - id
+      propertie:
+        id:
+          type: string
+        clientreferenceid:
+          type: string
+          nullable: true
+        tenantid:
+          type: string
+        doorno:
+          type: string
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        locationaccuracy:
+          type: number
+          format: double
+          nullable: true
+        type:
+          type: string
+        addressline1:
+          type: string
+        addressline2:
+          type: string
+        landmark:
+          type: string
+        city:
+          type: string
+        region:
+          type: string
+        pincode:
+          type: string
+        buildingname:
+          type: string
+        street:
+          type: string
+        country:
+          type: string
+        formatted:
+          type: string
+        localitycode:
+          type: string
+        wardcode:
+          type: string
+        createdby:
+          type: string
+        lastmodifiedby:
+          type: string
+        createdtime:
+          type: integer
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          format: int64
+    identifier:
+      type: object
+      required:
+        - id
+      propertie:
+        id:
+          type: string
+        identifiertype:
+          type: string
+        identifierid:
+          type: string
+        individualid:
+          type: string
+        createdby:
+          type: string
+        lastmodifiedby:
+          type: string
+        createdtime:
+          type: integer
+          format: int64
+        lastmodifiedtime:
+          type: integer
+          format: int64
+        active:
+          type: boolean
+    additionalfield:
+      type: object
+      propertie:
+        field:
+          type: array
+          item:
+            $ref: "#/component/schema/field"
+    field:
+      type: object
+      propertie:
+        key:
+          type: string
+        value:
+          type: string
+    auditdetail:
+      type: object
+      propertie:
+        createdby:
+          type: string
+        createdtime:
+          type: integer
+          format: int64
+        lastmodifiedby:
+          type: string
+        lastmodifiedtime:
+          type: integer
+          format: int64
+    config:
+      type: object
+      required:
+        - id
+        - tenantid
+      propertie:
+        id:
+          type: integer
+          format: int64
+        tenantid:
+          type: string
+        mobileregex:
+          type: string
+        nameregex:
+          type: string
+        uniquenesscriteria: {}
+        createdtime:
+          type: integer
+          format: int64
+
+
+    individualrequest:
+      type: object
+      required:
+        - individual
+      propertie:
+        individual:
+          $ref: "#/component/schema/individual"
+
+    individualresponse:
+      type: object
+      propertie:
+        individual:
+          $ref: "#/component/schema/individual"
+
+    individualsearchresponse:
+      type: object
+      required:
+        - individual
+        - totalcount
+      propertie:
+        individual:
+          type: array
+          item:
+            $ref: "#/component/schema/individual"
+        totalcount:
+          type: integer
+          format: int64
+    errorresponse:
+      type: object
+      propertie:
+        error:
+          type: array
+          item:
+            $ref: "#/component/schema/error"
+    error:
+      type: object
+      required:
+        - code
+        - message
+      propertie:
+        code:
+          type: string
+        message:
+          type: string
+        description:
+          type: string
+        param:
+          type: object
+          additionalpropertie: {}
+    validationerrorresponse:
+      type: object
+      required:
+        - error
+        - detail
+      propertie:
+        error:
+          type: string
+        detail:
+          type: array
+          item:
+            type: string
+    validationerrorobjectresponse:
+      type: object
+      required:
+        - error
+        - error
+      propertie:
+        error:
+          type: string
+        error:
+          type: array
+          item:
+            $ref: "#/component/schema/validationerroritem"
+    validationerroritem:
+      type: object
+      required:
+        - message
+      propertie:
+        index:
+          type: integer
+          nullable: true
+        field:
+          type: string
+        message:
+          type: string
+        value: {}
+    configrequest:
+      type: object
+      required:
+        - mobileregex
+        - nameregex
+        - uniquenesscriteria
+      propertie:
+        mobileregex:
+          type: string
+        nameregex:
+          type: string
+        uniquenesscriteria:
+          type: array
+          item:
+            type: string

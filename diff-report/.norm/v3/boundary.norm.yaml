@@ -1,0 +1,816 @@
+openapi: 3.0.0
+info:
+  title: boundary service
+  description: boundary service api - to create, search and update boundarie along with api for establishing relationship between boundarie. thi service support n-level hierarchical boundary data.
+  contact:
+    name: egov
+    email: info@egovernment.org
+  version: 3.0.0
+server:
+- url: /boundary
+path:
+  /create:
+    post:
+      tag:
+      - boundary entitie
+      summary: api endpoint to create boundary.
+      description: |
+        provide functionality to create boundary data.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrequest"
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+  /shapefile/boundary/create:
+    post:
+      tag:
+        - shapefile
+      summary: create boundarie from shapefile
+      description: |
+        create boundarie in the system using shapefile data. take a list of file store id representing uploaded shapefile along with code field configuration.
+      parameter: 
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              propertie:
+                filestoreid:
+                  type: array
+                  description: list of file store id for the uploaded shapefile.
+                  item:
+                    type: string
+                  example:
+                    - 59e61130-fddf-4fc0-8373-841be3ed1ae5
+                    - 4b95642b-d14f-49ad-bc1b-de9ba35b29fe
+                    - a69f6c45-d0da-4ca0-8da9-c8cd8bc87dfe
+                    - 862b2ef1-0820-4ad6-bbd1-59fe75824e7f
+                uniquecodefield:
+                  type: string
+                  description: name of the field in the shapefile used a the unique code for each boundary.
+                  example: admin
+              required:
+                - filestoreid
+                - codefield
+            example:
+              tenantid: qwert4
+              filestoreid:
+                - 59e61130-fddf-4fc0-8373-841be3ed1ae5
+                - 4b95642b-d14f-49ad-bc1b-de9ba35b29fe
+                - a69f6c45-d0da-4ca0-8da9-c8cd8bc87dfe
+                - 862b2ef1-0820-4ad6-bbd1-59fe75824e7f
+              codefield: admin
+              requestinfo:
+                t: "2024-06-18t14:00:00z"
+                userinfo:
+                  username: test
+      response:
+        '200':
+          description: boundarie created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  message:
+                    type: string
+                    example: boundarie created successfully
+        '400':
+          description: invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+  /search:
+    get:
+      tag:
+      - boundary entitie
+      summary: api endpoint to search boundary entitie.
+      description: |
+        provide a list of boundary entitie based on the provided search criteria.
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          maxlength: 256
+          type: string
+          format: varchar
+      - name: code
+        in: query
+        description: unique list of boundary code.
+        style: form
+        explode: false
+        required: true
+        schema:
+          type: array
+          item:
+            type: string
+            format: varchar
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+  /update:
+    put:
+      tag:
+      - boundary entitie
+      summary: api endpoint to update boundary.
+      description: |
+        provide functionality to update boundary data.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrequest"
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+  /hierarchy-definition/create:
+    post:
+      tag:
+      - hierarchy definition
+      summary: api endpoint to define hierarchy.
+      description: |
+        provide functionality to define hierarchy.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundarytypehierarchyrequest"
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundarytypehierarchyresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+  /hierarchy-definition/search:
+    get:
+      tag:
+      - hierarchy definition
+      summary: api endpoint to search boundary entitie.
+      description: |
+        provide boundary type hierarchy based on the provided search criteria.
+      parameter:
+            - name: tenantid
+              in: query
+              description: unique id for a tenant.
+              required: true
+              schema:
+                maxlength: 256
+                type: string
+                format: varchar
+            - name: hierarchytype
+              in: query
+              description: search by hierarchy type.
+              required: true
+              schema:
+                maxlength: 256
+                type: string
+                format: varchar    
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundarytypehierarchyresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+  /boundary-relationship/create:
+    post:
+      tag:
+      - boundary relationship
+      summary: api endpoint to create relationship between boundarie.
+      description: |
+        provide functionality to establish relationship between boundarie.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrelationshiprequest"
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryrelationshipresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+  /boundary-relationship/search:
+    get:
+      tag:
+      - boundary relationship
+      summary: api endpoint to search linked boundarie.
+      description: |
+        provide functionality to search linked boundarie based on the provided search criteria
+      parameter:
+      - name: tenantid
+        in: query
+        description: unique id for a tenant.
+        required: true
+        schema:
+          maxlength: 256
+          type: string
+          format: varchar
+      - name: boundarytype
+        in: query
+        description: boundary type within the tenant boundary structure.
+        schema:
+          maxlength: 64
+          type: string
+          format: varchar
+      - name: hierarchytype
+        in: query
+        description: type of the boundarytype like revenue, admin
+        schema:
+          maxlength: 128
+          type: string
+          format: varchar
+      - name: includechildren
+        in: query
+        description: boolean flag to inform the service if children need to be part of search.
+        required: false
+        schema:
+          type: boolean
+      - name: includeparent
+        in: query
+        description: boolean flag to inform the service if parent need to be part of search.
+        required: false
+        schema:
+          type: boolean
+      - name: code
+        in: query
+        description: unique list of boundary code.
+        style: form
+        explode: false
+        schema:
+          type: array
+          item:
+            type: string
+            format: varchar
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundarysearchresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+  /boundary-relationship/update:
+    put:
+      tag:
+      - boundary relationship
+      summary: api endpoint to update relationship between boundarie.
+      description: |
+        provide functionality to update relationship between boundarie.
+      requestbody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/component/schema/boundaryrelationshiprequest"
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        200:
+          description: successful response.
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/boundaryrelationshipresponse'
+        400:
+          description: invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/component/schema/error'
+      x-codegen-request-body-name: requestinfo
+      
+component:
+  securityscheme:
+    bearerauth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+  parameter:
+    requestidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+    correlationidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+    useragentheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+    tenantidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    forwardedforheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+    clientid:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+    clientsecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+    timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+  
+  header:
+    x-response-time:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+    x-response-timestamp:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+    x-request-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+    x-correlation-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+    x-tenant-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+    x-rate-limit:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+    x-rate-limit-remaining:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+    x-rate-limit-reset:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+  
+  schema:
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+    hierarchytype:
+      required:
+      - code
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique tenant identifier
+        id:
+          type: string
+          readonly: true
+          description: uuid
+        code:
+          type: string
+          description: unique hierarchy type code
+        active:
+          type: boolean
+          description: soft delete (true / false)
+    geometry:
+      type: object
+      propertie:
+        type:
+          type: string
+          enum:
+            - polygon
+            - point
+            - multipolygon
+        coordinate:
+          type: array
+          item:
+            type: array
+            item:
+              type: array
+              item:
+                type: number
+    boundarytype:
+      required:
+      - code
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique tenant identifier
+        id:
+          type: string
+          readonly: true
+          description: uuid
+        code:
+          type: string
+          description: unique code for boundary type.
+        active:
+          type: boolean
+          description: attribute that define if the given boundary type i active or not.
+    boundary:
+      required:
+      - code
+      type: object
+      propertie:
+        id:
+          type: string
+          readonly: true
+          description: read-only db entity uuid.
+        tenantid:
+          type: string
+          description: unique tenant identifier.
+        code:
+          type: string
+          description: code of the boundary.
+        geometry:
+          $ref: '#/component/schema/geometry'
+        additionaldetail:
+          type: object
+    enrichedboundary:
+      required:
+      - code
+      type: object
+      propertie:
+        id:
+          type: string
+          readonly: true
+          description: read-only db entity uuid.
+        tenantid:
+          type: string
+          description: unique tenant identifier.
+        code:
+          type: string
+          description: code of the boundary.
+        boundarytype:
+          type: string
+          description: type of the boundary.
+        children:
+          type: array
+          item:
+            $ref: '#/component/schema/enrichedboundary'
+          description: children boundarie of the current boundary
+    boundaryrelation:
+      required:
+      - code
+      type: object
+      propertie:
+        id:
+          type: string
+          readonly: true
+          description: read-only db entity uuid.
+        code:
+          type: string
+          description: code of the boundary.
+        tenantid:
+          type: string
+          description: unique tenant identifier.
+        hierarchytype:
+          type: string
+          description: code of the hierarchy type for which boundary relationship i being created.
+        boundarytype:
+          type: string
+          description: boundary type from master data.
+        parent:
+          type: string
+          description: parent boundary code.
+    hierarchyrelation:
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique id of the boundary tenant.
+        hierarchytype:
+          type: string
+          description: hierarchy type from master data
+        boundary:
+          $ref: '#/component/schema/enrichedboundary'
+    boundaryrelationshiprequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        boundaryrelationship:
+          $ref: '#/component/schema/boundaryrelation'
+    boundaryrelationshipresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        tenantboundary:
+          type: array
+          item:
+            $ref: '#/component/schema/boundaryrelation'
+    boundarysearchresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        tenantboundary:
+          type: array
+          item:
+            $ref: '#/component/schema/hierarchyrelation'
+    boundarytypehierarchy:
+      required:
+      - boundarytype, parentboundarytype
+      type: object
+      propertie:
+        boundarytype:
+          type: string
+          description: boundary type code.
+        id:
+          type: string
+          readonly: true
+          description: uuid
+        parentboundarytype:
+          type: string
+          description: unique code for parent boundary.
+        active:
+          type: boolean
+          description: attribute that define if the given boundary hierarchy i active or not
+    boundarytypehierarchyrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        boundaryhierarchy:
+          $ref: '#/component/schema/boundarytypehierarchydefinition'
+    boundarytypehierarchyresponse:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        boundaryhierarchy:
+          $ref: '#/component/schema/boundarytypehierarchydefinition'
+    boundarytypehierarchydefinition:
+      type: object
+      propertie:
+        tenantid:
+          type: string
+          description: unique id of the boundary tenant.
+        hierarchytype:
+          type: string
+          description: hierarchy type from master data
+        boundaryhierarchy:
+          type: array
+          item:
+            $ref: '#/component/schema/boundarytypehierarchy'
+    boundaryrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo'
+        boundary:
+          type: array
+          item:
+            $ref: '#/component/schema/boundary'
+    boundaryresponse:
+      type: object
+      propertie:
+        responseinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-Specs/master/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo'
+        boundary:
+          type: array
+          item:
+            $ref: '#/component/schema/boundary'
+    boundarytypehierarchysearchcriteria:
+      type: object
+      propertie:
+        tenantid:
+          maxlength: 100
+          minlength: 1
+          type: string
+          description: unique id for a tenant.
+        hierarchytype:
+          type: string
+          description: search by hierarchy type.
+    boundarytypehierarchysearchrequest:
+      type: object
+      propertie:
+        requestinfo:
+          $ref: 'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml#/definitions/RequestInfo'
+        boundarytypehierarchysearchcriteria:
+          $ref: '#/component/schema/boundarytypehierarchysearchcriteria'

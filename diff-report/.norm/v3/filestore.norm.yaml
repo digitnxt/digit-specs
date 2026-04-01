@@ -1,0 +1,755 @@
+openapi: 3.0.3
+info:
+  title: file upload api
+  version: 3.0.0
+  description: |
+    api for managing file upload and download using signed url, a well a maintaining document type metadata.
+    
+    thi api support:
+    - generating signed upload/download url
+    - confirming upload
+    - fetching uploaded file
+    - managing document type (metadata for uploaded file)
+
+server:
+  - url: https://api.example.com/file-store/v3
+    description: production server
+  - url: https://staging-api.example.com/file-store/v3
+    description: staging server
+
+security:
+  - bearerauth: []
+
+tag:
+  - name: filestore
+    description: |
+      operation related to uploading and downloading file using signed or direct endpoint. 
+      include upload confirmation and download url generation.
+  - name: documentcategory
+    description: |
+      operation for managing metadata of document type used acros variou service. 
+      include creation, update, retrieval, and soft deletion.
+
+path:
+  /document-categorie:
+    post:
+      summary: create a new document type
+      operationid: createdocumentcategory
+      tag:
+        - documentcategory
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/documentcategory'
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '201':
+          description: document type created
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/documentcategory'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+
+    get:
+      summary: search document type by filter
+      operationid: searchdocumentcategory
+      tag:
+        - documentcategory
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - in: query
+          name: type
+          schema:
+            type: string
+          description: filter by document type
+        - in: query
+          name: doccode
+          schema:
+            type: string
+          description: filter by document code
+        - in: query
+          name: issensitive
+          schema:
+            type: boolean
+          description: filter by sensitivity
+      response:
+        '200':
+          description: list of document type
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/documentcategory'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+  /document-categorie/{doccode}:
+    get:
+      summary: get a document type by doccode
+      operationid: getdocumentcategorybycode
+      tag:
+        - documentcategory
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: doccode
+          in: path
+          required: true
+          description: unique document code
+          schema:
+            type: string
+      response:
+        '200':
+          description: document type found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/documentcategory'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '404':
+          description: document type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/notfound'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    
+    put:
+      summary: update a document type
+      operationid: updatedocumentcategory
+      tag:
+        - documentcategory
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: doccode
+          in: path
+          required: true
+          description: unique document code
+          schema:
+            type: string
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/component/schema/documentcategory'
+      response:
+        '200':
+          description: updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/documentcategory'
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                item:
+                  $ref: '#/component/schema/error'
+        '404':
+          description: document type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+
+    delete:
+      summary: delete or deactivate a document type
+      operationid: deletedocumentcategory
+      tag:
+        - documentcategory
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+        - name: doccode
+          in: path
+          required: true
+          description: unique document code to delete or deactivate
+          schema:
+            type: string
+      response:
+        '204':
+          description: deleted successfully
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+        '404':
+          description: document type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/error'
+  
+  
+  /upload:
+    post:
+      summary: upload file directly
+      operationid: directupload
+      tag: 
+        - filestore
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      requestbody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              propertie:
+                file:
+                  type: string
+                  format: binary
+      response:
+        '200':
+          description: succes response with filestoreid and tenantid
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/uploadfileresponse'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/badrequest'
+
+
+  /upload-url:
+    post:
+      summary: generate signed url for file upload
+      operationid: generateuploadurl
+      tag:
+        - filestore
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - filename
+                - contenttype
+              propertie:
+                filename:
+                  type: string
+                contenttype:
+                  type: string
+      response:
+        '200':
+          description: signed upload url
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+
+
+  /confirm-upload:
+    post:
+      summary: confirm file upload using filestoreid
+      operationid: confirmupload
+      tag:
+        - filestore
+      parameter:
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      requestbody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - filestoreid
+              propertie:
+                filestoreid:
+                  type: string
+      response:
+        '200':
+          description: upload confirmed
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            application/json:
+              schema:
+                type: object
+                propertie:
+                  statu:
+                    type: string
+                    example: valid
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/badrequest'
+
+
+  /download-url:
+    get:
+      summary: generate signed download url for given filestoreid
+      operationid: getdownloadurl
+      tag:
+        - filestore
+      parameter:
+        - name: filestoreid
+          in: query
+          required: true
+          description: comma-separated list of filestoreid
+          schema:
+            type: string
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+
+      response:
+        '200':
+          description: list of signed download url with document type
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/downloadfiledetail'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/badrequest'
+
+
+
+
+  /{filestoreid}:
+    get:
+      summary: download file by filestoreid (for direct download only)
+      operationid: downloadfile
+      tag:
+        - filestore
+      parameter:
+        - name: filestoreid
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/component/parameter/requestidheader'
+        - $ref: '#/component/parameter/correlationidheader'
+        - $ref: '#/component/parameter/useragentheader'
+        - $ref: '#/component/parameter/tenantidheader'
+        - $ref: '#/component/parameter/forwardedforheader'
+        - $ref: '#/component/parameter/clientid'
+        - $ref: '#/component/parameter/clientsecret'
+        - $ref: '#/component/parameter/timestamp'
+      response:
+        '200':
+          description: file download stream
+          header:
+            x-response-time:
+              $ref: '#/component/header/x-response-time'
+            x-response-timestamp:
+              $ref: '#/component/header/x-response-timestamp'
+            x-request-id:
+              $ref: '#/component/header/x-request-id'
+            x-correlation-id:
+              $ref: '#/component/header/x-correlation-id'
+            x-tenant-id:
+              $ref: '#/component/header/x-tenant-id'
+            x-rate-limit:
+              $ref: '#/component/header/x-rate-limit'
+            x-rate-limit-remaining:
+              $ref: '#/component/header/x-rate-limit-remaining'
+            x-rate-limit-reset:
+              $ref: '#/component/header/x-rate-limit-reset'
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/component/schema/badrequest'
+
+  
+
+
+component:
+  securityscheme:
+    bearerauth:
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+  parameter:
+    requestidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+    correlationidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+    useragentheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+    tenantidheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+    forwardedforheader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+    clientid:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+    clientsecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+    timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+  
+  header:
+    x-response-time:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+    x-response-timestamp:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+    x-request-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+    x-correlation-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+    x-tenant-id:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+    x-rate-limit:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+    x-rate-limit-remaining:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+    x-rate-limit-reset:
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+    
+  schema:
+    error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+    
+    auditdetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
+    
+    document:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Document'
+    
+    badrequest:
+        description: bad request
+        content:
+          application/json:
+            schema:
+              type: array
+              item:
+                $ref: '#/component/schema/error'
+    
+    notfound:
+      description: document type not found
+      content:
+        application/json:
+          schema:
+            type: object
+            propertie:
+              message:
+                type: string
+
+    uploadfileresponse:
+      type: object
+      propertie:
+        filestoreid:
+          type: string
+        
+
+    downloadfiledetail:
+      type: object
+      propertie:
+        filestoreid:
+          type: string
+          description: unique identifier of the uploaded file
+          readonly: true
+        downloadurl:
+          type: string
+          format: uri
+          description: presigned url to download the file
+          readonly: true
+        doctype:
+          type: string
+          description: document type associated with the file (e.g., aadhar, drivinglicense)
+          readonly: true
+        isvalidated:
+          type: boolean
+          default: true
+        isactive:
+          type: boolean
+          default: true
+    
+    documentcategory:
+      type: object
+      required:
+        - type
+        - code
+        - allowedformat
+        - maxsize
+        - issensitive
+      propertie:
+        id:
+          type: string
+          description: system generated unique identifier of the category for internal referance
+          minlength: 2
+          maxlength: 64
+          readonly: true
+        type:
+          type: string
+          description: high-level category like "identity", "addressproof", etc.
+        code:
+          type: string
+          description: unique code for document like "aadhar", "drivinglicense"
+        allowedformat:
+          type: array
+          item:
+            type: string
+          description: allowed file extension like ["pdf", "jpg", "png"]
+        minsize:
+          type: string
+          description: minimum allowed size (e.g., "1mb")
+        maxsize:
+          type: string
+          description: maximum allowed size (e.g., "5mb")
+        issensitive:
+          type: boolean
+          description: mark if document contain pii or sensitive info
+        description:
+          type: string
+          description: optional description
+        isactive:
+          type: boolean
+          default: true
+        auditdetail:
+          $ref: '#/component/schema/auditdetail'
+    
+
+    

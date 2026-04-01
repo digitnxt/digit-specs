@@ -1,84 +1,84 @@
---- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/hrms-2.9.yaml	2026-04-01 11:35:28.165911207 +0530
-+++ /home/mithun/Downloads/hrms.yaml	2026-04-01 11:31:10.862123733 +0530
+--- /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v2/hrms.norm.yaml	2026-04-01 13:55:53.539322872 +0530
++++ /home/mithun/Desktop/spec-diff/digit-specs/diff-report/.norm/v3/hrms.norm.yaml	2026-04-01 13:55:53.539322872 +0530
 @@ -1,650 +1,799 @@
 -swagger: '2.0'
 +openapi: 3.0.3
  info:
 -  version: 1.0.0
--  title: Employee Information System APIs - Employee
+-  title: employee information system api - employee
 -  description: >-
--    All APIs available from Employee Information System  for employee services are listed here.
--    1. To create statewide standardized database of the employee in order to streamline processes related to personnel management.
--    2. To increase transparency for higher management for efficient resource planning
--    3. Integration with rainmaker modules for  security, authentication and workflow handling 
--    4. Setting KPIs for employees and timely report generation
+-    all api available from employee information system  for employee service are listed here.
+-    1. to create statewide standardized database of the employee in order to streamline processe related to personnel management.
+-    2. to increase transparency for higher management for efficient resource planning
+-    3. integration with rainmaker module for  security, authentication and workflow handling 
+-    4. setting kpi for employee and timely report generation
 -  contact:
--    name: Vishal Mahuli
--schemes:
--  - https
--basePath: '/rainmaker-hrms/[API endpoint]'
-+  title: HRMS Employee Service API
+-    name: vishal mahuli
+-scheme:
+-  - http
+-basepath: '/rainmaker-hrm/[api endpoint]'
++  title: hrm employee service api
 +  version: "3.0"
- paths:
--  /employees/_search:
-+  /employees/v3:
+ path:
+-  /employee/search:
++  /employee/v3:
      post:
--      summary: Get the list of employees defined in the system.
+-      summary: get the list of employee defined in the system.
 -      description: >
--        Get the employee list based on the input parameters. Response will give
+-        get the employee list based on the input parameter. response will give
 -        the minimum set of information related to the employee.
--      parameters:
--        - name: requestInfo
+-      parameter:
+-        - name: requestinfo
 -          in: body
--          description: Common request info for getting employee.
+-          description: common request info for getting employee.
 -          required: true
-+      operationId: createEmployees
-+      description: Creates one or more employees. Accepts an array of employee requests.
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+        - $ref: "#/components/parameters/Authorization"
-+      requestBody:
++      operationid: createemployee
++      description: create one or more employee. accept an array of employee request.
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++        - $ref: "#/component/parameter/authorization"
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
 +              type: array
-+              items:
-+                $ref: "#/components/schemas/CreateEmployeeRequest"
-+      responses:
++              item:
++                $ref: "#/component/schema/createemployeerequest"
++      response:
 +        "201":
-+          description: Created
++          description: created
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: "#/components/schemas/EmployeeResponse"
++                item:
++                  $ref: "#/component/schema/employeeresponse"
 +        "400":
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "401":
-+          description: Unauthorized
++          description: unauthorized
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +    get:
-+      operationId: searchEmployees
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+        - name: uuids
++      operationid: searchemployee
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++        - name: uuid
 +          in: query
 +          style: form
 +          explode: true
@@ -86,431 +86,431 @@
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
 +            type: array
-+            items:
++            item:
 +              type: string
 +              format: uuid
-         - name: codes
+         - name: code
            in: query
 -          required: false
--          description: List of employee codes
+-          description: list of employee code
 -          type: array
--          items:
+-          item:
 -            type: string
--          exclusiveMinimum: true
--          exclusiveMaximum: false
--        - name: names
+-          exclusiveminimum: true
+-          exclusivemaximum: false
+-        - name: name
 -          in: query
 -          required: false
--          description: List of employee names
+-          description: list of employee name
 -          type: array
--          items:
+-          item:
 -            type: string
--          exclusiveMinimum: true
--          exclusiveMaximum: false
+-          exclusiveminimum: true
+-          exclusivemaximum: false
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
-         - name: departments
+         - name: department
            in: query
--          description: List of Department codes for the employee assignment.
+-          description: list of department code for the employee assignment.
 -          required: false
 -          type: array
--          items:
+-          item:
 -            type: string
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
-         - name: designations
+         - name: designation
            in: query
--          description: List of Designation codes for the employee assignment.
+-          description: list of designation code for the employee assignment.
 -          required: false
 -          type: array
--          items:
+-          item:
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +        - name: phone
 +          in: query
 +          schema:
              type: string
--        - name: asOnDate
-+        - name: isActive
+-        - name: asondate
++        - name: isactive
            in: query
--          description: Epoch Date of assignment
+-          description: epoch date of assignment
 -          required: false
 -          type: number
--        - name: ids
+-        - name: id
 +          schema:
 +            type: boolean
 +        - name: limit
            in: query
--          description: List of Unique Id of employee
+-          description: list of unique id of employee
 -          required: false
 -          type: array
--          items:
+-          item:
 +          schema:
              type: integer
 -          format: int64
--          maxItems: 100
--        - name: employeestatuses
+-          maxitem: 100
+-        - name: employeestatuse
 +            default: 10
 +        - name: offset
            in: query
--          description: List of Unique codes of employee status
+-          description: list of unique code of employee statu
 -          required: false
 -          type: array
--          items:
+-          item:
 -            type: string
--        - name: employeetypes
+-        - name: employeetype
 +          schema:
 +            type: integer
 +            default: 0
-+        - name: sortBy
++        - name: sortby
            in: query
--          description: List of Unique codes of employee type
+-          description: list of unique code of employee type
 -          required: false
 -          type: array
--          items:
-+          description: "Valid values: code, createdAt, updatedAt, employeeType, status"
+-          item:
++          description: "valid value: code, createdat, updatedat, employeetype, statu"
 +          schema:
              type: string
--        - name: uuids
-+            default: created_time
-+        - name: sortOrder
+-        - name: uuid
++            default: createdtime
++        - name: sortorder
            in: query
--          description: List of Unique uuid of employee
+-          description: list of unique uuid of employee
 -          required: false
 -          type: array
--          items:
+-          item:
 +          schema:
 +            type: string
 +            enum: [asc, desc]
 +            default: desc
-+      responses:
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
 +                type: array
-+                items:
-+                  $ref: "#/components/schemas/EmployeeResponse"
++                item:
++                  $ref: "#/component/schema/employeeresponse"
 +        "400":
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
-+  /employees/v3/{id}:
++                $ref: "#/component/schema/employeeerrorresponse"
++  /employee/v3/{id}:
 +    get:
-+      operationId: getEmployeeByUUID
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
++      operationid: getemployeebyuuid
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: id
 +          in: path
 +          required: true
 +          schema:
 +            type: string
 +            format: uuid
-+      responses:
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeResponse"
++                $ref: "#/component/schema/employeeresponse"
 +        "400":
-+          description: Bad Request (invalid UUID)
++          description: bad request (invalid uuid)
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +    put:
-+      operationId: updateEmployee
-+      description: Full replace of an employee. Deletes existing jurisdictions and recreates from request.
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+        - $ref: "#/components/parameters/Authorization"
++      operationid: updateemployee
++      description: full replace of an employee. delete existing jurisdiction and recreate from request.
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++        - $ref: "#/component/parameter/authorization"
 +        - name: id
 +          in: path
 +          required: true
 +          schema:
 +            type: string
 +            format: uuid
-+      requestBody:
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/CreateEmployeeRequest"
-+      responses:
++              $ref: "#/component/schema/createemployeerequest"
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeResponse"
++                $ref: "#/component/schema/employeeresponse"
 +        "400":
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "401":
-+          description: Unauthorized
++          description: unauthorized
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +    patch:
-+      operationId: patchEmployee
-+      description: Partial update of mutable employee fields.
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
++      operationid: patchemployee
++      description: partial update of mutable employee field.
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++        - name: id
++          in: path
++          required: true
++          schema:
++            type: string
++            format: uuid
++      requestbody:
++        required: true
++        content:
++          application/json:
++            schema:
++              $ref: "#/component/schema/updateemployeerequest"
++      response:
++        "200":
++          description: ok
++          content:
++            application/json:
++              schema:
++                $ref: "#/component/schema/employeeresponse"
++        "400":
++          description: bad request
++          content:
++            application/json:
++              schema:
++                $ref: "#/component/schema/employeeerrorresponse"
++        "500":
++          description: internal server error
++          content:
++            application/json:
++              schema:
++                $ref: "#/component/schema/employeeerrorresponse"
++    delete:
++      operationid: harddeleteemployee
++      description: permanently delete an employee and all associated jurisdiction.
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++        - name: id
++          in: path
++          required: true
++          schema:
++            type: string
++            format: uuid
++      response:
++        "204":
++          description: no content
++        "400":
++          description: bad request (invalid uuid)
++          content:
++            application/json:
++              schema:
++                $ref: "#/component/schema/employeeerrorresponse"
++        "500":
++          description: internal server error
++          content:
++            application/json:
++              schema:
++                $ref: "#/component/schema/employeeerrorresponse"
++  /employee/v3/{id}/deactivate:
++    post:
++      operationid: deactivateemployee
++      description: set isactive to false for the employee.
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: id
 +          in: path
 +          required: true
 +          schema:
              type: string
--        - name: positions
+-        - name: position
 +            format: uuid
-+      requestBody:
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/UpdateEmployeeRequest"
-+      responses:
++              $ref: "#/component/schema/deactivationdetail"
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeResponse"
++                $ref: "#/component/schema/employeeresponse"
 +        "400":
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
-+    delete:
-+      operationId: hardDeleteEmployee
-+      description: Permanently deletes an employee and all associated jurisdictions.
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
++                $ref: "#/component/schema/employeeerrorresponse"
++  /employee/v3/{id}/reactivate:
++    post:
++      operationid: reactivateemployee
++      description: set isactive to true for the employee.
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: id
 +          in: path
 +          required: true
 +          schema:
 +            type: string
 +            format: uuid
-+      responses:
-+        "204":
-+          description: No Content
-+        "400":
-+          description: Bad Request (invalid UUID)
-+          content:
-+            application/json:
-+              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
-+        "500":
-+          description: Internal Server Error
-+          content:
-+            application/json:
-+              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
-+  /employees/v3/{id}/deactivate:
-+    post:
-+      operationId: deactivateEmployee
-+      description: Sets isActive to false for the employee.
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+        - name: id
-+          in: path
-+          required: true
-+          schema:
-+            type: string
-+            format: uuid
-+      requestBody:
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/DeactivationDetails"
-+      responses:
++              $ref: "#/component/schema/reactivationdetail"
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeResponse"
++                $ref: "#/component/schema/employeeresponse"
 +        "400":
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
++                $ref: "#/component/schema/employeeerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
-+  /employees/v3/{id}/reactivate:
++                $ref: "#/component/schema/employeeerrorresponse"
++  /employee/v3/jurisdiction:
 +    post:
-+      operationId: reactivateEmployee
-+      description: Sets isActive to true for the employee.
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+        - name: id
-+          in: path
-+          required: true
-+          schema:
-+            type: string
-+            format: uuid
-+      requestBody:
++      operationid: createjurisdiction
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/ReactivationDetails"
-+      responses:
-+        "200":
-+          description: OK
-+          content:
-+            application/json:
-+              schema:
-+                $ref: "#/components/schemas/EmployeeResponse"
-+        "400":
-+          description: Bad Request
-+          content:
-+            application/json:
-+              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
-+        "500":
-+          description: Internal Server Error
-+          content:
-+            application/json:
-+              schema:
-+                $ref: "#/components/schemas/EmployeeErrorResponse"
-+  /employees/v3/jurisdictions:
-+    post:
-+      operationId: createJurisdiction
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+      requestBody:
-+        required: true
-+        content:
-+          application/json:
-+            schema:
-+              $ref: "#/components/schemas/CreateJurisdictionRequest"
-+      responses:
++              $ref: "#/component/schema/createjurisdictionrequest"
++      response:
 +        "201":
-+          description: Created
++          description: created
 +          content:
 +            application/json:
 +              schema:
 +                type: object
-+                properties:
++                propertie:
 +                  jurisdiction:
-+                    $ref: "#/components/schemas/JurisdictionResponse"
++                    $ref: "#/component/schema/jurisdictionresponse"
 +        "400":
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +    get:
-+      operationId: searchJurisdictions
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
-+        - name: ids
++      operationid: searchjurisdiction
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
++        - name: id
            in: query
--          description: List of Unique Positions
+-          description: list of unique position
 -          required: false
 -          type: array
--          items:
+-          item:
 -            type: integer
--        - name: roles
+-        - name: role
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +              format: uuid
-+        - name: employeeId
++        - name: employeeid
            in: query
--          description: List of Roles of employee
+-          description: list of role of employee
 -          required: false
 -          type: array
--          items:
+-          item:
 +          schema:
              type: string
 -        - name: phone
 +            format: uuid
-+        - name: employeeIds
++        - name: employeeid
            in: query
--          description: Phone Number
+-          description: phone number
 -          required: true
 -          type: string
 +          style: form
 +          explode: true
 +          schema:
 +            type: array
-+            items:
++            item:
 +              type: string
 +              format: uuid
-         - name: isActive
+         - name: isactive
            in: query
--          description: True will return active employees, False otherwise
+-          description: true will return active employee, false otherwise
 -          required: true
 -          type: boolean
 +          schema:
@@ -522,690 +522,690 @@
 +            default: 10
          - name: offset
            in: query
--          description: Offset of the search result
+-          description: offset of the search result
 -          required: true
 -          type: integer
 -        - name: limit
 +          schema:
 +            type: integer
 +            default: 0
-+        - name: sortBy
++        - name: sortby
            in: query
--          description: No of records to be returned from the offset
+-          description: no of record to be returned from the offset
 -          required: true
 -          type: integer
 -        - name: tenantid
 +          schema:
 +            type: string
-+            default: created_time
-+        - name: sortOrder
++            default: createdtime
++        - name: sortorder
            in: query
--          description: Tenant id
+-          description: tenant id
 -          required: true
 -          type: string
--      responses:
+-      response:
 -        '200':
--          description: Successful response
+-          description: successful response
            schema:
--            $ref: '#/definitions/EmployeeRes'
+-            $ref: '#/definition/employeere'
 -        '400':
--          description: Invalid input.
+-          description: invalid input.
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
--      tags:
--        - Employee
--  /employees/_create:
+-      tag:
+-        - employee
+-  /employee/create:
 -    post:
 -      summary: >-
--        Create a new employee in the system along with all the related
--        informations like - assignment, jurisdiction, service, education and
+-        create a new employee in the system along with all the related
+-        information like - assignment, jurisdiction, service, education and
 -        probation
 -      description: >-
--        To create a new employee we can use POST and set all the required and
--        non-mandatory parameters. When an employee is created, an user is also
--        created along with it. Type value in object will be "EMPLOYEE".
--      parameters:
--        - name: employees
+-        to create a new employee we can use post and set all the required and
+-        non-mandatory parameter. when an employee i created, an user i also
+-        created along with it. type value in object will be "employee".
+-      parameter:
+-        - name: employee
 -          in: body
--          description: Details for the new employee.
+-          description: detail for the new employee.
 +            type: string
 +            enum: [asc, desc]
 +            default: desc
-+      responses:
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
 +                type: object
-+                properties:
-+                  jurisdictions:
++                propertie:
++                  jurisdiction:
 +                    type: array
-+                    items:
-+                      $ref: "#/components/schemas/JurisdictionResponse"
++                    item:
++                      $ref: "#/component/schema/jurisdictionresponse"
 +        "400":
-+          description: Bad Request
++          description: bad request
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
-+  /employees/v3/jurisdictions/{uuid}:
++                $ref: "#/component/schema/jurisdictionerrorresponse"
++  /employee/v3/jurisdiction/{uuid}:
 +    get:
-+      operationId: getJurisdictionByUUID
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
++      operationid: getjurisdictionbyuuid
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: uuid
 +          in: path
            required: true
            schema:
--            $ref: '#/definitions/EmployeeReq'
--      tags:
--        - Employee
--      responses:
+-            $ref: '#/definition/employeereq'
+-      tag:
+-        - employee
+-      response:
 -        '202':
--          description: Employee request accepted for creation.
+-          description: employee request accepted for creation.
 -          schema:
--            $ref: '#/definitions/EmployeeRes'
+-            $ref: '#/definition/employeere'
 -        '400':
--          description: Invalid Input.
+-          description: invalid input.
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
--  /employees/_update:
+-  /employee/update:
 -    post:
--      summary: Update Employee data for a particular employee
+-      summary: update employee data for a particular employee
 -      description: >-
--        To update an existing employee's employee details and all other details
--        like assignment, jurisdiction, qualification service details and
--        porbation. This API will also be used for deactivating an employee
--      parameters:
--        - name: employees
+-        to update an existing employee's employee detail and all other detail
+-        like assignment, jurisdiction, qualification service detail and
+-        porbation. thi api will also be used for deactivating an employee
+-      parameter:
+-        - name: employee
 -          in: body
--          description: Request header for the employee with new of values.
+-          description: request header for the employee with new of value.
 +            type: string
 +            format: uuid
-+      responses:
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
 +                type: object
-+                properties:
++                propertie:
 +                  jurisdiction:
-+                    $ref: "#/components/schemas/JurisdictionResponse"
++                    $ref: "#/component/schema/jurisdictionresponse"
 +        "400":
-+          description: Bad Request (invalid UUID)
++          description: bad request (invalid uuid)
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +        "404":
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +    put:
-+      operationId: replaceJurisdiction
-+      parameters:
-+        - $ref: "#/components/parameters/XTenantId"
-+        - $ref: "#/components/parameters/XClientId"
++      operationid: replacejurisdiction
++      parameter:
++        - $ref: "#/component/parameter/xtenantid"
++        - $ref: "#/component/parameter/xclientid"
 +        - name: uuid
 +          in: path
            required: true
            schema:
--            $ref: '#/definitions/EmployeeReq'
--      tags:
--        - Employee
--      responses:
+-            $ref: '#/definition/employeereq'
+-      tag:
+-        - employee
+-      response:
 -        '202':
--          description: Employee request accepted for update.
+-          description: employee request accepted for update.
 -          schema:
--            $ref: '#/definitions/EmployeeRes'
+-            $ref: '#/definition/employeere'
 -        '400':
--          description: Invalid input.
+-          description: invalid input.
 -          schema:
 -            $ref: >-
 -              https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ErrorRes
--  /employees/_count:
+-  /employee/count:
 -    post:
--      summary: Get the list of count of active and inactive employee. 
+-      summary: get the list of count of active and inactive employee. 
 -      description: |
--        Get the list of count of active and inactive employee for given tenant Id.
--      parameters:
+-        get the list of count of active and inactive employee for given tenant id.
+-      parameter:
 -        - $ref: 'https://raw.githubusercontent.com/egovernments/municipal-services/common-contract/docs/common-contract-v2-0-0.yml#/components/parameters/tenantId'
--      responses:
+-      response:
 -        '200':
--          description: Successful response, present the list of count of active and inactive employee for given tenant Id.
+-          description: successful response, present the list of count of active and inactive employee for given tenant id.
 -          schema:
--            $ref: '#/definitions/EmployeeCountResponse'
+-            $ref: '#/definition/employeecountresponse'
 -        '400':
--          description: Invalid input.
+-          description: invalid input.
 -          schema:
 -            $ref: 'https://raw.githubusercontent.com/egovernments/municipal-services/common-contract/docs/common-contract-v2-0-0.yml#/components/schemas/ErrorRes'
--      tags:
--        - Employee
+-      tag:
+-        - employee
 -
--definitions:
--  Employee:
+-definition:
+-  employee:
 -    description: >-
--      An employee is by default User of the system. User will be created from
+-      an employee i by default user of the system. user will be created from
 -      employee.
 -    type: object
--    properties:
+-    propertie:
 -      user:
 -        type: object
--        description: User related information
+-        description: user related information
 -        $ref: 'https://raw.githubusercontent.com/egovernments/egov-services/master/docs/egov-user/contracts/v1-0-0.yml#/definitions/User'
 -      id:
 -        type: integer
--        description: Numeric id of the employee, this is same as user id.
+-        description: numeric id of the employee, thi i same a user id.
 -      uuid:
 -        type: string
--        description: UUID of the employee, this is same as user uuid.
+-        description: uuid of the employee, thi i same a user uuid.
 -      code:
 -        type: string
 -        description: >-
--          The unique code for an employee. This will autogenerated if
+-          the unique code for an employee. thi will autogenerated if
 -          there's no input otherwise user will have to input a unique code.
--        minLength: 1
--        maxLength: 256
--      employeeStatus:
+-        minlength: 1
+-        maxlength: 256
+-      employeestatu:
 -        description: >-
--          Status of the employee from the status master where object type is
--          "Employee Master". Default value will be "EMPLOYED".  Possible status
--          list for employee are - EMPLOYED,RETIRED,SUSPENDED and DECEASED
+-          statu of the employee from the statu master where object type i
+-          "employee master". default value will be "employed".  possible statu
+-          list for employee are - employed,retired,suspended and deceased
 -        type: string
--      employeeType:
+-      employeetype:
 -        type: string
--        description: Type of employment of the employee from the EmployeeType.
--      dateOfAppointment:
+-        description: type of employment of the employee from the employeetype.
+-      dateofappointment:
 -        type: number
 -        format: int128
--        description: Epoch Date of appointment of the employee.
--      jurisdictions:
+-        description: epoch date of appointment of the employee.
+-      jurisdiction:
 -        type: array
 -        description: >-
--          List of Jurisdictions for which this employee has
--          access to. Currently we dont validate this
--        minItems: 1
--        maxItems: 50
--        uniqueItems: true
--        items:
--          $ref: '#/definitions/Jurisdiction'
--      assignments:
+-          list of jurisdiction for which thi employee ha
+-          acces to. currently we dont validate thi
+-        minitem: 1
+-        maxitem: 50
+-        uniqueitem: true
+-        item:
+-          $ref: '#/definition/jurisdiction'
+-      assignment:
 -        type: array
--        description: List of assignments for the employee.
--        items:
--          $ref: '#/definitions/Assignment'
--      serviceHistory:
+-        description: list of assignment for the employee.
+-        item:
+-          $ref: '#/definition/assignment'
+-      servicehistory:
 -        type: array
--        description: List of service history for the employee.
--        maxItems: 25
--        uniqueItems: true
--        items:
--          $ref: '#/definitions/ServiceHistory'
--      isActive:
+-        description: list of service history for the employee.
+-        maxitem: 25
+-        uniqueitem: true
+-        item:
+-          $ref: '#/definition/servicehistory'
+-      isactive:
 -        type: boolean
--        description: Field to mark whether the employee is active
+-        description: field to mark whether the employee i active
 -      education:
 -        type: array
--        description: List of educational qualification for the employee.
--        maxItems: 25
--        uniqueItems: true
--        items:
--          $ref: '#/definitions/EducationalQualification'
--      tests:
+-        description: list of educational qualification for the employee.
+-        maxitem: 25
+-        uniqueitem: true
+-        item:
+-          $ref: '#/definition/educationalqualification'
+-      test:
 -        type: array
--        description: List of departmental tests qualified by the employee.
--        maxItems: 25
--        uniqueItems: true
--        items:
--          $ref: '#/definitions/DepartmentalTest'
--      tenantId:
+-        description: list of departmental test qualified by the employee.
+-        maxitem: 25
+-        uniqueitem: true
+-        item:
+-          $ref: '#/definition/departmentaltest'
+-      tenantid:
 -        type: string
 -        description: >-
--          Unique Identifier of which tenant this data is defined
--        maxLength: 256
--      deactivationDetails:
+-          unique identifier of which tenant thi data i defined
+-        maxlength: 256
+-      deactivationdetail:
 -        type: array
--        description: List of deactivation details for the employee.
--        maxItems: 25
--        uniqueItems: true
--        items:
--          $ref: '#/definitions/DeactivationDetails'
--      reactivationDetails:
+-        description: list of deactivation detail for the employee.
+-        maxitem: 25
+-        uniqueitem: true
+-        item:
+-          $ref: '#/definition/deactivationdetail'
+-      reactivationdetail:
 -        type: array
--        description: List of reactivation details for the employee.
--        maxItems: 25
--        uniqueItems: true
--        items:
--          $ref: '#/definitions/ReactivationDetails'
--      documents:
+-        description: list of reactivation detail for the employee.
+-        maxitem: 25
+-        uniqueitem: true
+-        item:
+-          $ref: '#/definition/reactivationdetail'
+-      document:
 -        type: array
--        description: List of all the documents associated with an employee.
--        maxItems: 50
--        uniqueItems: true
--        items:
--          $ref: '#/definitions/EmployeeDocuments'
--      auditDetails:
+-        description: list of all the document associated with an employee.
+-        maxitem: 50
+-        uniqueitem: true
+-        item:
+-          $ref: '#/definition/employeedocument'
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
+-        $ref:  '#/definition/auditdetail'
 -    required:
--      - jurisdictions
--      - assignments
--      - employeeStatus
--      - employeeType
--      - tenantId
+-      - jurisdiction
+-      - assignment
+-      - employeestatu
+-      - employeetype
+-      - tenantid
 -      - user
--  Assignment:
+-  assignment:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: string
--        description: UUID of the assignment.
+-        description: uuid of the assignment.
 -      position:
 -        type: integer
 -        format: int64
--        description: Position Id associated with the assignment - autogenerated.
+-        description: position id associated with the assignment - autogenerated.
 -      designation:
 -        type: string
--        description: Designation code associated with the assignment.
+-        description: designation code associated with the assignment.
 -      department:
 -        type: string
--        description: Unique code of the Department associated with the assignment.
--      fromDate:
+-        description: unique code of the department associated with the assignment.
+-      fromdate:
 -        type: integer
 -        format: int128
--        description: Epoch value of From Date of assignment period.
--      toDate:
+-        description: epoch value of from date of assignment period.
+-      todate:
 -        type: integer
 -        format: int128
--        description: Epoch value of Till Date of assignment period.
--      govtOrderNumber:
+-        description: epoch value of till date of assignment period.
+-      govtordernumber:
 -        type: string
 -        description: >-
--          The order number issued for any transfer, promotion, demotion or
+-          the order number issued for any transfer, promotion, demotion or
 -          delegation of power.
--      reportingTo:
+-      reportingto:
 -        type: string
--        description: Name of the employee who this employee reports to.
--      isHOD:
+-        description: name of the employee who thi employee report to.
+-      ishod:
 -        type: boolean
--        description: Value true means, this guy is the HOD under this assignment.
--      isCurrentAssignment:
+-        description: value true mean, thi guy i the hod under thi assignment.
+-      iscurrentassignment:
 -        type: boolean
--        description: Value true means, This is the guy's current assignment.
--      auditDetails:
+-        description: value true mean, thi i the guy's current assignment.
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
+-        $ref:  '#/definition/auditdetail'
 -    required:
--      - fromDate
--      - toDate
+-      - fromdate
+-      - todate
 -      - department
 -      - designation
--  ServiceHistory:
+-  servicehistory:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: string
--        description: UUID of the service details.
--      serviceStatus:
+-        description: uuid of the service detail.
+-      servicestatu:
 -        type: string
--        description: Detail of the service that the employee has done.
--      serviceFrom:
+-        description: detail of the service that the employee ha done.
+-      servicefrom:
 -        type: integer
 -        format: int128
--        description: Epoch date on which this service was applicable from.
--      serviceTo:
+-        description: epoch date on which thi service wa applicable from.
+-      serviceto:
 -        type: integer
 -        format: int128
--        description: Epoch date on which this service was applicable from.
+-        description: epoch date on which thi service wa applicable from.
 -      location:
 -        type: string
--        description: The government order number passed for the service change.
--      orderNo:
+-        description: the government order number passed for the service change.
+-      orderno:
 -        type: string
--        description: The government order number passed for the service change.
--      isCurrentPosition:
+-        description: the government order number passed for the service change.
+-      iscurrentposition:
 -        type: boolean
--        description: Value signifies if this is the current working status.    
--      auditDetails:
+-        description: value signifie if thi i the current working statu.    
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
+-        $ref:  '#/definition/auditdetail'
 -    required:
--      - orderNo
--      - serviceFrom
--      - serviceTo
--      - serviceStatus
--  EducationalQualification:
+-      - orderno
+-      - servicefrom
+-      - serviceto
+-      - servicestatu
+-  educationalqualification:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: string
--        description: UUID of the qualification details.
+-        description: uuid of the qualification detail.
 -      qualification:
 -        type: string
--        description: Name of the qualifying degree.
+-        description: name of the qualifying degree.
 -      stream:
 -        type: string
--        description: The main subject studies as part of the qualifying degree.
--      yearOfPassing:
+-        description: the main subject studie a part of the qualifying degree.
+-      yearofpassing:
 -        type: integer
 -        format: int32
--        description: The year in which the employee has finished the qualification.
+-        description: the year in which the employee ha finished the qualification.
 -      university:
 -        type: string
 -        description: >-
--          Name of the university/board from which the mentioned qualification
--          was acquired.
--      remarks:
+-          name of the university/board from which the mentioned qualification
+-          wa acquired.
+-      remark:
 -        type: string
--        description: Any remarks to be captured for this technical qualification.
--      auditDetails:
+-        description: any remark to be captured for thi technical qualification.
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
+-        $ref:  '#/definition/auditdetail'
 -    required:
 -      - qualification
--      - yearOfPassing
+-      - yearofpassing
 -      - stream
--  DepartmentalTest:
+-  departmentaltest:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: string
--        description: UUID of the departmental test details.
+-        description: uuid of the departmental test detail.
 -      test:
 -        type: string
--        description: Name of the Test taken.
--      yearOfPassing:
+-        description: name of the test taken.
+-      yearofpassing:
 -        type: integer
 -        format: int32
--        description: The year in which the employee has qualified this test.
--      remarks:
+-        description: the year in which the employee ha qualified thi test.
+-      remark:
 -        type: string
--        description: Any general remarks.
--      auditDetails:
+-        description: any general remark.
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
+-        $ref:  '#/definition/auditdetail'
 -    required:
 -      - test
--      - yearOfPassing
--  EmployeeReq:
+-      - yearofpassing
+-  employeereq:
 -    type: object
--    properties:
--      RequestInfo:
+-    propertie:
+-      requestinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/RequestInfo
--      Employee:
+-      employee:
 -        type: array
--        items:
--          $ref: '#/definitions/Employee'
+-        item:
+-          $ref: '#/definition/employee'
 -    required:
--      - RequestInfo
--      - Employee
--  EmployeeRes:
+-      - requestinfo
+-      - employee
+-  employeere:
 -    type: object
--    properties:
--      ResponseInfo:
+-    propertie:
+-      responseinfo:
 -        $ref: >-
 -          https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-1-1.yml#/definitions/ResponseInfo
--      Employee:
+-      employee:
 -        type: array
--        items:
--          $ref: '#/definitions/Employee'
--  EmployeeDocuments:
+-        item:
+-          $ref: '#/definition/employee'
+-  employeedocument:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: integer
 -        format: int64
--        description: The unique id of this object.
--      employeeId:
+-        description: the unique id of thi object.
+-      employeeid:
 -        type: integer
 -        format: int64
--        description: The unique id of employee.
--      documentId:
+-        description: the unique id of employee.
+-      documentid:
 -        type: string
--        description: The unique url for the document attached.
--      documentName:
+-        description: the unique url for the document attached.
+-      documentname:
 -        type: string
--        description: Name of the document attached.
--      referenceType:
+-        description: name of the document attached.
+-      referencetype:
 -        type: string
 -        description: >-
--          Each details in Employee can have multiple documents attached. Based
--          on the reference type we are differentiate which document is relevant
--          from which details.
--        items:
+-          each detail in employee can have multiple document attached. based
+-          on the reference type we are differentiate which document i relevant
+-          from which detail.
+-        item:
 -          type: string
 -          enum:
--            - HEADER
--            - ASSIGNMENT
--            - JURISDICTION
--            - SERVICE
--            - EDUCATION
--            - TEST
--            - DEACTIVATION
--      referenceId:
+-            - header
+-            - assignment
+-            - jurisdiction
+-            - service
+-            - education
+-            - test
+-            - deactivation
+-      referenceid:
 -        type: string
--        description: The unique id of the referenced objecy. (Assignment id, Service id etc).
--      auditDetails:
+-        description: the unique id of the referenced objecy. (assignment id, service id etc).
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
+-        $ref:  '#/definition/auditdetail'
 -    required:
--      - employeeId
+-      - employeeid
 -      - document
--  Jurisdiction:
+-  jurisdiction:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: string
 -        format: uuid
--        description: UUID of the jurisdiction - autogenerated
+-        description: uuid of the jurisdiction - autogenerated
 -      hierarchy:
 -        type: string
--        description: Hierarchy code from the boundary data
+-        description: hierarchy code from the boundary data
 -      boundary:
 -        type: string
--        description: Boundary code from the boundary data
--      boundaryType:
+-        description: boundary code from the boundary data
+-      boundarytype:
 -        type: string
--        description: Boundary Type code from the boundary data
--      auditDetails:
+-        description: boundary type code from the boundary data
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
+-        $ref:  '#/definition/auditdetail'
 -    required:
 -      - hierarchy
 -      - boundary
--      - boundaryType
--  DeactivationDetails:
+-      - boundarytype
+-  deactivationdetail:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: string
--        description: UUID of the deactivation detail
--      employeeId:
+-        description: uuid of the deactivation detail
+-      employeeid:
 -        type: string
--        description: UUID of the employee to whom this details belongs.
--      reasonForDeactivation:
+-        description: uuid of the employee to whom thi detail belong.
+-      reasonfordeactivation:
 -        type: string
--        description: Reason for deactivation
--      effectiveFrom:
+-        description: reason for deactivation
+-      effectivefrom:
 -        type: integer
 -        format: int128
--        description: Epoch date from which the deactivation is effective.
--      orderNo:
+-        description: epoch date from which the deactivation i effective.
+-      orderno:
 -        type: string
--        description: The government order number passed for the deactivation
--      typeOfDeactivation:
--        items:
+-        description: the government order number passed for the deactivation
+-      typeofdeactivation:
+-        item:
 -          type: string
 -          enum:
--            - SUSPENSION
--            - DEATH
--            - RETIRED
--      auditDetails:
+-            - suspension
+-            - death
+-            - retired
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
--  ReactivationDetails:
+-        $ref:  '#/definition/auditdetail'
+-  reactivationdetail:
 -    type: object
--    properties:
+-    propertie:
 -      id:
 -        type: string
--        description: UUID of the deactivation detail
--      employeeId:
+-        description: uuid of the deactivation detail
+-      employeeid:
 -        type: string
--        description: UUID of the employee to whom this details belongs.
--      reasonForReactivation:
+-        description: uuid of the employee to whom thi detail belong.
+-      reasonforreactivation:
 -        type: string
--        description: Reason for deactivation
--      effectiveFrom:
+-        description: reason for deactivation
+-      effectivefrom:
 -        type: integer
 -        format: int128
--        description: Epoch date from which the reactivation is effective.
--      orderNo:
+-        description: epoch date from which the reactivation i effective.
+-      orderno:
 -        type: string
--        description: The government order number passed for the reactivation
--      typeOfReactivation:
--        items:
+-        description: the government order number passed for the reactivation
+-      typeofreactivation:
+-        item:
 -          type: string
 -          enum:
--            - ORDER FROM COMISSIONER
--            - OTHERS
--      auditDetails:
+-            - order from comissioner
+-            - other
+-      auditdetail:
 -        type: object
--        $ref:  '#/definitions/AuditDetails'
--  AuditDetails:
+-        $ref:  '#/definition/auditdetail'
+-  auditdetail:
 -    type: object
--    properties:
--      createdBy:
+-    propertie:
+-      createdby:
 -        type: string
--        description: Id of the user who created the record.
--      createdDate:
+-        description: id of the user who created the record.
+-      createddate:
 -        type: integer
 -        format: int64
--        description: Epoch Date on which the user master data was added into the system.
--      lastModifiedBy:
+-        description: epoch date on which the user master data wa added into the system.
+-      lastmodifiedby:
 -        type: string
--        description: Id of the user who last modified the record.
--      lastModifiedDate:
+-        description: id of the user who last modified the record.
+-      lastmodifieddate:
 -        type: integer
 -        format: int64
--        description: Epoch Date on which the user master data was last modified.
--  EmployeeCount:
+-        description: epoch date on which the user master data wa last modified.
+-  employeecount:
 -    type: object
--    description: Capture the employee count details
--    properties:
--      activeEmployee:
+-    description: capture the employee count detail
+-    propertie:
+-      activeemployee:
 -        type: string
--        description: Number of active employee present in the system
--      inactiveEmployee:
+-        description: number of active employee present in the system
+-      inactiveemployee:
 -        type: string
--        description: Number of inactive employee present in the system
--      totalEmployee:
+-        description: number of inactive employee present in the system
+-      totalemployee:
 -        type: string
--        description: Total number of employee present in the system
--  EmployeeCountResponse:
+-        description: total number of employee present in the system
+-  employeecountresponse:
 -    type: object
--    description: Response to the service request
--    properties:
--      responseInfo:
+-    description: response to the service request
+-    propertie:
+-      responseinfo:
 -        $ref: 'https://raw.githubusercontent.com/egovernments/municipal-services/common-contract/docs/common-contract-v2-0-0.yml#/components/schemas/ResponseHeader'
--      EmployeeCount:
--        $ref: '#/definitions/EmployeeCount'
+-      employeecount:
+-        $ref: '#/definition/employeecount'
 +            type: string
 +            format: uuid
-+      requestBody:
++      requestbody:
 +        required: true
 +        content:
 +          application/json:
 +            schema:
-+              $ref: "#/components/schemas/UpdateJurisdictionRequest"
-+      responses:
++              $ref: "#/component/schema/updatejurisdictionrequest"
++      response:
 +        "200":
-+          description: OK
++          description: ok
 +          content:
 +            application/json:
 +              schema:
 +                type: object
-+                properties:
++                propertie:
 +                  jurisdiction:
-+                    $ref: "#/components/schemas/JurisdictionResponse"
++                    $ref: "#/component/schema/jurisdictionresponse"
 +        "400":
-+          description: Bad Request (invalid UUID)
++          description: bad request (invalid uuid)
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +        "404":
-+          description: Not Found
++          description: not found
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
++                $ref: "#/component/schema/jurisdictionerrorresponse"
 +        "500":
-+          description: Internal Server Error
++          description: internal server error
 +          content:
 +            application/json:
 +              schema:
-+                $ref: "#/components/schemas/JurisdictionErrorResponse"
-+components:
-+  parameters:
-+    XTenantId:
-+      name: X-Tenant-Id
++                $ref: "#/component/schema/jurisdictionerrorresponse"
++component:
++  parameter:
++    xtenantid:
++      name: x-tenant-id
 +      in: header
 +      required: true
 +      schema:
 +        type: string
-+    XClientId:
-+      name: X-Client-Id
++    xclientid:
++      name: x-client-id
 +      in: header
 +      required: false
 +      schema:
 +        type: string
-+    Authorization:
-+      name: Authorization
++    authorization:
++      name: authorization
 +      in: header
 +      required: true
-+      description: Bearer token for Keycloak user validation
++      description: bearer token for keycloak user validation
 +      schema:
 +        type: string
-+  schemas:
-+    CreateEmployeeRequest:
++  schema:
++    createemployeerequest:
 +      type: object
-+      properties:
++      propertie:
 +        code:
 +          type: string
-+          description: If omitted, auto-generated via IDGen service
-+          minLength: 2
-+          maxLength: 64
-+        userId:
++          description: if omitted, auto-generated via idgen service
++          minlength: 2
++          maxlength: 64
++        userid:
 +          type: string
-+        individualId:
++        individualid:
 +          type: string
-+        status:
++        statu:
 +          type: string
-+          enum: [ACTIVE, INACTIVE, SUSPENDED]
-+        employeeType:
++          enum: [active, inactive, suspended]
++        employeetype:
 +          type: string
-+          enum: [PERMANENT, CONTRACT, TEMPORARY]
-+        dateOfAppointment:
++          enum: [permanent, contract, temporary]
++        dateofappointment:
 +          type: string
 +          format: date-time
 +          nullable: true
@@ -1213,54 +1213,54 @@
 +          type: string
 +        designation:
 +          type: string
-+        isActive:
++        isactive:
 +          type: boolean
 +          nullable: true
-+        jurisdictions:
++        jurisdiction:
 +          type: array
 +          nullable: true
-+          items:
-+            $ref: "#/components/schemas/Jurisdiction"
-+    UpdateEmployeeRequest:
++          item:
++            $ref: "#/component/schema/jurisdiction"
++    updateemployeerequest:
 +      type: object
-+      description: Partial update fields for PATCH. All fields are optional.
-+      properties:
-+        employeeStatus:
++      description: partial update field for patch. all field are optional.
++      propertie:
++        employeestatu:
 +          type: string
-+          enum: [ACTIVE, INACTIVE, SUSPENDED]
++          enum: [active, inactive, suspended]
 +          nullable: true
-+        employeeType:
++        employeetype:
 +          type: string
-+          enum: [PERMANENT, CONTRACT, TEMPORARY]
++          enum: [permanent, contract, temporary]
 +          nullable: true
 +        phone:
 +          type: string
 +          pattern: "^[6-9][0-9]{9}$"
 +          nullable: true
-+        emailId:
++        emailid:
 +          type: string
 +          format: email
 +          nullable: true
-+        isActive:
++        isactive:
 +          type: boolean
 +          nullable: true
-+    EmployeeResponse:
++    employeeresponse:
 +      type: object
-+      properties:
++      propertie:
 +        id:
 +          type: string
 +          format: uuid
 +        code:
 +          type: string
-+        userId:
++        userid:
 +          type: string
-+        individualId:
++        individualid:
 +          type: string
-+        status:
++        statu:
 +          type: string
-+        employeeType:
++        employeetype:
 +          type: string
-+        dateOfAppointment:
++        dateofappointment:
 +          type: string
 +          format: date-time
 +          nullable: true
@@ -1268,150 +1268,150 @@
 +          type: string
 +        designation:
 +          type: string
-+        isActive:
++        isactive:
 +          type: boolean
-+        auditDetails:
-+          allOf:
-+            - $ref: "#/components/schemas/AuditDetails"
++        auditdetail:
++          allof:
++            - $ref: "#/component/schema/auditdetail"
 +          nullable: true
-+        jurisdictions:
++        jurisdiction:
 +          type: array
 +          nullable: true
-+          items:
-+            $ref: "#/components/schemas/JurisdictionResponse"
-+    DeactivationDetails:
++          item:
++            $ref: "#/component/schema/jurisdictionresponse"
++    deactivationdetail:
 +      type: object
 +      required:
-+        - reasonForDeactivation
-+        - effectiveFrom
-+      properties:
-+        reasonForDeactivation:
++        - reasonfordeactivation
++        - effectivefrom
++      propertie:
++        reasonfordeactivation:
 +          type: string
-+        effectiveFrom:
++        effectivefrom:
 +          type: string
 +          format: date-time
-+        remarks:
++        remark:
 +          type: string
-+    ReactivationDetails:
++    reactivationdetail:
 +      type: object
 +      required:
-+        - reasonForReactivation
-+        - effectiveFrom
-+      properties:
-+        reasonForReactivation:
++        - reasonforreactivation
++        - effectivefrom
++      propertie:
++        reasonforreactivation:
 +          type: string
-+        effectiveFrom:
++        effectivefrom:
 +          type: string
 +          format: date-time
-+        remarks:
++        remark:
 +          type: string
-+    Jurisdiction:
++    jurisdiction:
 +      type: object
-+      description: Jurisdiction as embedded in employee create/update requests
-+      properties:
++      description: jurisdiction a embedded in employee create/update request
++      propertie:
 +        id:
 +          type: string
 +          format: uuid
-+        employeeId:
++        employeeid:
 +          type: string
-+        boundaryRelation:
++        boundaryrelation:
 +          type: array
-+          items:
++          item:
 +            type: string
-+        isActive:
++        isactive:
 +          type: boolean
-+        tenantId:
++        tenantid:
 +          type: string
-+        createdAt:
++        createdat:
 +          type: integer
 +          format: int64
-+        updatedAt:
++        updatedat:
 +          type: integer
 +          format: int64
 +          nullable: true
-+        auditDetails:
-+          allOf:
-+            - $ref: "#/components/schemas/AuditDetails"
++        auditdetail:
++          allof:
++            - $ref: "#/component/schema/auditdetail"
 +          nullable: true
-+    CreateJurisdictionRequest:
++    createjurisdictionrequest:
 +      type: object
 +      required:
-+        - employeeId
-+        - boundaryRelation
-+      properties:
-+        employeeId:
++        - employeeid
++        - boundaryrelation
++      propertie:
++        employeeid:
 +          type: string
-+        boundaryRelation:
++        boundaryrelation:
 +          type: array
-+          minItems: 1
-+          items:
++          minitem: 1
++          item:
 +            type: string
-+        isActive:
++        isactive:
 +          type: boolean
 +          nullable: true
-+    UpdateJurisdictionRequest:
++    updatejurisdictionrequest:
 +      type: object
-+      properties:
-+        employeeId:
++      propertie:
++        employeeid:
 +          type: string
-+        boundaryRelation:
++        boundaryrelation:
 +          type: array
-+          minItems: 1
++          minitem: 1
 +          nullable: true
-+          items:
++          item:
 +            type: string
-+        isActive:
++        isactive:
 +          type: boolean
 +          nullable: true
-+    JurisdictionResponse:
++    jurisdictionresponse:
 +      type: object
-+      properties:
++      propertie:
 +        id:
 +          type: string
 +          format: uuid
-+        employeeId:
++        employeeid:
 +          type: string
-+        boundaryRelation:
++        boundaryrelation:
 +          type: array
-+          items:
++          item:
 +            type: string
-+        isActive:
++        isactive:
 +          type: boolean
-+        tenantId:
++        tenantid:
 +          type: string
-+        createdAt:
++        createdat:
 +          type: integer
 +          format: int64
-+        updatedAt:
++        updatedat:
 +          type: integer
 +          format: int64
 +          nullable: true
-+    AuditDetails:
++    auditdetail:
 +      type: object
-+      properties:
-+        createdBy:
++      propertie:
++        createdby:
 +          type: string
-+        createdTime:
++        createdtime:
 +          type: integer
 +          format: int64
-+        lastModifiedBy:
++        lastmodifiedby:
 +          type: string
-+        lastModifiedTime:
++        lastmodifiedtime:
 +          type: integer
 +          format: int64
-+    EmployeeErrorResponse:
++    employeeerrorresponse:
 +      type: object
-+      description: "Error format from employee handlers: {\"error\": \"message string\"}"
-+      properties:
++      description: "error format from employee handler: {\"error\": \"message string\"}"
++      propertie:
 +        error:
 +          type: string
-+    JurisdictionErrorResponse:
++    jurisdictionerrorresponse:
 +      type: object
-+      description: "Error format from jurisdiction handlers: {\"error\": {\"code\": \"...\", \"message\": \"...\"}}"
-+      properties:
++      description: "error format from jurisdiction handler: {\"error\": {\"code\": \"...\", \"message\": \"...\"}}"
++      propertie:
 +        error:
 +          type: object
-+          properties:
++          propertie:
 +            code:
 +              type: string
 +            message:
