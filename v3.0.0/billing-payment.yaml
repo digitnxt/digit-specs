@@ -1063,6 +1063,58 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /bills/generate:
+    post:
+      summary: Generate a bill
+      operationId: generateBill
+      tags: [Bill]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateBillCriteria'
+      responses:
+        '201':
+          description: Bill generated
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bill'
+        '400':
+          description: Validation error (unknown head, invalid amounts, bad status transition, etc.)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Conflict (duplicate create without Idempotency-Key; overlapping/duplicate bills as per policy)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /bills:
     get:
       summary: Search bills by filters
@@ -1124,7 +1176,7 @@ paths:
           description: Offset for pagination
       responses:
         '200':
-          description: List of Demands
+          description: List of Bills
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1149,10 +1201,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
-  /bills/generate:
+
+      
+  /bills/cancel:
     post:
-      summary: Generate a bill
-      operationId: generateBill
+      summary: Cancel a bill
+      operationId: cancelBill
       tags: [Bill]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -1169,10 +1223,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenerateBillCriteria'
+              $ref: '#/components/schemas/UpdateBillStatus'
       responses:
         '201':
-          description: Bills generated
+          description: Bill canceled
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1200,11 +1254,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-      
-  /bills/cancel:
+
+  /bills/bulk-generate:
     post:
-      summary: Cancel a bill
-      operationId: cancelBill
+      summary: Generate bills in bulk
+      operationId: bulkGenerateBill
       tags: [Bill]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -1221,10 +1275,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateBillStatus'
+              $ref: '#/components/schemas/BulkBillGenerator'
       responses:
-        '201':
-          description: Bills canceled
+        '202':
+          description: Bulk bill generation request accepted
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1234,7 +1288,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Bill'
+                $ref: '#/components/schemas/BulkBillResponse'
         '400':
           description: Validation error (unknown head, invalid amounts, bad status transition, etc.)
           content:
@@ -1242,11 +1296,6 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
-        '409':
-          description: Conflict (duplicate create without Idempotency-Key; overlapping/duplicate bills as per policy)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
         '500':
           description: Internal server error
           content:
@@ -1417,6 +1466,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /payments/{id}:
+    get:
+      summary: Get payment by ID
+      operationId: getPaymentByID
+      tags: [Payment]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: paymentModes found
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
 
 components:
@@ -1508,7 +1604,7 @@ components:
         collectionMode:
           type: string
           description: Allowed collection channel(s)
-          enum: [ONLINE, OFFLINE, BOTH]
+          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
           default: BOTH
         allowedPaymentModes:
           type: array
@@ -1518,7 +1614,8 @@ components:
             enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, CARD,ONLINE_NEFT, ONLINE_RTGS, UPI, NETBANKING, WALLET]
         billExpiryDays:
           type: integer
-          description: Days after which an issued bill expires (-1 = never)
+          minimum: 0
+          description: Days after which an issued bill expires (0 = never)
           example: 30
         partialPaymentAllowed:
           type: boolean
@@ -1570,6 +1667,7 @@ components:
         - isActive
         - currency
         - effectiveFrom
+        - billExpiryDays
       properties:
         code:
           type: string
@@ -1587,7 +1685,7 @@ components:
         collectionMode:
           type: string
           description: Allowed collection channel(s)
-          enum: [ONLINE, OFFLINE, BOTH]
+          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
           default: BOTH
         allowedPaymentModes:
           type: array
@@ -1597,8 +1695,8 @@ components:
             enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, CARD,ONLINE_NEFT, ONLINE_RTGS, UPI, NETBANKING, WALLET]
         billExpiryDays:
           type: integer
-          minimum: -1
-          description: Days after which an issued bill expires (-1 = never)
+          minimum: 0
+          description: Days after which an issued bill expires (0 = never)
           example: 30
         partialPaymentAllowed:
           type: boolean
@@ -1641,6 +1739,7 @@ components:
         - isActive
         - currency
         - effectiveFrom
+        - billExpiryDays
       properties:
         name:
           type: string
@@ -1650,7 +1749,7 @@ components:
         collectionMode:
           type: string
           description: Allowed collection channel(s)
-          enum: [ONLINE, OFFLINE, BOTH]
+          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
           default: BOTH
         allowedPaymentModes:
           type: array
@@ -1706,7 +1805,7 @@ components:
           maxLength: 128
         collectionMode:
           type: string
-          enum: [ONLINE, OFFLINE, BOTH]
+          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
         allowedPaymentModes:
           type: array
           items:
@@ -1715,6 +1814,8 @@ components:
         billExpiryDays:
           type: integer
           minimum: 0
+          description: Days after which an issued bill expires (0 = never)
+          example: 30
         minPayableAmount:
           type: number
           format: double
@@ -2022,13 +2123,16 @@ components:
             $ref: '#/components/schemas/LineItem'
         status:
           type: string
-          enum: [DRAFT, ACTIVE, FROZEN, CANCELLED]
+          enum: [DRAFT, ACTIVE, FROZEN, PARTIALLY_PAID, PAID, ROLL_FORWARDED, CANCELLED]
           default: ACTIVE
           description: |
             Demand lifecycle:
-            - **DRAFT**: Created but not yet validated/finalized. Fully editable. Not eligible for billing.
+            - **DRAFT**: Created but not yet validated/finalized. Fully editable and not eligible for billing.
             - **ACTIVE**: Validated and eligible for billing. Minor corrections allowed until frozen (per policy).
             - **FROZEN**: Locked for bill generation; **no edits** allowed (use adjustments or a new demand).
+            - **PARTIALLY_PAID**: Received multiple payments but total payable amount is not yet fully settled.
+            - **PAID**: Fully settled through payments. Considered Financially closed.
+            - **ROLL_FORWARDED**: Financially closed due to arrear carry-forward. Not editable and not eligible for bill generation.
             - **CANCELLED**: Voided. Not billable. Used when assessment is withdrawn or superseded.
         totalAmount:
           type: number
@@ -2107,7 +2211,7 @@ components:
         collectedAmount:
           type: number
           format: double
-          minimum: 0
+          minimum: -1000000000
           maximum:  1000000000
           default: 0
           multipleOf: 0.01
@@ -2201,17 +2305,15 @@ components:
             and carries the assessed amount for this demand period.
             **Service rule**: duplicate taxHeadCode entries within the same demand are rejected.
           items:
-            $ref: '#/components/schemas/LineItem'
+            $ref: '#/components/schemas/LineItemCreate'
         status:
           type: string
-          enum: [DRAFT, ACTIVE, FROZEN, CANCELLED]
+          enum: [DRAFT, ACTIVE]
           default: ACTIVE
           description: |
             Demand lifecycle:
-            - **DRAFT**: Created but not yet validated/finalized. Fully editable. Not eligible for billing.
+            - **DRAFT**: Created but not yet validated/finalized. Fully editable and not eligible for billing.
             - **ACTIVE**: Validated and eligible for billing. Minor corrections allowed until frozen (per policy).
-            - **FROZEN**: Locked for bill generation; **no edits** allowed (use adjustments or a new demand).
-            - **CANCELLED**: Voided. Not billable. Used when assessment is withdrawn or superseded.
         metadata:
           type: object
           additionalProperties: true
@@ -2223,6 +2325,47 @@ components:
         - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0.
         - Duplicate taxHeadCode in lineItems is not allowed.
         - Demand is editable only in DRAFT/ACTIVE; transitions enforced by service.
+
+    LineItemCreate:
+      type: object
+      description: Breakdown of an assessed amount within a Demand, mapped to a specific TaxHead (e.g., base charge, penalty, cess).
+      required: 
+        - taxHeadCode
+        - amount
+      properties:
+        taxHeadCode:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
+          description: |
+            Code of the configured Tax Head (same Business Service; active within the period).
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT_BASE
+        amount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          multipleOf: 0.01
+          description: |
+            Assessed amount for this line. Positive values increase payable; negative values represent credits
+            (e.g., rebates). Two-decimal precision enforced.
+          example: 4500
+        collectedAmount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          default: 0
+          multipleOf: 0.01
+          description: |
+            Amount already collected against this line. Must be ≥ 0 and, for positive `amount`, must not exceed `amount`.
+            For negative `amount` (credits), `collectionAmount` must be **0**.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
 
     DemandUpdate:
       type: object
@@ -2280,7 +2423,7 @@ components:
             and carries the assessed amount for this demand period.
             **Service rule**: duplicate taxHeadCode entries within the same demand are rejected.
           items:
-            $ref: '#/components/schemas/LineItem'
+            $ref: '#/components/schemas/LineItemCreate'
         status:
           type: string
           enum: [DRAFT, ACTIVE]
@@ -2385,6 +2528,56 @@ components:
           type: object
           additionalProperties: true
           description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+
+    BulkBillGenerator:
+      type: object
+      description: Represents a request for generating bills in bulk from eleigible FROZEN, ACTIVE & PARTIALLY_PAID demands under a BusinessService.
+      required:
+        - businessServiceCode
+      properties:
+        businessServiceCode:
+          type: string
+          minLength: 2
+          maxLength: 32
+          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
+          description: |
+            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional context such as requestedBy, reason, traceId
+
+    BulkBillResponse:
+      type: object
+      description: Used for bulk API operations.
+      properties:
+        businessServiceCode:
+          type: string
+          minLength: 2
+          maxLength: 32
+          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
+          description: |
+            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT
+        status:
+          type: string
+          enum: [ACCEPTED, IN_PROGESS, COMPLETED, PARTIALLY_COMPLETED, FAILED]
+          default: ACCEPTED
+        totalJobsCreated:
+          type: integer
+          format: int64
+          example: 42
+        totalConsumersIdentified:
+          type: integer
+          format: int64
+          example: 20500
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional context such as requestedBy, reason, traceId
 
     Bill:
       type: object
