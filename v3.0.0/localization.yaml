@@ -5,9 +5,9 @@ info:
     for applications.
   version: 3.0.0
 servers:
-- url: https://api.example.com
+- url: https://api.example.com/localization/v3
   description: Production server
-- url: https://staging-api.example.com
+- url: https://staging-api.example.com/localization/v3
   description: Staging server
 components:
   headers:
@@ -181,7 +181,7 @@ tags:
 - name: Cache
   description: Endpoints for cache management.
 paths:
-  /localization/v3/messages:
+  /messages:
     get:
       tags:
       - Messages
@@ -433,7 +433,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       operationId: deleteLocalizationV3Messages
-  /localization/v3/messages/_upsert:
+  /messages/_upsert:
     put:
       tags:
       - Messages
@@ -502,7 +502,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       operationId: putLocalizationV3MessagesUpsert
-  /localization/v3/messages/_missing:
+  /messages/_missing:
     post:
       tags:
       - Messages
@@ -580,7 +580,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       operationId: postLocalizationV3MessagesMissing
-  /localization/v3/cache/_bust:
+  /cache/_bust:
     delete:
       tags:
       - Cache

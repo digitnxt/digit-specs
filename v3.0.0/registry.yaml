@@ -10,9 +10,9 @@ info:
 
     '
 servers:
-- url: https://api.example.com
+- url: https://api.example.com/registry/v3
   description: Production server
-- url: https://staging-api.example.com
+- url: https://staging-api.example.com/registry/v3
   description: Staging server
 components:
   parameters:
@@ -396,7 +396,7 @@ tags:
 - name: Data
   description: Registry data APIs
 paths:
-  /registry/v3/schema:
+  /schema:
     post:
       tags:
       - Schema
@@ -561,7 +561,7 @@ paths:
                 $ref: '#/components/schemas/ResponseEnvelope'
       description: Performs GET on /registry/v3/schema.
       operationId: getRegistryV3Schema
-  /registry/v3/schema/{schemaCode}:
+  /schema/{schemaCode}:
     get:
       tags:
       - Schema
@@ -763,7 +763,7 @@ paths:
       required: true
       schema:
         type: string
-  /registry/v3/schema/{schemaCode}/_isExist:
+  /schema/{schemaCode}/_isExist:
     post:
       tags:
       - Schema
@@ -836,7 +836,7 @@ paths:
       required: true
       schema:
         type: string
-  /registry/v3/schema/{schemaCode}/data:
+  /schema/{schemaCode}/data:
     get:
       tags:
       - Data
@@ -1086,7 +1086,7 @@ paths:
                 $ref: '#/components/schemas/ResponseEnvelope'
       description: Create a registry record for the specified schema.
       operationId: createRegistryData
-  /registry/v3/schema/{schemaCode}/data/{id}:
+  /schema/{schemaCode}/data/{id}:
     delete:
       tags:
       - Data
@@ -1187,7 +1187,7 @@ paths:
       required: true
       schema:
         type: string
-  /registry/v3/schema/{schemaCode}/data/_exists:
+  /schema/{schemaCode}/data/_exists:
     get:
       tags:
       - Data
@@ -1253,7 +1253,7 @@ paths:
       required: true
       schema:
         type: string
-  /registry/v3/schema/{schemaCode}/data/_registry:
+  /schema/{schemaCode}/data/_registry:
     get:
       tags:
       - Data
@@ -1327,7 +1327,7 @@ paths:
       required: true
       schema:
         type: string
-  /registry/v3/schema/{schemaCode}/data/_verify:
+  /schema/{schemaCode}/data/_verify:
     get:
       tags:
       - Data
@@ -1406,7 +1406,7 @@ paths:
       required: true
       schema:
         type: string
-  /registry/v3/schema/{schemaCode}/data/_search:
+  /schema/{schemaCode}/data/_search:
     post:
       tags:
       - Data
@@ -1478,7 +1478,7 @@ paths:
       required: true
       schema:
         type: string
-  /registry/v3/health:
+  /health:
     get:
       tags:
       - Data
