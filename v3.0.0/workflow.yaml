@@ -11,9 +11,9 @@ info:
 
     '
 servers:
-- url: https://api.example.com
+- url: https://api.example.com/workflow/v3
   description: Production server
-- url: https://staging-api.example.com
+- url: https://staging-api.example.com/workflow/v3
   description: Staging server
 tags:
 - name: Process
@@ -480,7 +480,7 @@ components:
     X-Rate-Limit-Reset:
       $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
 paths:
-  /workflow/v3/process:
+  /process:
     post:
       tags:
       - Process
@@ -677,7 +677,7 @@ paths:
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
       operationId: deleteWorkflowV3Process
-  /workflow/v3/process/definition:
+  /process/definition:
     get:
       tags:
       - Process
@@ -739,7 +739,7 @@ paths:
                 $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/process/definition.
       operationId: getWorkflowV3ProcessDefinition
-  /workflow/v3/process/{id}:
+  /process/{id}:
     parameters:
     - $ref: '#/components/parameters/TenantHeader'
     - name: id
@@ -945,7 +945,7 @@ paths:
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/process/{id}.
       operationId: deleteWorkflowV3ProcessId
-  /workflow/v3/process/{processId}/state:
+  /process/{processId}/state:
     parameters:
     - $ref: '#/components/parameters/TenantHeader'
     - name: processId
@@ -1080,7 +1080,7 @@ paths:
                 $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/process/{processId}/state.
       operationId: getWorkflowV3ProcessProcessidState
-  /workflow/v3/state/{id}:
+  /state/{id}:
     parameters:
     - $ref: '#/components/parameters/TenantHeader'
     - name: id
@@ -1280,7 +1280,7 @@ paths:
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/state/{id}.
       operationId: deleteWorkflowV3StateId
-  /workflow/v3/state/{stateId}/action:
+  /state/{stateId}/action:
     parameters:
     - $ref: '#/components/parameters/TenantHeader'
     - name: stateId
@@ -1415,7 +1415,7 @@ paths:
                 $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/state/{stateId}/action.
       operationId: getWorkflowV3StateStateidAction
-  /workflow/v3/action/{id}:
+  /action/{id}:
     parameters:
     - $ref: '#/components/parameters/TenantHeader'
     - name: id
@@ -1615,7 +1615,7 @@ paths:
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/action/{id}.
       operationId: deleteWorkflowV3ActionId
-  /workflow/v3/process/{processId}/escalation:
+  /process/{processId}/escalation:
     parameters:
     - $ref: '#/components/parameters/TenantHeader'
     - name: processId
@@ -1750,7 +1750,7 @@ paths:
                 $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/process/{processId}/escalation.
       operationId: getWorkflowV3ProcessProcessidEscalation
-  /workflow/v3/escalation/{id}:
+  /escalation/{id}:
     parameters:
     - $ref: '#/components/parameters/TenantHeader'
     - name: id
@@ -1950,7 +1950,7 @@ paths:
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/escalation/{id}.
       operationId: deleteWorkflowV3EscalationId
-  /workflow/v3/transition:
+  /transition:
     post:
       tags:
       - Transition
@@ -2083,7 +2083,7 @@ paths:
                 $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/transition.
       operationId: getWorkflowV3Transition
-  /workflow/v3/auto/{processCode}/_escalate:
+  /auto/{processCode}/_escalate:
     post:
       tags:
       - AutoEscalation
@@ -2162,7 +2162,7 @@ paths:
       required: true
       schema:
         type: string
-  /workflow/v3/auto/_search:
+  /auto/_search:
     get:
       tags:
       - AutoEscalation
