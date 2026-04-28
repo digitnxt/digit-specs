@@ -1,407 +1,156 @@
 openapi: 3.0.3
+
 info:
-  title: URL Shortener API
-  version: 1.0.0
-  description: API for creating, resolving, and managing shortened URLs.
+  title: URL Shortener Service API
+  version: 3.0.0
+  description: |
+    Shortens long URLs into compact short keys and redirects users to the original URL.
+
+    Supports optional validity windows (validFrom / validTill) and an optional Redis or
+    in-memory cache layer for fast redirects.
+
+    Shorten endpoint requires X-Tenant-ID and X-Client-ID headers.
+
 servers:
-- url: https://api.example.com/url-shortener/v3
-  description: Production server
-- url: https://staging-api.example.com/url-shortener/v3
-  description: Staging server
+  - url: https://api.example.com/url-shortener/v3
+    description: Production server
+  - url: https://staging-api.example.com/url-shortener/v3
+    description: Staging server
+
+security:
+  - BearerAuth: []
+
 tags:
-- name: Short URLs
-- name: Health
+  - name: URL Shortener
+    description: Shorten URLs and resolve short keys
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+
 paths:
-  /v1/short-urls:
+
+  # ── SHORTEN ──────────────────────────────────────────────────────────────────
+
+  /shortener:
     post:
-      tags:
-      - Short URLs
-      summary: Create a short URL
-      operationId: createShortUrl
+      tags: [URL Shortener]
+      summary: Shorten URL
+      description: |
+        Creates a short key for the given URL. Returns the full short URL using the
+        configured HOST_NAME. Optionally accepts a validity window.
+      operationId: shortenURL
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateShortUrlRequest'
+              $ref: "#/components/schemas/ShortenRequest"
       responses:
-        '201':
-          description: Short URL created
+        "201":
+          description: URL shortened successfully
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ShortUrlResponse'
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
+                $ref: "#/components/schemas/ShortenResponse"
         '400':
-          description: Validation error
+          description: Bad request.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '409':
-          description: Custom alias already exists
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Unauthorized
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests — generation rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Internal server error.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs POST on /v1/short-urls.
-      parameters:
-      - &id001
-        $ref: '#/components/parameters/RequestIdHeader'
-      - &id002
-        $ref: '#/components/parameters/CorrelationIdHeader'
-      - &id003
-        $ref: '#/components/parameters/UserAgentHeader'
-      - &id004
-        $ref: '#/components/parameters/TenantIdHeader'
-      - &id005
-        $ref: '#/components/parameters/ForwardedForHeader'
-      - &id006
-        $ref: '#/components/parameters/ClientId'
-      - &id007
-        $ref: '#/components/parameters/ClientSecret'
-      - &id008
-        $ref: '#/components/parameters/TimeStamp'
+
+  # ── REDIRECT ──────────────────────────────────────────────────────────────────
+
+  /{key}:
     get:
-      tags:
-      - Short URLs
-      summary: List short URLs
-      operationId: listShortUrls
+      tags: [URL Shortener]
+      summary: Redirect to original URL
+      description: |
+        Resolves the short key and issues a 307 Temporary Redirect to the original URL.
+        Returns 404 if the key does not exist.
+        Note: this route is registered directly on the server root, not under the
+        /url-shortener context path.
+      operationId: redirectURL
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - in: query
-        name: limit
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 100
-          default: 20
-      - in: query
-        name: offset
-        schema:
-          type: integer
-          minimum: 0
-          default: 0
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: key
+          in: path
+          required: true
+          description: The short key generated by the shorten endpoint
+          schema:
+            type: string
+            example: aB3x
       responses:
-        '200':
-          description: List of short URLs
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ShortUrlResponse'
-                  total:
-                    type: integer
-                    example: 42
+        "307":
+          description: Temporary redirect to the original URL
           headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /v1/short-urls.
-    parameters: []
-  /v1/short-urls/{code}:
-    get:
-      tags:
-      - Short URLs
-      summary: Get short URL details
-      operationId: getShortUrl
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - $ref: '#/components/parameters/CodeParam'
-      responses:
-        '200':
-          description: Short URL details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShortUrlResponse'
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /v1/short-urls/{code}.
-    patch:
-      tags:
-      - Short URLs
-      summary: Update short URL metadata
-      operationId: updateShortUrl
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - $ref: '#/components/parameters/CodeParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateShortUrlRequest'
-      responses:
-        '200':
-          description: Short URL updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShortUrlResponse'
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs PATCH on /v1/short-urls/{code}.
-    delete:
-      tags:
-      - Short URLs
-      summary: Delete short URL
-      operationId: deleteShortUrl
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - $ref: '#/components/parameters/CodeParam'
-      responses:
-        '204':
-          description: Deleted
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs DELETE on /v1/short-urls/{code}.
-    parameters:
-    - name: code
-      in: path
-      required: true
-      schema:
-        type: string
-  /v1/r/{code}:
-    get:
-      tags:
-      - Short URLs
-      summary: Resolve and redirect to long URL
-      operationId: redirectShortUrl
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - $ref: '#/components/parameters/CodeParam'
-      responses:
-        '302':
-          description: Redirect to original URL
-          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
             Location:
+              description: The original long URL
               schema:
                 type: string
                 format: uri
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '410':
-          description: Link expired
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '400':
-          description: Validation error
+          description: Bad request.
           content:
             application/json:
               schema:
@@ -409,292 +158,142 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
+        '404':
+          description: Not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs GET on /v1/r/{code}.
-    parameters:
-    - name: code
-      in: path
-      required: true
-      schema:
-        type: string
-  /v1/short-urls/{code}/stats:
-    get:
-      tags:
-      - Short URLs
-      summary: Get click statistics
-      operationId: getShortUrlStats
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - $ref: '#/components/parameters/CodeParam'
-      responses:
-        '200':
-          description: Click stats
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShortUrlStatsResponse'
+        '429':
+          description: Too Many Requests — generation rate limit exceeded.
           headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '400':
-          description: Validation error
-          content:
-            application/json:
+            Retry-After:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Internal server error.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs GET on /v1/short-urls/{code}/stats.
-    parameters:
-    - name: code
-      in: path
-      required: true
-      schema:
-        type: string
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+
 components:
+
+  # ── Security ────────────────────────────────────────────────────────────────
+
+  securitySchemes:
+    BearerAuth:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
+
+  # ── Parameters ──────────────────────────────────────────────────────────────
+
   parameters:
-    CodeParam:
-      in: path
-      name: code
-      required: true
+    RequestIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
+    CorrelationIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
+    UserAgentHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
+    TenantIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
+    ForwardedForHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
+    ClientId:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
+    ClientSecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
+    TimeStamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Provide a unique value to prevent duplicate creations on retries.
       schema:
         type: string
-        minLength: 4
-        maxLength: 32
-        pattern: ^[a-zA-Z0-9_-]+$
-    RequestIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
-    CorrelationIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
-    UserAgentHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
-    TenantIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
-    ForwardedForHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
-    ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
-    ClientSecret:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
-    TimeStamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
+        minLength: 8
+        maxLength: 128
+
+  # ── Response Headers ─────────────────────────────────────────────────────────
+
+  headers:
+    X-Response-Time:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
+    X-Response-Timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
+    X-Request-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
+    X-Correlation-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
+    X-Tenant-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
+    X-Rate-Limit:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
+    X-Rate-Limit-Remaining:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
+    X-Rate-Limit-Reset:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
+
+  # ── Schemas ──────────────────────────────────────────────────────────────────
+
   schemas:
-    CreateShortUrlRequest:
+
+    # ── Common refs ─────────────────────────────────────────────────────────────
+
+    Error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
+
+    AuditDetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
+
+    # ── URL Shortener Request / Response Schemas ─────────────────────────────────
+
+    ShortenRequest:
       type: object
-      required:
-      - longUrl
+      required: [url]
       properties:
-        longUrl:
+        url:
           type: string
           format: uri
-          example: https://example.com/products/123?ref=campaign
-        customAlias:
-          type: string
-          minLength: 4
-          maxLength: 32
-          pattern: ^[a-zA-Z0-9_-]+$
-          example: summer-sale
-        expiresAt:
-          type: string
-          format: date-time
-          example: 2026-12-31 23:59:59+00:00
-        tags:
-          type: array
-          items:
-            type: string
-          example:
-          - marketing
-          - q4
-        metadata:
-          type: object
-          additionalProperties:
-            type: string
-          example:
-            campaignId: CMP-001
-    UpdateShortUrlRequest:
+          maxLength: 2048
+          description: The long URL to shorten
+          example: https://example.com/some/very/long/path?with=query&params=here
+        validFrom:
+          type: integer
+          format: int64
+          minimum: 0
+          default: 0
+          description: Epoch milliseconds — when the short URL becomes valid (0 = immediately)
+        validTill:
+          type: integer
+          format: int64
+          minimum: 0
+          default: 0
+          description: Epoch milliseconds — when the short URL expires (0 = never)
+
+    ShortenResponse:
       type: object
+      required: [shortUrl]
       properties:
-        longUrl:
-          type: string
-          format: uri
-        expiresAt:
-          type: string
-          format: date-time
-          nullable: true
-        active:
-          type: boolean
-        tags:
-          type: array
-          items:
-            type: string
-        metadata:
-          type: object
-          additionalProperties:
-            type: string
-    ShortUrlResponse:
-      type: object
-      properties:
-        code:
-          type: string
-          example: aB12xY
         shortUrl:
           type: string
           format: uri
-          example: https://sho.rt/aB12xY
-        longUrl:
-          type: string
-          format: uri
-          example: https://example.com/products/123?ref=campaign
-        active:
-          type: boolean
-          example: true
-        expiresAt:
-          type: string
-          format: date-time
-          nullable: true
-        tags:
-          type: array
-          items:
-            type: string
-        metadata:
-          type: object
-          additionalProperties:
-            type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    ShortUrlStatsResponse:
-      type: object
-      properties:
-        code:
-          type: string
-          example: aB12xY
-        totalClicks:
-          type: integer
-          example: 1042
-        uniqueClicks:
-          type: integer
-          example: 813
-        lastClickedAt:
-          type: string
-          format: date-time
-          nullable: true
-        topReferrers:
-          type: array
-          items:
-            type: object
-            properties:
-              referrer:
-                type: string
-                example: google.com
-              clicks:
-                type: integer
-                example: 421
-        topCountries:
-          type: array
-          items:
-            type: object
-            properties:
-              countryCode:
-                type: string
-                example: IN
-              clicks:
-                type: integer
-                example: 250
-    ErrorResponse:
-      type: object
-      properties:
-        code:
-          type: string
-          example: NOT_FOUND
-        message:
-          type: string
-          example: Short URL not found
-        details:
-          type: object
-          additionalProperties: true
-    Error:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
-  responses:
-    BadRequest:
-      description: Invalid request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-  headers:
-    X-Response-Time:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
-    X-Response-Timestamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
-    X-Request-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
-    X-Correlation-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
-    X-Tenant-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
-    X-Rate-Limit:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
-    X-Rate-Limit-Remaining:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
-    X-Rate-Limit-Reset:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
-  securitySchemes:
-    BearerAuth:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth
-security:
-- BearerAuth: []
+          readOnly: true
+          description: The full short URL including the configured hostname
+          example: http://localhost:8080/aB3x
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
