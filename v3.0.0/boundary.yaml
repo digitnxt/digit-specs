@@ -1,7 +1,9 @@
 openapi: 3.0.0
 info:
   title: Boundary Service
-  description: Boundary service APIs - to create, search and update boundaries along with APIs for establishing relationships between boundaries. This service supports n-level hierarchical boundary data.
+  description: Boundary service APIs - to create, search and update boundaries along
+    with APIs for establishing relationships between boundaries. This service supports
+    n-level hierarchical boundary data.
   contact:
     name: eGov
     email: info@egovernments.org
@@ -9,7 +11,7 @@ info:
 servers:
 - url: /boundary/v3
 security:
-  - BearerAuth: []
+- BearerAuth: []
 paths:
   /:
     get:
@@ -17,8 +19,10 @@ paths:
       - Boundary Entities
       summary: API endpoint to search boundary entities.
       operationId: searchBoundaries
-      description: |
-        Provides a list of boundary entities based on the provided search criteria.
+      description: 'Provides a list of boundary entities based on the provided search
+        criteria.
+
+        '
       parameters:
       - name: codes
         in: query
@@ -52,7 +56,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
-        200:
+        '200':
           description: Successful Response.
           headers:
             X-Response-Time:
@@ -75,7 +79,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryResponse'
-        400:
+        '400':
           description: Invalid input.
           content:
             '*/*':
@@ -83,13 +87,13 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        401:
+        '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        '500':
           description: Internal server error.
           content:
             '*/*':
@@ -100,24 +104,25 @@ paths:
       - Boundary Entities
       summary: API endpoint to create Boundary.
       operationId: createBoundary
-      description: |
-        Provides functionality to create boundary data.
+      description: 'Provides functionality to create boundary data.
+
+        '
       requestBody:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/BoundaryRequest"
-      parameters: 
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+              $ref: '#/components/schemas/BoundaryRequest'
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       responses:
-        201:
+        '201':
           description: Boundary created successfully.
           headers:
             X-Response-Time:
@@ -140,7 +145,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryResponse'
-        400:
+        '400':
           description: Invalid input.
           content:
             '*/*':
@@ -148,13 +153,13 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        401:
+        '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        '500':
           description: Internal server error.
           content:
             '*/*':
@@ -166,30 +171,31 @@ paths:
       - Boundary Entities
       summary: API endpoint to update Boundary.
       operationId: updateBoundary
-      description: |
-        Provides functionality to update boundary data.
+      description: 'Provides functionality to update boundary data.
+
+        '
       parameters:
-        - name: id
-          in: path
-          description: Boundary ID
-          required: true
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        description: Boundary ID
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/Boundary"
+              $ref: '#/components/schemas/Boundary'
       responses:
-        200:
+        '200':
           description: Boundary updated successfully.
           headers:
             X-Response-Time:
@@ -212,7 +218,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryResponse'
-        400:
+        '400':
           description: Invalid input.
           content:
             '*/*':
@@ -220,19 +226,19 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        401:
+        '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        404:
+        '404':
           description: Boundary not found.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        '500':
           description: Internal server error.
           content:
             '*/*':
@@ -241,20 +247,23 @@ paths:
   /shapefile/boundary:
     post:
       tags:
-        - Shapefile
+      - Shapefile
       summary: Create boundaries from shapefile
       operationId: createBoundariesFromShapefile
-      description: |
-        Creates boundaries in the system using shapefile data. Takes a list of file store IDs representing uploaded shapefiles along with code field configuration.
-      parameters: 
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      description: 'Creates boundaries in the system using shapefile data. Takes a
+        list of file store IDs representing uploaded shapefiles along with code field
+        configuration.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
@@ -311,24 +320,25 @@ paths:
       - Hierarchy Definition
       summary: API endpoint to create boundary hierarchy.
       operationId: createBoundaryHierarchy
-      description: |
-        Creates a new boundary type hierarchy definition.
+      description: 'Creates a new boundary type hierarchy definition.
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/BoundaryHierarchyRequest'
       responses:
-        201:
+        '201':
           description: Hierarchy created successfully.
           headers:
             X-Response-Time:
@@ -351,8 +361,20 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryTypeHierarchyResponse'
-        400:
+        '400':
           description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
           content:
             '*/*':
               schema:
@@ -362,27 +384,29 @@ paths:
       - Hierarchy Definition
       summary: API endpoint to search boundary hierarchy.
       operationId: searchBoundaryHierarchy
-      description: |
-        Provides boundary type hierarchy based on the provided search criteria.
+      description: 'Provides boundary type hierarchy based on the provided search
+        criteria.
+
+        '
       parameters:
-        - name: hierarchyType
-          in: query
-          description: Search by hierarchy type.
-          required: true
-          schema:
-            maxLength: 256
-            type: string
-            format: varchar
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - name: hierarchyType
+        in: query
+        description: Search by hierarchy type.
+        required: true
+        schema:
+          maxLength: 256
+          type: string
+          format: varchar
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       responses:
-        200:
+        '200':
           description: Successful Response.
           headers:
             X-Response-Time:
@@ -405,7 +429,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryTypeHierarchyResponse'
-        400:
+        '400':
           description: Invalid input.
           content:
             '*/*':
@@ -413,13 +437,13 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        401:
+        '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        '500':
           description: Internal server error.
           content:
             '*/*':
@@ -431,30 +455,31 @@ paths:
       - Hierarchy Definition
       summary: API endpoint to update boundary hierarchy.
       operationId: updateBoundaryHierarchy
-      description: |
-        Updates an existing boundary type hierarchy definition.
+      description: 'Updates an existing boundary type hierarchy definition.
+
+        '
       parameters:
-        - name: id
-          in: path
-          description: Hierarchy ID
-          required: true
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        description: Hierarchy ID
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/BoundaryHierarchyRequest'
       responses:
-        200:
+        '200':
           description: Hierarchy updated successfully.
           headers:
             X-Response-Time:
@@ -477,7 +502,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryTypeHierarchyResponse'
-        400:
+        '400':
           description: Invalid input.
           content:
             '*/*':
@@ -485,19 +510,19 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        401:
+        '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        404:
+        '404':
           description: Hierarchy not found.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        '500':
           description: Internal server error.
           content:
             '*/*':
@@ -509,24 +534,25 @@ paths:
       - Boundary Relationships
       summary: API endpoint to create relationships between boundaries.
       operationId: createBoundaryRelationship
-      description: |
-        Provides functionality to establish relationships between boundaries.
+      description: 'Provides functionality to establish relationships between boundaries.
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/BoundaryRelationshipRequest'
       responses:
-        201:
+        '201':
           description: Relationship created successfully.
           headers:
             X-Response-Time:
@@ -549,8 +575,20 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryRelationshipResponse'
-        400:
+        '400':
           description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
           content:
             '*/*':
               schema:
@@ -560,8 +598,10 @@ paths:
       - Boundary Relationships
       summary: API endpoint to search linked boundaries.
       operationId: searchBoundaryRelationships
-      description: |
-        Provides functionality to search linked boundaries based on the provided search criteria
+      description: 'Provides functionality to search linked boundaries based on the
+        provided search criteria
+
+        '
       parameters:
       - name: hierarchyType
         in: query
@@ -594,13 +634,15 @@ paths:
           type: string
       - name: includeChildren
         in: query
-        description: boolean flag to inform the service if children need to be part of search.
+        description: boolean flag to inform the service if children need to be part
+          of search.
         required: false
         schema:
           type: boolean
       - name: includeParents
         in: query
-        description: boolean flag to inform the service if parents need to be part of search.
+        description: boolean flag to inform the service if parents need to be part
+          of search.
         required: false
         schema:
           type: boolean
@@ -625,7 +667,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
-        200:
+        '200':
           description: Successful Response.
           headers:
             X-Response-Time:
@@ -648,7 +690,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundarySearchResponse'
-        400:
+        '400':
           description: Invalid input.
           content:
             '*/*':
@@ -656,13 +698,13 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        401:
+        '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        '500':
           description: Internal server error.
           content:
             '*/*':
@@ -674,30 +716,31 @@ paths:
       - Boundary Relationships
       summary: API endpoint to update relationships between boundaries.
       operationId: updateBoundaryRelationship
-      description: |
-        Provides functionality to update relationships between boundaries.
+      description: 'Provides functionality to update relationships between boundaries.
+
+        '
       parameters:
-        - name: id
-          in: path
-          description: Relationship ID
-          required: true
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        description: Relationship ID
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BoundaryRelationship'
+              $ref: '#/components/schemas/BoundaryRelation'
       responses:
-        200:
+        '200':
           description: Relationship updated successfully.
           headers:
             X-Response-Time:
@@ -720,7 +763,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/BoundaryRelationshipResponse'
-        400:
+        '400':
           description: Invalid input.
           content:
             '*/*':
@@ -728,95 +771,74 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        401:
+        '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        404:
+        '404':
           description: Relationship not found.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        500:
+        '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-      
 components:
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth
   parameters:
     RequestIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
     ClientSecret:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
-  
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
   headers:
     X-Response-Time:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
-  
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
   schemas:
     Error:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
-    HierarchyType:
-      required:
-      - code
-      type: object
-      properties:
-        tenantId:
-          type: string
-          description: Unique tenant identifier
-        id:
-          type: string
-          readOnly: true
-          description: UUID
-        code:
-          type: string
-          description: Unique Hierarchy type code
-        active:
-          type: boolean
-          description: Soft delete (true / false)
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
     Geometry:
       type: object
       properties:
         type:
           type: string
           enum:
-            - Polygon
-            - Point
-            - MultiPolygon
+          - Polygon
+          - Point
+          - MultiPolygon
         coordinates:
           type: array
           items:
@@ -825,24 +847,6 @@ components:
               type: array
               items:
                 type: number
-    BoundaryType:
-      required:
-      - code
-      type: object
-      properties:
-        tenantId:
-          type: string
-          description: unique tenant identifier
-        id:
-          type: string
-          readOnly: true
-          description: UUID
-        code:
-          type: string
-          description: unique code for boundary type.
-        active:
-          type: boolean
-          description: attribute that defines if the given boundary type is active or not.
     Boundary:
       required:
       - code
@@ -859,8 +863,7 @@ components:
           type: string
           description: code of the boundary.
         geometry:
-          type: object
-          description: GeoJSON geometry object (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection)
+          $ref: '#/components/schemas/Geometry'
         additionalAttributes:
           type: object
           description: Additional attributes for the boundary
@@ -870,7 +873,7 @@ components:
         auditDetails:
           $ref: '#/components/schemas/AuditDetails'
     AuditDetails:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail
     EnrichedBoundary:
       type: object
       properties:
@@ -909,7 +912,8 @@ components:
           description: Unique tenant identifier.
         hierarchyType:
           type: string
-          description: Code of the hierarchy type for which boundary relationship is being created.
+          description: Code of the hierarchy type for which boundary relationship
+            is being created.
         boundaryType:
           type: string
           description: Boundary type from master data.
@@ -972,8 +976,8 @@ components:
           description: unique code for parent boundary. Null for root level.
         active:
           type: boolean
-          description: attribute that defines if the given boundary hierarchy is active or not
-
+          description: attribute that defines if the given boundary hierarchy is active
+            or not
     BoundaryTypeHierarchyResponse:
       type: object
       properties:
@@ -1010,7 +1014,7 @@ components:
     BoundaryRequest:
       type: object
       required:
-        - boundary
+      - boundary
       properties:
         boundary:
           type: array
@@ -1027,13 +1031,14 @@ components:
     ShapefileBoundaryCreateRequest:
       type: object
       required:
-        - fileStoreIds
+      - fileStoreIds
       properties:
         fileStoreIds:
           type: array
           items:
             type: string
-          description: List of file store IDs for the shapefile components (.shp, .shx, .dbf, .prj)
+          description: List of file store IDs for the shapefile components (.shp,
+            .shx, .dbf, .prj)
         uniqueCodeField:
           type: string
           description: Field name in the shapefile to use as the unique boundary code
