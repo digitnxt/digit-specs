@@ -654,13 +654,7 @@ components:
         - templateId
         - type
         - content
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: System-generated unique identifier for the notification template.
-          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"  
+      properties: 
         templateId:
           type: string
           minLength: 1
