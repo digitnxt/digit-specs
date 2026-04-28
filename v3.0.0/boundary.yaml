@@ -1,16 +1,15 @@
 openapi: 3.0.0
 info:
   title: Boundary Service
-  description: Boundary service APIs - to create, search and update boundaries along
-    with APIs for establishing relationships between boundaries. This service supports
-    n-level hierarchical boundary data.
+  description: Boundary service APIs - to create, search and update boundaries along with APIs for establishing relationships between boundaries. This service supports n-level hierarchical boundary data.
+  contact:
+    name: eGov
+    email: info@egovernments.org
   version: 3.0.0
 servers:
 - url: /boundary/v3
-- url: https://staging-api.example.com/boundary/v3
-  description: Staging server
 security:
-- BearerAuth: []
+  - BearerAuth: []
 paths:
   /:
     get:
@@ -18,27 +17,9 @@ paths:
       - Boundary Entities
       summary: API endpoint to search boundary entities.
       operationId: searchBoundaries
-      description: 'Provides a list of boundary entities based on the provided search
-        criteria.
-
-        '
+      description: |
+        Provides a list of boundary entities based on the provided search criteria.
       parameters:
-      - &id001
-        $ref: '#/components/parameters/RequestIdHeader'
-      - &id002
-        $ref: '#/components/parameters/CorrelationIdHeader'
-      - &id003
-        $ref: '#/components/parameters/UserAgentHeader'
-      - &id004
-        $ref: '#/components/parameters/TenantIdHeader'
-      - &id005
-        $ref: '#/components/parameters/ForwardedForHeader'
-      - &id006
-        $ref: '#/components/parameters/ClientId'
-      - &id007
-        $ref: '#/components/parameters/ClientSecret'
-      - &id008
-        $ref: '#/components/parameters/TimeStamp'
       - name: codes
         in: query
         description: unique list of boundary codes.
@@ -62,6 +43,14 @@ paths:
         required: false
         schema:
           type: integer
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       responses:
         200:
           description: Successful Response.
@@ -106,48 +95,27 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
     post:
       tags:
       - Boundary Entities
       summary: API endpoint to create Boundary.
       operationId: createBoundary
-      description: 'Provides functionality to create boundary data.
-
-        '
+      description: |
+        Provides functionality to create boundary data.
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BoundaryRequest'
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
+              "$ref": "#/components/schemas/BoundaryRequest"
+      parameters: 
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       responses:
         201:
           description: Boundary created successfully.
@@ -192,56 +160,34 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    parameters: []
   /{id}:
     put:
       tags:
       - Boundary Entities
       summary: API endpoint to update Boundary.
       operationId: updateBoundary
-      description: 'Provides functionality to update boundary data.
-
-        '
+      description: |
+        Provides functionality to update boundary data.
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - name: id
-        in: path
-        description: Boundary ID
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          description: Boundary ID
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Boundary'
+              "$ref": "#/components/schemas/Boundary"
       responses:
         200:
           description: Boundary updated successfully.
@@ -292,52 +238,23 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
   /shapefile/boundary:
     post:
       tags:
-      - Shapefile
+        - Shapefile
       summary: Create boundaries from shapefile
       operationId: createBoundariesFromShapefile
-      description: 'Creates boundaries in the system using shapefile data. Takes a
-        list of file store IDs representing uploaded shapefiles along with code field
-        configuration.
-
-        '
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
+      description: |
+        Creates boundaries in the system using shapefile data. Takes a list of file store IDs representing uploaded shapefiles along with code field configuration.
+      parameters: 
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
@@ -388,25 +305,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-    parameters: []
   /hierarchy:
     post:
       tags:
       - Hierarchy Definition
       summary: API endpoint to create boundary hierarchy.
       operationId: createBoundaryHierarchy
-      description: 'Creates a new boundary type hierarchy definition.
-
-        '
+      description: |
+        Creates a new boundary type hierarchy definition.
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
@@ -442,52 +357,30 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
     get:
       tags:
       - Hierarchy Definition
       summary: API endpoint to search boundary hierarchy.
       operationId: searchBoundaryHierarchy
-      description: 'Provides boundary type hierarchy based on the provided search
-        criteria.
-
-        '
+      description: |
+        Provides boundary type hierarchy based on the provided search criteria.
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - name: hierarchyType
-        in: query
-        description: Search by hierarchy type.
-        required: true
-        schema:
-          maxLength: 256
-          type: string
-          format: varchar
+        - name: hierarchyType
+          in: query
+          description: Search by hierarchy type.
+          required: true
+          schema:
+            maxLength: 256
+            type: string
+            format: varchar
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       responses:
         200:
           description: Successful Response.
@@ -532,51 +425,29 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    parameters: []
   /hierarchy/{id}:
     put:
       tags:
       - Hierarchy Definition
       summary: API endpoint to update boundary hierarchy.
       operationId: updateBoundaryHierarchy
-      description: 'Updates an existing boundary type hierarchy definition.
-
-        '
+      description: |
+        Updates an existing boundary type hierarchy definition.
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - name: id
-        in: path
-        description: Hierarchy ID
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          description: Hierarchy ID
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
@@ -632,50 +503,23 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
   /relationship:
     post:
       tags:
       - Boundary Relationships
       summary: API endpoint to create relationships between boundaries.
       operationId: createBoundaryRelationship
-      description: 'Provides functionality to establish relationships between boundaries.
-
-        '
+      description: |
+        Provides functionality to establish relationships between boundaries.
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
@@ -711,44 +555,14 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
     get:
       tags:
       - Boundary Relationships
       summary: API endpoint to search linked boundaries.
       operationId: searchBoundaryRelationships
-      description: 'Provides functionality to search linked boundaries based on the
-        provided search criteria
-
-        '
+      description: |
+        Provides functionality to search linked boundaries based on the provided search criteria
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
       - name: hierarchyType
         in: query
         description: Type Of the BoundaryType Like REVENUE, ADMIN
@@ -780,15 +594,13 @@ paths:
           type: string
       - name: includeChildren
         in: query
-        description: boolean flag to inform the service if children need to be part
-          of search.
+        description: boolean flag to inform the service if children need to be part of search.
         required: false
         schema:
           type: boolean
       - name: includeParents
         in: query
-        description: boolean flag to inform the service if parents need to be part
-          of search.
+        description: boolean flag to inform the service if parents need to be part of search.
         required: false
         schema:
           type: boolean
@@ -804,6 +616,14 @@ paths:
         required: false
         schema:
           type: integer
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       responses:
         200:
           description: Successful Response.
@@ -848,51 +668,29 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    parameters: []
   /relationship/{id}:
     put:
       tags:
       - Boundary Relationships
       summary: API endpoint to update relationships between boundaries.
       operationId: updateBoundaryRelationship
-      description: 'Provides functionality to update relationships between boundaries.
-
-        '
+      description: |
+        Provides functionality to update relationships between boundaries.
       parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - *id006
-      - *id007
-      - *id008
-      - name: id
-        in: path
-        description: Relationship ID
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          description: Relationship ID
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         content:
           application/json:
@@ -948,73 +746,50 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
+      
 components:
   securitySchemes:
     BearerAuth:
-      $ref: https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth
+      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
   parameters:
     RequestIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
     CorrelationIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
     ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
     ClientSecret:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
     TimeStamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+  
   headers:
     X-Response-Time:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
     X-Response-Timestamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
     X-Request-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
     X-Correlation-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
     X-Tenant-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
     X-Rate-Limit:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
     X-Rate-Limit-Remaining:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
     X-Rate-Limit-Reset:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
+        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+  
   schemas:
     Error:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
     HierarchyType:
       required:
       - code
@@ -1039,9 +814,9 @@ components:
         type:
           type: string
           enum:
-          - Polygon
-          - Point
-          - MultiPolygon
+            - Polygon
+            - Point
+            - MultiPolygon
         coordinates:
           type: array
           items:
@@ -1067,8 +842,7 @@ components:
           description: unique code for boundary type.
         active:
           type: boolean
-          description: attribute that defines if the given boundary type is active
-            or not.
+          description: attribute that defines if the given boundary type is active or not.
     Boundary:
       required:
       - code
@@ -1086,8 +860,7 @@ components:
           description: code of the boundary.
         geometry:
           type: object
-          description: GeoJSON geometry object (Point, LineString, Polygon, MultiPoint,
-            MultiLineString, MultiPolygon, GeometryCollection)
+          description: GeoJSON geometry object (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection)
         additionalAttributes:
           type: object
           description: Additional attributes for the boundary
@@ -1097,7 +870,7 @@ components:
         auditDetails:
           $ref: '#/components/schemas/AuditDetails'
     AuditDetails:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
     EnrichedBoundary:
       type: object
       properties:
@@ -1136,8 +909,7 @@ components:
           description: Unique tenant identifier.
         hierarchyType:
           type: string
-          description: Code of the hierarchy type for which boundary relationship
-            is being created.
+          description: Code of the hierarchy type for which boundary relationship is being created.
         boundaryType:
           type: string
           description: Boundary type from master data.
@@ -1200,8 +972,8 @@ components:
           description: unique code for parent boundary. Null for root level.
         active:
           type: boolean
-          description: attribute that defines if the given boundary hierarchy is active
-            or not
+          description: attribute that defines if the given boundary hierarchy is active or not
+
     BoundaryTypeHierarchyResponse:
       type: object
       properties:
@@ -1238,7 +1010,7 @@ components:
     BoundaryRequest:
       type: object
       required:
-      - boundary
+        - boundary
       properties:
         boundary:
           type: array
@@ -1255,14 +1027,13 @@ components:
     ShapefileBoundaryCreateRequest:
       type: object
       required:
-      - fileStoreIds
+        - fileStoreIds
       properties:
         fileStoreIds:
           type: array
           items:
             type: string
-          description: List of file store IDs for the shapefile components (.shp,
-            .shx, .dbf, .prj)
+          description: List of file store IDs for the shapefile components (.shp, .shx, .dbf, .prj)
         uniqueCodeField:
           type: string
           description: Field name in the shapefile to use as the unique boundary code
