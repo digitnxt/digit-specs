@@ -23,6 +23,8 @@ security:
   - BearerAuth: []
 
 tags:
+  - name: Health
+    description: Health check endpoint for service monitoring.
   - name: Config
     description: Manage per-tenant, per-purpose OTP configuration (OTP length, TTL, rate limits, lockout).
   - name: OTP
@@ -33,6 +35,27 @@ tags:
 # ─────────────────────────────────────────────────────────────────────────────
 
 paths:
+
+  # ── HEALTH ──────────────────────────────────────────────────────────────────
+
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: healthCheck
+      tags: [Health]
+      description: Returns the health status of the OTP service.
+      security: []
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
 
   # ── CONFIG ──────────────────────────────────────────────────────────────────
 
@@ -115,6 +138,7 @@ paths:
       tags: [Config]
       description: |
         Returns the OTP configuration for the given purpose under the calling tenant.
+        If purpose is not provided, returns all configs for the tenant.
         `tenantId` is extracted from the bearer token.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -130,10 +154,10 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/OtpPurpose'
-          description: The purpose to retrieve config for.
+          description: The purpose to retrieve config for. If omitted, returns all configs for the tenant.
       responses:
         '200':
-          description: OTP config returned.
+          description: OTP config(s) returned.
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -146,7 +170,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OtpConfig'
+                oneOf:
+                  - $ref: '#/components/schemas/OtpConfig'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/OtpConfig'
         '400':
           description: Bad Request.
           content:
@@ -187,6 +215,13 @@ paths:
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier of the config to update.
       requestBody:
         required: true
         content:
@@ -308,19 +343,16 @@ paths:
       tags: [OTP]
       description: |
         Generates a cryptographically secure OTP for the given identifier and purpose.
-        Returns a signed Reference ID (JWT). Publishes an `otp.generated` event for the
-        Notification Service to consume — the OTP Service does not call delivery providers directly.
+        Returns a UUID referenceId. Sends the OTP via the Notification Service.
 
-        **tenantId** is extracted from the bearer token — never sent in the request body.
+        **tenantId** is extracted from the X-Tenant-Id header.
 
-        **Idempotency:** If an active OTP exists for the same (tenantId, identifier, purpose)
+        **Idempotency:** If an active OTP exists for the same (tenantId, destination, purpose)
         and the cooldown window has not elapsed, the existing `referenceId` is returned without
         generating a new OTP.
 
-        **Atomicity:** OTP creation uses Redis SET NX to prevent race conditions under concurrent requests.
-
         **Pre-conditions:**
-        - A config must exist and `isEnabled = true` for this tenant+purpose.
+        - A config must exist and `isActive = true` for this tenant+purpose.
         - Identifier must not be in a lockout period.
         - Generation rate limit must not be exceeded.
       parameters:
@@ -426,14 +458,14 @@ paths:
       description: |
         Verifies the submitted OTP against the stored hash.
 
-        `tenantId`, `identifier`, and `purpose` are extracted from the signed `referenceId` JWT —
-        the caller never sends these values and cannot tamper with them.
+        `referenceId` is the UUID returned from `/generate` - used to look up the OTP record.
+        `tenantId` is extracted from the X-Tenant-Id header.
+        `purpose` must be provided in the request body and must match the purpose stored in the OTP record.
 
-        **On success:** The OTP is immediately deleted (single-use guarantee).
+        **On success:** The OTP status is marked as verified.
 
         **On failure:** The attempt counter is incremented. When `maxAttempts` is reached the OTP
-        is locked, the identifier enters a lockout period for `lockoutSeconds`, and no further
-        attempts are possible until the lockout expires.
+        is locked and no further attempts are possible.
 
         **Security:** Comparison is always constant-time to prevent timing attacks.
       parameters:
@@ -455,13 +487,15 @@ paths:
               standard:
                 summary: Standard verify
                 value:
-                  referenceId: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  referenceId: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
+                  purpose: "login"
                   otp: "482910"
               with_context_binding:
                 summary: Verify with session binding
                 value:
-                  referenceId: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                  otp: "48291033"
+                  referenceId: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
+                  purpose: "transaction"
+                  otp: "482910"
                   sessionId: sess-abc123
       responses:
         '200':
@@ -526,10 +560,11 @@ paths:
       operationId: invalidateOtp
       tags: [OTP]
       description: |
-        Immediately and permanently deletes an active OTP.
+        Immediately marks an OTP as invalid.
         Used on logout, account lock, or any security event.
 
-        `tenantId`, `identifier`, and `purpose` are decoded from the signed `referenceId` JWT.
+        `referenceId` is the UUID returned from `/generate`.
+        `tenantId` is extracted from the X-Tenant-Id header.
 
         **Idempotent** — returns `200` even if no active OTP exists for the given `referenceId`
         (already expired, already verified, or never existed).
@@ -550,7 +585,7 @@ paths:
             schema:
               $ref: '#/components/schemas/OtpInvalidateRequest'
             example:
-              referenceId: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+              referenceId: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
       responses:
         '200':
           description: OTP invalidated or was already inactive.
@@ -595,25 +630,21 @@ paths:
       operationId: resendOtp
       tags: [OTP]
       description: |
-        Invalidates the current active OTP for the (tenantId, identifier, purpose) encoded
-        in the submitted `referenceId` and generates a fresh one.
-        Publishes a new `otp.generated` event for the Notification Service to consume.
+        Resends the OTP for an existing OTP request.
+        Depending on configuration, either sends the same OTP or generates a new one.
 
-        `tenantId`, `identifier`, and `purpose` are decoded from the signed `referenceId` JWT —
-        the caller never sends these values and cannot tamper with them.
+        `referenceId` is the UUID returned from the previous `/generate` call.
+        `tenantId` is extracted from the X-Tenant-Id header.
 
-        **Cooldown enforcement:** If the last OTP was generated within `cooldownSeconds`,
+        **Cooldown enforcement:** If the last OTP was sent within `cooldownSeconds`,
         the request is rejected with `429 RESEND_COOLDOWN` and a `Retry-After` header.
 
         **Rate limiting:** Subject to `maxResendsPerHour` from the resolved purpose config.
 
-        **Atomicity:** The old OTP is deleted and the new one is written atomically.
-        A new signed `referenceId` JWT is returned — the previous one is invalidated.
-
         **Pre-conditions:**
-        - `referenceId` JWT signature must be valid.
+        - `referenceId` must be a valid UUID for an existing OTP record.
         - Identifier must not be in an active lockout period.
-        - Cooldown window must have elapsed since the last generate or resend.
+        - Cooldown window must have elapsed since the last send.
         - Resend rate limit must not be exceeded.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -635,11 +666,11 @@ paths:
               standard:
                 summary: Resend login OTP
                 value:
-                  referenceId: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  referenceId: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
               with_context:
                 summary: Resend transaction OTP with new session binding
                 value:
-                  referenceId: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  referenceId: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
                   metadata:
                     sessionId: sess-new-456
                     deviceId: device-001
@@ -725,7 +756,7 @@ components:
 
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
 
   # ── Parameters ──────────────────────────────────────────────────────────────
 
@@ -893,7 +924,14 @@ components:
             If `false`, `/generate` returns `403 PURPOSE_NOT_CONFIGURED`.
           example: true
           default: true
-        
+        contextBindingRequired:
+          type: boolean
+          description: |
+            Whether session binding is required for this purpose.
+            If `true`, the `sessionId` must be provided in metadata during generate
+            and must match during verify.
+          example: false
+          default: false
         version:
           type: integer
           format: int32
@@ -946,6 +984,19 @@ components:
               Example: `email:user@example.com`
         purpose:
           $ref: '#/components/schemas/OtpPurpose'
+        metadata:
+          type: object
+          description: |
+            Optional caller-supplied context for the OTP.
+            Max 5 key-value string pairs. Passed to the audit log and `otp.generated` event.
+            If `contextBindingRequired = true` for this purpose, the `sessionId` key is mandatory
+            and will be bound to the OTP for verification.
+          additionalProperties:
+            type: string
+          maxProperties: 5
+          example:
+            sessionId: sess-abc123
+            deviceId: device-001
         
       
 
@@ -955,18 +1006,19 @@ components:
       properties:
         referenceId:
           type: string
+          format: uuid
           description: |
-            Signed JWT encoding `tenantId`, `identifier`, `purpose`, `jti`, and `exp`.
-            Submit this on `/verify` and `/invalidate`. Do not parse or modify it.
-            The JWT `exp` and the Redis TTL are always identical — set from `ttlSeconds` at generation time.
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            Unique identifier (UUID) for this OTP request.
+            Submit this on `/verify`, `/invalidate`, and `/resend`.
+            This ID is used to look up the OTP record in the database.
+          example: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
         expiresIn:
           type: integer
           description: Seconds until this OTP expires.
           example: 600
         cooldownSeconds:
           type: integer
-          description: Minimum seconds to wait before calling `/generate` again for a resend.
+          description: Minimum seconds to wait before calling `/resend`.
           example: 60
 
     OtpVerifyRequest:
@@ -979,11 +1031,11 @@ components:
       properties:
         referenceId:
           type: string
+          format: uuid
           description: |
-            The signed JWT returned by `/generate`.
-            `tenantId`, `identifier`, and `purpose` are decoded from this token —
-            the caller never sends these values and cannot tamper with them.
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            The UUID returned by `/generate`.
+            Used to look up the OTP record in the database.
+          example: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
         purpose:
           $ref: '#/components/schemas/OtpPurpose'
         otp:
@@ -1002,18 +1054,7 @@ components:
           description: |
             Required only if `contextBindingRequired = true` for this tenant+purpose.
             Must match the `sessionId` submitted in the `metadata` at generate time.
-            Comparison is performed against the stored hash — the raw value is never persisted.
           example: sess-abc123
-      x-businessRules:
-        - referenceId JWT signature must be valid and not expired.
-        - jti claim from referenceId must match the jti stored in Redis (replay prevention).
-        - Identifier must not be in an active lockout period.
-        - attempts must be less than maxAttempts before comparison is performed.
-        - OTP hash comparison must use constant-time comparison — never string equality.
-        - On success, the Redis key otp:{tenantId}:{purpose}:{identifier} is deleted immediately (single-use).
-        - On failure, attempts counter is incremented. If attempts reaches maxAttempts, OTP is locked and lockout key is written.
-        - If contextBindingRequired = true, hash(sessionId) must match contextHash stored in Redis.
-        - Purpose will get used for now until referanceid is opeque token
 
     OtpVerifyResponse:
       type: object
@@ -1030,16 +1071,18 @@ components:
       type: object
       description: |
         Request payload to invalidate an active OTP.
-        `tenantId`, `identifier`, and `purpose` are decoded from the signed `referenceId` JWT.
+        `referenceId` is the UUID returned from `/generate`.
+        `tenantId` is extracted from the X-Tenant-Id header.
       required:
         - referenceId
       properties:
         referenceId:
           type: string
+          format: uuid
           description: |
-            The signed JWT returned by `/generate`.
-            Used to decode tenantId, identifier, and purpose for the Redis key lookup.
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            The UUID returned by `/generate`.
+            Used to look up the OTP record in the database.
+          example: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
 
     OtpInvalidateResponse:
       type: object
@@ -1058,42 +1101,29 @@ components:
       type: object
       description: |
         Request payload to resend an OTP.
-        `tenantId`, `identifier`, and `purpose` are decoded from the signed `referenceId` JWT —
-        the caller never sends these values explicitly.
+        `referenceId` is the UUID returned from the previous `/generate` call.
+        `tenantId` is extracted from the X-Tenant-Id header.
       required:
         - referenceId
       properties:
         referenceId:
           type: string
+          format: uuid
           description: |
-            The signed JWT returned by the previous `/generate` or `/resend` call.
-            `tenantId`, `identifier`, and `purpose` are extracted from this token.
-            This token is invalidated upon successful resend — use the new `referenceId`
-            returned in the response for subsequent `/verify` or `/invalidate` calls.
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            The UUID returned by the previous `/generate` call.
+            Used to look up the OTP record in the database.
+          example: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
         metadata:
           type: object
           description: |
-            Optional caller-supplied context for the newly issued OTP.
+            Optional caller-supplied context for the resend.
             Max 5 key-value string pairs. Passed to the audit log and `otp.generated` event.
-            If `contextBindingRequired = true` for this purpose, the `sessionId` key is mandatory
-            and will be bound to the new OTP — the previous context binding is discarded.
           additionalProperties:
             type: string
           maxProperties: 5
           example:
             sessionId: sess-new-456
             deviceId: device-001
-      x-businessRules:
-        - referenceId JWT signature must be valid. An expired JWT is rejected with 401.
-        - tenantId, identifier, and purpose are extracted from the JWT — not accepted from the request body.
-        - Identifier must not be in an active lockout period.
-        - Time elapsed since last generate or resend must be >= cooldownSeconds from config.
-        - Resend count in the sliding window must be < maxResendsPerHour from config.
-        - If contextBindingRequired = true, metadata.sessionId is mandatory.
-        - On success, the old OTP Redis key is deleted and a new one is written atomically.
-        - The old referenceId JWT is invalidated — its jti is removed from Redis.
-        - A new otp.generated event is published with the new OTP and new referenceId jti.
 
     OtpResendResponse:
       type: object
@@ -1101,14 +1131,13 @@ components:
       properties:
         referenceId:
           type: string
+          format: uuid
           description: |
-            New signed JWT for the freshly issued OTP.
-            Replaces the previous `referenceId` — the old one is now invalid.
-            Submit this new token on `/verify` or `/invalidate`.
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...(new)
+            Same UUID as the request - the referenceId does not change on resend.
+          example: "8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3"
         expiresIn:
           type: integer
-          description: Seconds until the new OTP expires.
+          description: Seconds until the OTP expires.
           example: 600
         cooldownSeconds:
           type: integer

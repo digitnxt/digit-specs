@@ -12,9 +12,9 @@ info:
     - Managing document types (metadata for uploaded files)
 
 servers:
-  - url: https://api.example.com/file-store/v3
+  - url: https://api.example.com/filestore/v3/files
     description: Production server
-  - url: https://staging-api.example.com/file-store/v3
+  - url: https://staging-api.example.com/filestore/v3/files
     description: Staging server
 
 security:
@@ -212,7 +212,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotFound'
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -321,7 +321,7 @@ paths:
           schema:
             type: string
       responses:
-        '204':
+        '200':
           description: Deleted successfully
           headers:
             X-Response-Time:
@@ -340,6 +340,22 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Document type not found
           content:
@@ -377,13 +393,29 @@ paths:
               type: object
               required:
                 - file
+                - tenantId
               properties:
                 file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: One or more files to upload
+                tenantId:
                   type: string
-                  format: binary
+                  description: Tenant identifier
+                module:
+                  type: string
+                  description: Module name for document category validation
+                tag:
+                  type: string
+                  description: Tag to associate with uploaded files
+                requestInfo:
+                  type: string
+                  description: JSON string containing request metadata
       responses:
-        '200':
-          description: Success response with filestoreid and tenantid
+        '201':
+          description: Files uploaded successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -404,13 +436,153 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UploadFileResponse'
+                $ref: '#/components/schemas/StorageResponse'
         '400':
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BadRequest'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /metadata:
+    post:
+      summary: Get file metadata by fileStoreId
+      operationId: getMetadata
+      tags:
+        - FileStore
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          description: Tenant identifier
+          schema:
+            type: string
+        - name: fileStoreId
+          in: query
+          required: true
+          description: File store identifier
+          schema:
+            type: string
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: File metadata retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadata'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tag:
+    post:
+      summary: Get files by tag
+      operationId: getFilesByTag
+      tags:
+        - FileStore
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          description: Tenant identifier
+          schema:
+            type: string
+        - name: tag
+          in: query
+          required: true
+          description: Tag to filter files
+          schema:
+            type: string
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Files retrieved by tag successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilesByTagResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 
   /upload-url:
@@ -433,23 +605,45 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - fileName
-                - contentType
-              properties:
-                fileName:
-                  type: string
-                contentType:
-                  type: string
+              $ref: '#/components/schemas/UploadRequest'
       responses:
         '200':
-          description: Signed upload URL
+          description: Signed upload URL generated successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
             X-Response-Timestamp:
               $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 
   /confirm-upload:
@@ -472,12 +666,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - fileStoreId
-              properties:
-                fileStoreId:
-                  type: string
+              $ref: '#/components/schemas/ConfirmUploadRequest'
       responses:
         '200':
           description: Upload confirmed
@@ -501,17 +690,21 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: VALID
+                $ref: '#/components/schemas/ConfirmUploadResponse'
         '400':
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BadRequest'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 
   /download-urls:
@@ -521,6 +714,12 @@ paths:
       tags:
         - FileStore
       parameters:
+        - name: tenantId
+          in: query
+          required: true
+          description: Tenant identifier
+          schema:
+            type: string
         - name: fileStoreIds
           in: query
           required: true
@@ -535,20 +734,44 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
-
       responses:
         '200':
-          description: List of signed download URLs with document types
+          description: Map of fileStoreIds to signed download URLs
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DownloadFileDetail'
+                $ref: '#/components/schemas/DownloadUrlsResponse'
         '400':
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BadRequest'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 
 
@@ -563,6 +786,13 @@ paths:
         - name: fileStoreId
           in: path
           required: true
+          description: Unique identifier of the file to download
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          required: true
+          description: Tenant identifier
           schema:
             type: string
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -577,6 +807,22 @@ paths:
         '200':
           description: File download stream
           headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment header with filename
+            Content-Type:
+              schema:
+                type: string
+              description: MIME type of the file
+            Content-Transfer-Encoding:
+              schema:
+                type: string
+              description: Transfer encoding (binary)
+            Accept-Ranges:
+              schema:
+                type: string
+              description: Indicates server supports range requests
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
             X-Response-Timestamp:
@@ -603,7 +849,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BadRequest'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   
 
@@ -611,7 +865,7 @@ paths:
 components:
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
   parameters:
     RequestIdHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
@@ -658,31 +912,203 @@ components:
     Document:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Document'
     
-    BadRequest:
-        description: Bad Request
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Error'
-    
-    NotFound:
-      description: Document type not found
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              message:
-                type: string
+
 
     UploadFileResponse:
       type: object
       properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+    
+    File:
+      type: object
+      properties:
         fileStoreId:
           type: string
-        
+          description: Unique identifier of the uploaded file
+          minLength: 2
+          maxLength: 128
+        tenantId:
+          type: string
+          description: Tenant identifier
+          minLength: 2
+          maxLength: 64
+
+    StorageResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+    
+    UploadRequest:
+      type: object
+      required:
+        - fileName
+        - contentType
+        - module
+        - tag
+      properties:
+        fileName:
+          type: string
+          description: Name of the file to upload
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          description: MIME type of the file
+          minLength: 3
+          maxLength: 100
+        module:
+          type: string
+          description: Module name for document category validation
+          minLength: 2
+          maxLength: 64
+        tag:
+          type: string
+          description: Tag to associate with the file
+          minLength: 1
+          maxLength: 128
+    
+    UploadResponse:
+      type: object
+      required:
+        - preSignedUrl
+        - fileStoreId
+      properties:
+        preSignedUrl:
+          type: string
+          format: uri
+          description: Presigned URL for uploading the file
+        fileStoreId:
+          type: string
+          description: Unique identifier for the file
+          minLength: 2
+          maxLength: 128
+    
+    ConfirmUploadRequest:
+      type: object
+      required:
+        - fileStoreId
+      properties:
+        fileStoreId:
+          type: string
+          description: Unique identifier of the uploaded file
+          minLength: 2
+          maxLength: 128
+    
+    ConfirmUploadResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [VALID, INVALID]
+          description: Upload validation status
+          example: VALID
+
+    DownloadUrlsResponse:
+      type: object
+      properties:
+        fileStoreIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileStoreResponse'
+      additionalProperties:
+        type: string
+        description: Map of fileStoreId to download URL
+    
+    FileStoreResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: File store identifier
+          minLength: 2
+          maxLength: 128
+        url:
+          type: string
+          format: uri
+          description: Signed download URL
+    
+    FileMetadata:
+      type: object
+      properties:
+        fileStoreId:
+          type: string
+          description: Unique identifier of the file
+          minLength: 2
+          maxLength: 128
+        fileName:
+          type: string
+          description: Name of the file
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          description: MIME type of the file
+          minLength: 3
+          maxLength: 100
+        fileSize:
+          type: integer
+          format: int64
+          description: Size of the file in bytes
+          minimum: 0
+        module:
+          type: string
+          description: Module associated with the file
+          minLength: 2
+          maxLength: 64
+        tag:
+          type: string
+          description: Tag associated with the file
+          minLength: 1
+          maxLength: 128
+        tenantId:
+          type: string
+          description: Tenant identifier
+          minLength: 2
+          maxLength: 64
+    
+    FilesByTagResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileInfo'
+    
+    FileInfo:
+      type: object
+      properties:
+        fileStoreId:
+          type: string
+          description: Unique identifier of the file
+          minLength: 2
+          maxLength: 128
+        fileName:
+          type: string
+          description: Name of the file
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          description: MIME type of the file
+          minLength: 3
+          maxLength: 100
+        url:
+          type: string
+          format: uri
+          description: Download URL for the file
+        tag:
+          type: string
+          description: Tag associated with the file
+          minLength: 1
+          maxLength: 128
 
     DownloadFileDetail:
       type: object
@@ -690,6 +1116,8 @@ components:
         fileStoreId:
           type: string
           description: Unique identifier of the uploaded file
+          minLength: 2
+          maxLength: 128
           readOnly: true
         downloadUrl:
           type: string
@@ -699,13 +1127,17 @@ components:
         docType:
           type: string
           description: Document type associated with the file (e.g., AADHAR, DrivingLicense)
+          minLength: 2
+          maxLength: 64
           readOnly: true
         isValidated:
           type: boolean
           default: true
+          description: Whether the file has been validated
         isActive:
           type: boolean
           default: true
+          description: Whether the file is active
     
     DocumentCategory:
       type: object
@@ -718,16 +1150,19 @@ components:
       properties:
         id:
           type: string
+          format: uuid
           description: System generated unique identifier of the category for internal referance
-          minLength: 2
-          maxLength: 64
           readOnly: true
         type:
           type: string
           description: High-level category like "identity", "addressProof", etc.
+          minLength: 2
+          maxLength: 64
         code:
           type: string
           description: Unique code for document like "AADHAR", "DrivingLicense"
+          minLength: 2
+          maxLength: 64
         allowedFormats:
           type: array
           items:
@@ -736,15 +1171,21 @@ components:
         minSize:
           type: string
           description: Minimum allowed size (e.g., "1MB")
+          pattern: '^\d+(\.\d+)?(KB|MB|GB)$'
+          example: "1MB"
         maxSize:
           type: string
           description: Maximum allowed size (e.g., "5MB")
+          pattern: '^\d+(\.\d+)?(KB|MB|GB)$'
+          example: "5MB"
         isSensitive:
           type: boolean
           description: Marks if document contains PII or sensitive info
         description:
           type: string
           description: Optional description
+          minLength: 0
+          maxLength: 500
         isActive:
           type: boolean
           default: true
