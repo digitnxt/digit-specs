@@ -412,6 +412,14 @@ paths:
             X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
             X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
         '400':
           description: Bad Request.
           content:
@@ -529,7 +537,7 @@ paths:
           description: Filter by tax head code
         - in: query
           name: category
-          schema: { type: string, enum: [TAX, CESS, PENALTY, INTEREST, REBATE, ROUNDING, OTHER] }
+          schema: { $ref: "#/components/schemas/TaxHeadCategory" }
           description: Filter by category
         - in: query
           name: isActive
@@ -816,6 +824,14 @@ paths:
             X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
             X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
         '400':
           description: Bad Request.
           content:
@@ -1044,8 +1060,7 @@ paths:
         - in: query
           name: status
           schema:
-            type: string
-            enum: [DRAFT, ACTIVE, FROZEN, CANCELLED]
+            $ref: "#/components/schemas/DemandStatus"
           description: Filter by Demand Status
         - in: query
           name: createdFrom
@@ -1494,8 +1509,7 @@ paths:
           name: status
           description: Filter by Bill Status
           schema:
-            type: string
-            enum: [ACTIVE, CANCELLED, EXPIRED, PAID, PARTIALLY_PAID, PAYMENT_CANCELLED]
+            $ref: "#/components/schemas/BillStatus"
         - in: query
           name: mobileNumber
           schema: 
@@ -2098,7 +2112,7 @@ components:
     BulkBillStatus:
       type: string
       description: Bulk bill generation request status 
-      enum: [ACCEPTED, IN_PROGESS, COMPLETED, PARTIALLY_COMPLETED, FAILED]
+      enum: [ACCEPTED, IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED]
       default: ACCEPTED
 
     PaymentStatus:
@@ -3206,10 +3220,10 @@ components:
 
     UpdateBillStatus:
       type: object
-      description: Represents a request to change the status of one or more existing bills (e.g., cancel, expire, mark paid).
+      description: Represents a request to change the status of existing bill (e.g., cancel, expire, mark paid).
       required:
         - businessServiceCode
-        - consumerCodes
+        - consumerCode
         - statusToBeUpdated
         - metadata
       properties:
