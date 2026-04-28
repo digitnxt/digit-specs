@@ -2,81 +2,92 @@ openapi: 3.0.3
 info:
   title: Access Control Service
   version: 1.0.0
-  description: |
-    Centralized Access Control microservice supporting both Role-Based Access Control 
-    and Job-Based Access Control  for Kong gateway integration.
-    Manages access control rules with tenant-aware operations, version tracking, and internal
-    endpoints for Kong plugin integration.
+  description: "Centralized Access Control microservice supporting both Role-Based\
+    \ Access Control \nand Job-Based Access Control  for Kong gateway integration.\n\
+    Manages access control rules with tenant-aware operations, version tracking, and\
+    \ internal\nendpoints for Kong plugin integration.\n"
   contact:
     name: Platform Team
   license:
     name: Apache 2.0
-
 servers:
-  - url: https://api.example.com/access-control/v1
-    description: Production
-  - url: https://staging-api.example.com/access-control/v1
-    description: Staging
-  - url: http://localhost:8080/access-control/v1
-    description: Local Development
-
+- url: https://api.example.com/access-control/v1
+  description: Production
+- url: https://staging-api.example.com/access-control/v1
+  description: Staging
+- url: http://localhost:8080/access-control/v1
+  description: Local Development
 security:
-  - BearerAuth: []
-
+- BearerAuth: []
 tags:
-  - name: RBAC Rules
-    description: Role-Based Access Control rule CRUD operations
-  - name: JBAC Rules
-    description: Job-Based Access Control rule CRUD operations
-  - name: Internal
-    description: Internal endpoints for Kong plugin integration
-
+- name: RBAC Rules
+  description: Role-Based Access Control rule CRUD operations
+- name: JBAC Rules
+  description: Job-Based Access Control rule CRUD operations
+- name: Internal
+  description: Internal endpoints for Kong plugin integration
 paths:
   /rbac/rules:
     post:
       tags:
-        - RBAC Rules
+      - RBAC Rules
       summary: Create RBAC rule
       operationId: createRbacRule
-      description: |
-        Creates a new Role-Based Access Control rule for the tenant.
-        
+      description: 'Creates a new Role-Based Access Control rule for the tenant.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
+
         - Request body must contain valid rule configuration
-        
+
+
         **Business Rules:**
+
         - Rule ID is auto-generated as UUID
+
         - Priority determines rule evaluation order (lower values evaluated first)
+
         - Multiple roles can be assigned to a single rule
+
         - Path supports wildcard patterns (e.g., /api/*/users)
+
         - HTTP method must be one of: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
+
         - Effect must be either ALLOW or DENY
+
         - Enabled flag defaults to true if not specified
-        
+
+
         **Post-conditions:**
+
         - Rule is persisted to database
+
         - Response includes complete rule object with generated ID
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateRuleRequest'
+              $ref: '#/components/schemas/RbacRuleRequest'
             example:
               roleNames:
-                - admin
-                - moderator
+              - admin
+              - moderator
               httpMethod: POST
               path: /api/users
               effect: ALLOW
@@ -106,7 +117,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Rule'
+                $ref: '#/components/schemas/RbacRuleResponse'
         '400':
           description: Validation error - invalid rule configuration
           content:
@@ -144,62 +155,76 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     get:
       tags:
-        - RBAC Rules
+      - RBAC Rules
       summary: List RBAC rules with pagination
       operationId: listRbacRules
-      description: |
-        Retrieves a paginated list of Role-Based Access Control rules for the tenant.
-        
+      description: 'Retrieves a paginated list of Role-Based Access Control rules
+        for the tenant.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
-        
+
+
         **Business Rules:**
+
         - Results are filtered by tenant ID from header
+
         - Results are sorted by priority (ascending) then by creation time (descending)
+
         - Disabled rules are included in results but can be filtered
+
         - Pagination defaults to page 1, size 20 if not specified
+
         - Maximum page size is 100
-        
+
+
         **Post-conditions:**
+
         - Response includes total count of rules matching filter
+
         - Response includes current page number and size
+
         - Response includes hasMore flag for client pagination
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: page
-          in: query
-          required: false
-          description: Page number (1-indexed)
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: size
-          in: query
-          required: false
-          description: Number of rules per page (max 100)
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: enabled
-          in: query
-          required: false
-          description: Filter by enabled status
-          schema:
-            type: boolean
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: page
+        in: query
+        required: false
+        description: Page number (1-indexed)
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: Number of rules per page (max 100)
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: enabled
+        in: query
+        required: false
+        description: Filter by enabled status
+        schema:
+          type: boolean
       responses:
         '200':
           description: Rules retrieved successfully
@@ -223,7 +248,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleListResponse'
+                $ref: '#/components/schemas/RbacRuleListResponse'
         '400':
           description: Validation error - invalid query parameters
           content:
@@ -254,39 +279,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
   /rbac/rules/bulk:
     post:
       tags:
-        - RBAC Rules
+      - RBAC Rules
       summary: Bulk create RBAC rules
       operationId: bulkCreateRbacRules
-      description: |
-        Creates multiple RBAC rules in a single request for the tenant.
-        
+      description: 'Creates multiple RBAC rules in a single request for the tenant.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
+
         - Request body must contain array of valid rule configurations
-        
+
+
         **Business Rules:**
+
         - All rules must be valid for the entire operation to succeed
+
         - If any rule fails validation, the entire operation is rolled back
+
         - Maximum 100 rules per request
-        
+
+
         **Post-conditions:**
+
         - All rules are persisted to database
+
         - Response includes array of created rules with generated IDs
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
@@ -294,14 +329,14 @@ paths:
             schema:
               type: object
               required:
-                - rules
+              - rules
               properties:
                 rules:
                   type: array
                   minItems: 1
                   maxItems: 100
                   items:
-                    $ref: '#/components/schemas/CreateRuleRequest'
+                    $ref: '#/components/schemas/RbacRuleRequest'
       responses:
         '201':
           description: Rules created successfully
@@ -330,7 +365,7 @@ paths:
                   rules:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Rule'
+                      $ref: '#/components/schemas/RbacRule'
         '400':
           description: Validation error - invalid rule configuration
           content:
@@ -367,37 +402,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /rbac/rules/tenant:
     delete:
       tags:
-        - RBAC Rules
+      - RBAC Rules
       summary: Delete all RBAC rules for a tenant
       operationId: deleteRbacRulesByTenant
-      description: |
-        Deletes all RBAC rules for the tenant specified in X-Tenant-ID header.
-        
+      description: 'Deletes all RBAC rules for the tenant specified in X-Tenant-ID
+        header.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
-        
+
+
         **Business Rules:**
+
         - This is a destructive operation that removes all rules for the tenant
+
         - Operation is idempotent (deleting non-existent rules returns success)
+
         - Deleted rules are soft-deleted (marked as deleted, not removed from database)
-        
+
+
         **Post-conditions:**
+
         - All rules for the tenant are marked as deleted
+
         - Response includes count of deleted rules
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       responses:
         '200':
           description: Rules deleted successfully
@@ -448,43 +494,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /rbac/rules/{id}:
     get:
       tags:
-        - RBAC Rules
+      - RBAC Rules
       summary: Get a single RBAC rule
       operationId: getRbacRule
-      description: |
-        Retrieves a specific RBAC rule by ID for the tenant.
-        
+      description: 'Retrieves a specific RBAC rule by ID for the tenant.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
+
         - Rule ID must be a valid UUID
-        
+
+
         **Business Rules:**
+
         - Rule must belong to the tenant specified in X-Tenant-ID header
+
         - Deleted rules cannot be retrieved
-        
+
+
         **Post-conditions:**
+
         - Response includes complete rule object with all fields
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Rule ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Rule ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Rule retrieved successfully
@@ -508,7 +563,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Rule'
+                $ref: '#/components/schemas/RbacRuleResponse'
         '401':
           description: Unauthorized - missing or invalid bearer token
           content:
@@ -537,54 +592,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     put:
       tags:
-        - RBAC Rules
+      - RBAC Rules
       summary: Update an RBAC rule
       operationId: updateRbacRule
-      description: |
-        Updates an existing RBAC rule for the tenant.
-        
+      description: 'Updates an existing RBAC rule for the tenant.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
+
         - Rule ID must be a valid UUID and exist
+
         - Rule must belong to the tenant specified in X-Tenant-ID header
-        
+
+
         **Business Rules:**
+
         - Rule ID cannot be changed
+
         - Tenant ID cannot be changed
+
         - All fields in request body are updated
+
         - Priority can be modified to reorder rule evaluation
+
         - Enabled status can be toggled without affecting other rules
-        
+
+
         **Post-conditions:**
+
         - Rule is persisted with updated values
+
         - Modification timestamp is updated
+
         - Response includes updated rule object
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Rule ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Rule ID (UUID)
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateRuleRequest'
+              $ref: '#/components/schemas/UpdateRbacRuleRequest'
       responses:
         '200':
           description: Rule updated successfully
@@ -608,7 +678,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Rule'
+                $ref: '#/components/schemas/RbacRuleResponse'
         '400':
           description: Validation error - invalid rule configuration
           content:
@@ -651,45 +721,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     delete:
       tags:
-        - RBAC Rules
+      - RBAC Rules
       summary: Delete an RBAC rule
       operationId: deleteRbacRule
-      description: |
-        Deletes an RBAC rule for the tenant.
-        
+      description: 'Deletes an RBAC rule for the tenant.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
+
         - Rule ID must be a valid UUID and exist
+
         - Rule must belong to the tenant specified in X-Tenant-ID header
-        
+
+
         **Business Rules:**
+
         - Delete operation is idempotent (deleting non-existent rule returns success)
+
         - Deleted rules are soft-deleted (marked as deleted, not removed from database)
+
         - Deleted rules do not appear in list or get operations
-        
+
+
         **Post-conditions:**
+
         - Rule is marked as deleted in database
+
         - Response includes deleted flag set to true
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Rule ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Rule ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Rule deleted successfully
@@ -736,30 +818,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
   /jbac/rules:
     post:
       tags:
-        - JBAC Rules
+      - JBAC Rules
       summary: Create JBAC rule
       operationId: createJbacRule
       description: Creates a new Job-Based Access Control rule for the tenant
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateRuleRequest'
+              $ref: '#/components/schemas/JbacRuleRequest'
       responses:
         '201':
           description: Rule created successfully
@@ -783,7 +863,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Rule'
+                $ref: '#/components/schemas/JbacRuleResponse'
         '400':
           description: Validation error
           content:
@@ -820,42 +900,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     get:
       tags:
-        - JBAC Rules
+      - JBAC Rules
       summary: List JBAC rules
       operationId: listJbacRules
       description: Retrieves a paginated list of JBAC rules for the tenant
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: size
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: enabled
-          in: query
-          required: false
-          schema:
-            type: boolean
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: enabled
+        in: query
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: Rules retrieved successfully
@@ -879,7 +958,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RuleListResponse'
+                $ref: '#/components/schemas/JbacRuleListResponse'
         '400':
           description: Validation error
           content:
@@ -910,24 +989,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
   /jbac/rules/bulk:
     post:
       tags:
-        - JBAC Rules
+      - JBAC Rules
       summary: Bulk create JBAC rules
       operationId: bulkCreateJbacRules
       description: Creates multiple JBAC rules in a single request
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
@@ -935,14 +1012,14 @@ paths:
             schema:
               type: object
               required:
-                - rules
+              - rules
               properties:
                 rules:
                   type: array
                   minItems: 1
                   maxItems: 100
                   items:
-                    $ref: '#/components/schemas/CreateRuleRequest'
+                    $ref: '#/components/schemas/JbacRuleRequest'
       responses:
         '201':
           description: Rules created successfully
@@ -971,7 +1048,7 @@ paths:
                   rules:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Rule'
+                      $ref: '#/components/schemas/JbacRule'
         '400':
           description: Validation error
           content:
@@ -1008,23 +1085,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /jbac/rules/tenant:
     delete:
       tags:
-        - JBAC Rules
+      - JBAC Rules
       summary: Delete all JBAC rules for tenant
       operationId: deleteJbacRulesByTenant
       description: Deletes all JBAC rules for the tenant
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
       responses:
         '200':
           description: Rules deleted successfully
@@ -1074,29 +1150,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /jbac/rules/{id}:
     get:
       tags:
-        - JBAC Rules
+      - JBAC Rules
       summary: Get JBAC rule
       operationId: getJbacRule
       description: Retrieves a specific JBAC rule by ID
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Rule retrieved successfully
@@ -1120,7 +1195,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Rule'
+                $ref: '#/components/schemas/JbacRuleResponse'
         '401':
           description: Unauthorized
           content:
@@ -1149,34 +1224,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     put:
       tags:
-        - JBAC Rules
+      - JBAC Rules
       summary: Update JBAC rule
       operationId: updateJbacRule
       description: Updates an existing JBAC rule
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateRuleRequest'
+              $ref: '#/components/schemas/UpdateJbacRuleRequest'
       responses:
         '200':
           description: Rule updated successfully
@@ -1200,7 +1274,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Rule'
+                $ref: '#/components/schemas/JbacRuleResponse'
         '400':
           description: Validation error
           content:
@@ -1243,28 +1317,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     delete:
       tags:
-        - JBAC Rules
+      - JBAC Rules
       summary: Delete JBAC rule
       operationId: deleteJbacRule
       description: Deletes a JBAC rule
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Rule deleted successfully
@@ -1311,18 +1384,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
   /internal/rbac/rules:
     get:
       tags:
-        - Internal
-      summary: Get all RBAC rules (internal)
+      - Internal
+      summary: Get all RBAC rules 
       operationId: listAllRbacRules
       description: Internal endpoint for Kong plugin to fetch all active RBAC rules
       security: []
       parameters:
-        - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
       responses:
         '200':
           description: Rules retrieved successfully
@@ -1346,7 +1417,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InternalRulesResponse'
+                $ref: '#/components/schemas/InternalRbacRulesResponse'
         '400':
           description: Validation error
           content:
@@ -1371,17 +1442,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /internal/rbac/rules/version:
     get:
       tags:
-        - Internal
-      summary: Get RBAC rules version (internal)
+      - Internal
+      summary: Get RBAC rules version 
       operationId: getAllRbacRulesVersion
       description: Internal endpoint to get RBAC ruleset version hash for cache validation
       security: []
       parameters:
-        - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
       responses:
         '200':
           description: Version retrieved successfully
@@ -1422,17 +1492,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /internal/jbac/rules:
     get:
       tags:
-        - Internal
-      summary: Get all JBAC rules (internal)
+      - Internal
+      summary: Get all JBAC rules 
       operationId: listAllJbacRules
       description: Internal endpoint for Kong plugin to fetch all active JBAC rules
       security: []
       parameters:
-        - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
       responses:
         '200':
           description: Rules retrieved successfully
@@ -1456,7 +1525,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InternalRulesResponse'
+                $ref: '#/components/schemas/InternalJbacRulesResponse'
         '400':
           description: Validation error
           content:
@@ -1481,17 +1550,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /internal/jbac/rules/version:
     get:
       tags:
-        - Internal
-      summary: Get JBAC rules version (internal)
+      - Internal
+      summary: Get JBAC rules version 
       operationId: getAllJbacRulesVersion
       description: Internal endpoint to get JBAC ruleset version hash for cache validation
       security: []
       parameters:
-        - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
       responses:
         '200':
           description: Version retrieved successfully
@@ -1532,14 +1600,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
   parameters:
     RequestIdHeader:
       name: X-Request-ID
@@ -1550,7 +1616,6 @@ components:
         type: string
         minLength: 2
         maxLength: 64
-
     CorrelationIdHeader:
       name: X-Correlation-ID
       in: header
@@ -1560,7 +1625,6 @@ components:
         type: string
         minLength: 2
         maxLength: 64
-
     UserAgentHeader:
       name: User-Agent
       in: header
@@ -1570,7 +1634,6 @@ components:
         type: string
         minLength: 5
         maxLength: 64
-
     TenantIdHeader:
       name: X-Tenant-ID
       in: header
@@ -1580,7 +1643,6 @@ components:
         type: string
         minLength: 2
         maxLength: 64
-
     ForwardedForHeader:
       name: X-Forwarded-For
       in: header
@@ -1590,7 +1652,6 @@ components:
         type: string
         minLength: 2
         maxLength: 64
-
     ClientId:
       name: X-Client-Id
       in: header
@@ -1600,7 +1661,6 @@ components:
         type: string
         minLength: 3
         maxLength: 100
-
     ClientSecret:
       name: X-Client-Secret
       in: header
@@ -1610,7 +1670,6 @@ components:
         type: string
         minLength: 8
         maxLength: 256
-
     TimeStamp:
       name: X-Time-Stamp
       in: header
@@ -1620,60 +1679,51 @@ components:
         type: integer
         minimum: 1000000000000
         maximum: 9999999999999
-
   headers:
     X-Response-Time:
       description: Total time taken to process the request in milliseconds
       schema:
         type: integer
         minimum: 0
-
     X-Response-Timestamp:
       description: Server-side timestamp in epoch milliseconds when response was generated
       schema:
         type: integer
         minimum: 1000000000000
         maximum: 9999999999999
-
     X-Request-ID:
       description: Echoes the X-Request-ID from the request for tracking
       schema:
         type: string
-
     X-Correlation-ID:
       description: Echoes the X-Correlation-ID to trace request across services
       schema:
         type: string
-
     X-Tenant-ID:
       description: Echoes the X-Tenant-ID from the request confirming tenant scope
       schema:
         type: string
-
     X-Rate-Limit:
       description: Maximum number of allowed requests in a given timeframe
       schema:
         type: integer
         minimum: 1
-
     X-Rate-Limit-Remaining:
       description: Remaining number of requests in the current rate limit window
       schema:
         type: integer
         minimum: 0
-
     X-Rate-Limit-Reset:
       description: Time in UTC epoch seconds when the rate limit will reset
       schema:
         type: integer
         minimum: 0
-
   schemas:
     Error:
       type: object
       required:
-        - code
-        - message
+      - code
+      - message
       properties:
         code:
           type: string
@@ -1691,20 +1741,19 @@ components:
           description: Optional placeholders for dynamic messages
           items:
             type: string
-
-    Rule:
+    RbacRule:
       type: object
       required:
-        - id
-        - tenantId
-        - roleNames
-        - httpMethod
-        - path
-        - effect
-        - priority
-        - enabled
-        - createdTime
-        - modifiedTime
+      - id
+      - tenantId
+      - roleNames
+      - httpMethod
+      - path
+      - effect
+      - priority
+      - enabled
+      - createdTime
+      - modifiedTime
       properties:
         id:
           type: string
@@ -1728,7 +1777,14 @@ components:
           description: List of roles this rule applies to
         httpMethod:
           type: string
-          enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+          enum:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - HEAD
+          - OPTIONS
           description: HTTP method
         path:
           type: string
@@ -1737,7 +1793,9 @@ components:
           description: URL path to match
         effect:
           type: string
-          enum: [ALLOW, DENY]
+          enum:
+          - ALLOW
+          - DENY
           description: Action to take
         priority:
           type: integer
@@ -1769,136 +1827,46 @@ components:
           type: string
           readOnly: true
           description: User who modified
-
-    CreateRuleRequest:
-      type: object
-      required:
-        - roleNames
-        - httpMethod
-        - path
-        - effect
-        - priority
-      properties:
-        roleNames:
-          type: array
-          minItems: 1
-          maxItems: 100
-          items:
-            type: string
-            minLength: 1
-            maxLength: 64
-        httpMethod:
-          type: string
-          enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
-        path:
-          type: string
-          minLength: 1
-          maxLength: 512
-        effect:
-          type: string
-          enum: [ALLOW, DENY]
-        priority:
-          type: integer
-          minimum: 0
-          maximum: 2147483647
-        description:
-          type: string
-          maxLength: 512
-        enabled:
-          type: boolean
-          default: true
-
-    UpdateRuleRequest:
-      type: object
-      required:
-        - roleNames
-        - httpMethod
-        - path
-        - effect
-        - priority
-      properties:
-        roleNames:
-          type: array
-          minItems: 1
-          maxItems: 100
-          items:
-            type: string
-            minLength: 1
-            maxLength: 64
-        httpMethod:
-          type: string
-          enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
-        path:
-          type: string
-          minLength: 1
-          maxLength: 512
-        effect:
-          type: string
-          enum: [ALLOW, DENY]
-        priority:
-          type: integer
-          minimum: 0
-          maximum: 2147483647
-        description:
-          type: string
-          maxLength: 512
-        enabled:
-          type: boolean
-
-    RuleListResponse:
-      type: object
-      required:
-        - rules
-        - totalCount
-        - page
-        - size
-        - hasMore
-      properties:
-        rules:
-          type: array
-          items:
-            $ref: '#/components/schemas/Rule'
-        totalCount:
-          type: integer
-          minimum: 0
-        page:
-          type: integer
-          minimum: 1
-        size:
-          type: integer
-          minimum: 1
-          maximum: 100
-        hasMore:
-          type: boolean
-
     DeleteResponse:
       type: object
       required:
-        - deleted
+      - deleted
       properties:
         deleted:
           type: boolean
-
-    InternalRulesResponse:
+    InternalRbacRulesResponse:
       type: object
       required:
-        - rules
-        - version
+      - rules
+      - version
       properties:
         rules:
           type: array
           items:
-            $ref: '#/components/schemas/Rule'
+            $ref: '#/components/schemas/RbacRule'
         version:
           type: string
           minLength: 32
           maxLength: 32
-
+    InternalJbacRulesResponse:
+      type: object
+      required:
+      - rules
+      - version
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/JbacRule'
+        version:
+          type: string
+          minLength: 32
+          maxLength: 32
     VersionResponse:
       type: object
       required:
-        - version
-        - timestamp
+      - version
+      - timestamp
       properties:
         version:
           type: string
@@ -1907,16 +1875,14 @@ components:
         timestamp:
           type: integer
           format: int64
-
-    # RBAC-Specific Schemas
-    CreateRbacRuleRequest:
+    RbacRuleRequest:
       type: object
       required:
-        - roleNames
-        - httpMethod
-        - path
-        - effect
-        - priority
+      - roleNames
+      - httpMethod
+      - path
+      - effect
+      - priority
       properties:
         roleNames:
           type: array
@@ -1928,7 +1894,14 @@ components:
           description: List of role names this rule applies to
         httpMethod:
           type: string
-          enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+          enum:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - HEAD
+          - OPTIONS
           description: HTTP method this rule applies to
         path:
           type: string
@@ -1937,7 +1910,9 @@ components:
           description: API path pattern (supports wildcards like /api/*/users)
         effect:
           type: string
-          enum: [ALLOW, DENY]
+          enum:
+          - ALLOW
+          - DENY
           description: Whether to allow or deny access
         priority:
           type: integer
@@ -1955,15 +1930,14 @@ components:
           type: string
           maxLength: 512
           description: Optional description of the rule
-
     UpdateRbacRuleRequest:
       type: object
       required:
-        - roleNames
-        - httpMethod
-        - path
-        - effect
-        - priority
+      - roleNames
+      - httpMethod
+      - path
+      - effect
+      - priority
       properties:
         roleNames:
           type: array
@@ -1975,7 +1949,14 @@ components:
           description: List of role names this rule applies to
         httpMethod:
           type: string
-          enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+          enum:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - HEAD
+          - OPTIONS
           description: HTTP method this rule applies to
         path:
           type: string
@@ -1984,7 +1965,9 @@ components:
           description: API path pattern (supports wildcards like /api/*/users)
         effect:
           type: string
-          enum: [ALLOW, DENY]
+          enum:
+          - ALLOW
+          - DENY
           description: Whether to allow or deny access
         priority:
           type: integer
@@ -2001,27 +1984,25 @@ components:
           type: string
           maxLength: 512
           description: Optional description of the rule
-
     RbacRuleResponse:
       type: object
       required:
-        - rule
+      - rule
       properties:
         rule:
-          $ref: '#/components/schemas/Rule'
-
+          $ref: '#/components/schemas/RbacRule'
     RbacRuleListResponse:
       type: object
       required:
-        - rules
-        - page
-        - size
-        - total
+      - rules
+      - page
+      - size
+      - total
       properties:
         rules:
           type: array
           items:
-            $ref: '#/components/schemas/Rule'
+            $ref: '#/components/schemas/RbacRule'
         page:
           type: integer
           minimum: 1
@@ -2032,21 +2013,18 @@ components:
         total:
           type: integer
           minimum: 0
-
-
-    # JBAC-Specific Schemas
     JbacRule:
       type: object
       required:
-        - id
-        - tenantId
-        - name
-        - pathPattern
-        - methods
-        - enforcement
-        - parentImpliesChildren
-        - createdAt
-        - updatedAt
+      - id
+      - tenantId
+      - name
+      - pathPattern
+      - methods
+      - enforcement
+      - parentImpliesChildren
+      - createdAt
+      - updatedAt
       properties:
         id:
           type: string
@@ -2072,7 +2050,14 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+            enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - HEAD
+            - OPTIONS
           description: HTTP methods this rule applies to
         enforcement:
           type: string
@@ -2099,15 +2084,14 @@ components:
           format: int64
           readOnly: true
           description: Last modification timestamp in milliseconds
-
-    CreateJbacRuleRequest:
+    JbacRuleRequest:
       type: object
       required:
-        - name
-        - pathPattern
-        - methods
-        - enforcement
-        - parentImpliesChildren
+      - name
+      - pathPattern
+      - methods
+      - enforcement
+      - parentImpliesChildren
       properties:
         name:
           type: string
@@ -2124,7 +2108,14 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+            enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - HEAD
+            - OPTIONS
           description: HTTP methods this rule applies to
         enforcement:
           type: string
@@ -2141,15 +2132,14 @@ components:
           type: string
           maxLength: 512
           description: Optional description of the rule
-
     UpdateJbacRuleRequest:
       type: object
       required:
-        - name
-        - pathPattern
-        - methods
-        - enforcement
-        - parentImpliesChildren
+      - name
+      - pathPattern
+      - methods
+      - enforcement
+      - parentImpliesChildren
       properties:
         name:
           type: string
@@ -2166,7 +2156,14 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+            enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - HEAD
+            - OPTIONS
           description: HTTP methods this rule applies to
         enforcement:
           type: string
@@ -2183,22 +2180,20 @@ components:
           type: string
           maxLength: 512
           description: Optional description of the rule
-
     JbacRuleResponse:
       type: object
       required:
-        - rule
+      - rule
       properties:
         rule:
           $ref: '#/components/schemas/JbacRule'
-
     JbacRuleListResponse:
       type: object
       required:
-        - rules
-        - page
-        - size
-        - total
+      - rules
+      - page
+      - size
+      - total
       properties:
         rules:
           type: array
