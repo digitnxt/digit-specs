@@ -535,11 +535,11 @@ paths:
         '409':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -596,11 +596,11 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -638,11 +638,11 @@ paths:
         '409':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -726,11 +726,11 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -787,11 +787,11 @@ paths:
         '404':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -865,11 +865,11 @@ paths:
         '409':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -896,11 +896,11 @@ paths:
         '409':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -1006,11 +1006,11 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -1059,11 +1059,11 @@ paths:
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '400':
           description: Validation error
           content:
@@ -1204,11 +1204,11 @@ paths:
         '404':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -1223,11 +1223,11 @@ paths:
       summary: Delete state by ID
       responses:
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '400':
           description: Validation error
           content:
@@ -1402,11 +1402,11 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -1558,11 +1558,11 @@ paths:
       summary: Delete action by ID
       responses:
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '400':
           description: Validation error
           content:
@@ -2009,11 +2009,11 @@ paths:
         '409':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -2070,11 +2070,11 @@ paths:
         '403':
           $ref: '#/components/responses/ErrorResponse'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -2143,11 +2143,11 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
@@ -2211,11 +2211,11 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          $ref: '#/components/responses/ErrorResponse'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: Internal server error
         '401':
           description: Unauthorized
           content:
