@@ -4,8 +4,8 @@ info:
   version: 3.0.0
   description: |
     REST APIs to manage Business Services in the DIGIT Billing & Collection domain.
-    A Business Service represents a billable service (e.g., Property Tax, Trade License, Water/Sewerage)
-    and its collection behavior and defaults.
+
+    A Business Service represents a billable service (e.g., Property Tax, Trade License, Water/Sewerage) and its collection behavior and defaults.
 
 servers:
   - url: https://api.example.com/billing/v3
@@ -89,6 +89,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict (duplicate code within tenant). Use PUT to update.
           content:
@@ -161,6 +167,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -217,6 +229,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -272,6 +290,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -339,6 +363,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -390,6 +420,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -455,6 +491,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict (duplicate code within tenant). Use PUT to update.
           content:
@@ -531,6 +573,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -573,12 +621,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaxHead'
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -587,6 +629,18 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -634,12 +688,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaxHead'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -648,6 +696,18 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict (immutable field change attempted)
           content:
@@ -708,6 +768,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -758,6 +824,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -817,6 +889,15 @@ paths:
                   $ref: '#/components/schemas/Demand'
         '207':
           description: Multi-Status — some items succeeded, some failed
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
@@ -829,6 +910,12 @@ paths:
                 type: array
                 items: 
                   $ref: '#/components/schemas/Error' 
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict
           content:
@@ -887,6 +974,15 @@ paths:
                   $ref: '#/components/schemas/Demand'
         '207':
           description: Multi-Status — some items updated, some failed
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
@@ -899,6 +995,12 @@ paths:
                 type: array
                 items: 
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict (e.g., trying to change immutable fields such as code)
           content:
@@ -987,6 +1089,12 @@ paths:
                 type: array
                 items: 
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1028,12 +1136,6 @@ paths:
             application/json:
               schema: 
                 $ref: '#/components/schemas/Demand'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema: 
-                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -1042,6 +1144,18 @@ paths:
                 type: array
                 items: 
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1105,6 +1219,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -1168,6 +1288,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -1209,14 +1335,10 @@ paths:
           required: true
           schema: { type: string }
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                reasonCode: { type: string, description: Optional reference to reason master }
-                note: { type: string }
+              $ref: "#/components/schemas/CancelDemandRequest"
       responses:
         '200':
           description: Demand cancelled
@@ -1241,6 +1363,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -1313,6 +1441,12 @@ paths:
                 type: array
                 items: 
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict (duplicate create without Idempotency-Key; overlapping/duplicate bills as per policy)
           content:
@@ -1411,14 +1545,18 @@ paths:
                 type: array
                 items: 
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema: 
                 $ref: '#/components/schemas/Error'
-
-
       
   /bills/cancel:
     post:
@@ -1434,6 +1572,7 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -1464,6 +1603,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict
           content:
@@ -1522,6 +1667,12 @@ paths:
                 type: array
                 items: 
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1551,7 +1702,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Payment'
+              $ref: '#/components/schemas/PaymentCreate'
       responses:
         '201':
           description: Payment created
@@ -1576,6 +1727,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict
           content:
@@ -1688,6 +1845,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1727,25 +1890,99 @@ paths:
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Payment' }
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Payment'
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
+  /payments/validate:
+    post:
+      tags: [Payment]
+      summary: Validate payment (dry run)
+      description: Validates a payment request without persisting. Checks bill status, amounts, duplicates, and instrument rules.
+      operationId: validatePayment
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentCreate"
+      responses:
+        "200":
+          description: Payment is valid — returns calculated payment structure
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+  
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1756,27 +1993,27 @@ components:
 
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
 
   # ── Parameters ──────────────────────────────────────────────────────────────
 
   parameters:
     RequestIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
     CorrelationIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
     ClientId:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
     ClientSecret:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
     TimeStamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -1791,21 +2028,21 @@ components:
 
   headers:
     X-Response-Time:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
     X-Response-Timestamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
     X-Request-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
     X-Correlation-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
     X-Tenant-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
     X-Rate-Limit:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
     X-Rate-Limit-Remaining:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
     X-Rate-Limit-Reset:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
 
   # ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -1814,10 +2051,10 @@ components:
     # ── Common refs ─────────────────────────────────────────────────────────────
 
     Error:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
 
     AuditDetail:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
 
     # ── Enums ───────────────────────────────────────────────────────────────────
 
