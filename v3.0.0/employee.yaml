@@ -2,66 +2,78 @@ openapi: 3.0.3
 info:
   title: Employee Service API
   version: 3.0.0
-  description: |
-    Standardized REST APIs for managing Employees and their Jurisdictions within the DIGIT platform.
-    This specification aligns with DIGIT 3.0 common standards and includes full compliance with 
-    platform header and error standards.
-  contact:
-    name: Platform Team
-  license:
-    name: Apache 2.0
-
+  description: "Standardized REST APIs for managing Employees and their Jurisdictions\
+    \ within the DIGIT platform.\nThis specification aligns with DIGIT 3.0 common\
+    \ standards and includes full compliance with \nplatform header and error standards.\n"
 servers:
-  - url: https://api.example.com/employee/v3
-    description: Production
-  - url: https://staging-api.example.com/employee/v3
-    description: Staging
-  - url: http://localhost:8080/employee/v3
-    description: Local Development
-
+- url: https://api.example.com/employee/v3
+  description: Production
+- url: https://staging-api.example.com/employee/v3
+  description: Staging
+- url: http://localhost:8080/employee/v3
+  description: Local Development
 security:
-  - BearerAuth: []
-
+- BearerAuth: []
 tags:
-  - name: Employee
-    description: Lifecycle management of staff members
-  - name: Jurisdiction
-    description: Managing employee assignments to geographical areas
-
+- name: Employee
+  description: Lifecycle management of staff members
+- name: Jurisdiction
+  description: Managing employee assignments to geographical areas
 paths:
-
   /:
     post:
       tags:
-        - Employee
+      - Employee
       summary: Create employees
       operationId: createEmployees
-      description: |
-        Registers one or more new employees. If code is omitted, it will be auto-generated.
-        
+      description: 'Registers one or more new employees. If code is omitted, it will
+        be auto-generated.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
+
         - Request body must contain valid employee data
-        
+
+
         **Business Rules:**
+
         - Employee ID is auto-generated as UUID
+
         - Code is auto-generated if not provided
+
         - All employees must be valid for entire operation to succeed
+
         - If any employee fails validation, entire operation is rolled back
-        
+
+
         **Post-conditions:**
+
         - All employees are persisted to database
+
         - Response includes array of created employees with generated IDs
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - &id001
+        $ref: '#/components/parameters/RequestIdHeader'
+      - &id002
+        $ref: '#/components/parameters/CorrelationIdHeader'
+      - &id003
+        $ref: '#/components/parameters/UserAgentHeader'
+      - &id004
+        $ref: '#/components/parameters/TenantIdHeader'
+      - &id005
+        $ref: '#/components/parameters/ForwardedForHeader'
+      - &id006
+        $ref: '#/components/parameters/ClientId'
+      - &id007
+        $ref: '#/components/parameters/ClientSecret'
+      - &id008
+        $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
@@ -134,67 +146,80 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     get:
       tags:
-        - Employee
+      - Employee
       summary: Search employees
       operationId: searchEmployees
-      description: |
-        Retrieves a paginated list of employees for the tenant with optional filtering.
-        
+      description: 'Retrieves a paginated list of employees for the tenant with optional
+        filtering.
+
+
         **Pre-conditions:**
+
         - User must be authenticated with valid bearer token
+
         - X-Tenant-ID header must be present and valid
-        
+
+
         **Business Rules:**
+
         - Results are filtered by tenant ID from header
+
         - Results are sorted by creation time (descending)
+
         - Pagination defaults to page 1, size 20 if not specified
+
         - Maximum page size is 100
-        
+
+
         **Post-conditions:**
+
         - Response includes total count of employees matching filter
+
         - Response includes current page number and size
+
         - Response includes hasMore flag for client pagination
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: page
-          in: query
-          required: false
-          description: Page number (1-indexed)
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: size
-          in: query
-          required: false
-          description: Number of employees per page (max 100)
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: code
-          in: query
-          required: false
-          description: Filter by employee code
-          schema:
-            type: string
-        - name: name
-          in: query
-          required: false
-          description: Filter by employee name
-          schema:
-            type: string
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: page
+        in: query
+        required: false
+        description: Page number (1-indexed)
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: Number of employees per page (max 100)
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: code
+        in: query
+        required: false
+        description: Filter by employee code
+        schema:
+          type: string
+      - name: name
+        in: query
+        required: false
+        description: Filter by employee name
+        schema:
+          type: string
       responses:
         '200':
           description: Employees retrieved successfully
@@ -249,30 +274,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+    parameters: []
   /{id}:
     get:
       tags:
-        - Employee
+      - Employee
       summary: Get employee by ID
       operationId: getEmployee
       description: Retrieves a specific employee by ID
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Employee ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Employee retrieved successfully
@@ -325,29 +350,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     put:
       tags:
-        - Employee
+      - Employee
       summary: Update employee
       operationId: updateEmployee
       description: Updates an existing employee
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Employee ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
@@ -414,28 +446,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       tags:
-        - Employee
+      - Employee
       summary: Hard delete employee
       operationId: hardDeleteEmployee
       description: Permanently deletes an employee record
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Employee ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Employee deleted successfully
@@ -491,29 +529,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     patch:
       tags:
-        - Employee
+      - Employee
       summary: Patch employee
       operationId: patchEmployee
       description: Partially updates an employee record
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Employee ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
@@ -586,30 +631,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
   /{id}/deactivate:
     post:
       tags:
-        - Employee
+      - Employee
       summary: Deactivate employee
       operationId: deactivateEmployee
       description: Deactivates an active employee
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Employee ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Employee deactivated successfully
@@ -668,30 +718,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
   /{id}/reactivate:
     post:
       tags:
-        - Employee
+      - Employee
       summary: Reactivate employee
       operationId: reactivateEmployee
       description: Reactivates a deactivated employee
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          description: Employee ID (UUID)
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Employee reactivated successfully
@@ -750,23 +813,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
   /jurisdictions:
     post:
       tags:
-        - Jurisdiction
+      - Jurisdiction
       summary: Create jurisdiction
       operationId: createJurisdiction
       description: Creates a new jurisdiction assignment for an employee
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
@@ -833,37 +909,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
     get:
       tags:
-        - Jurisdiction
+      - Jurisdiction
       summary: Search jurisdictions
       operationId: searchJurisdictions
       description: Retrieves a paginated list of jurisdictions
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: size
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
       responses:
         '200':
           description: Jurisdictions retrieved successfully
@@ -918,30 +993,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+    parameters: []
   /jurisdictions/{uuid}:
     get:
       tags:
-        - Jurisdiction
+      - Jurisdiction
       summary: Get jurisdiction by UUID
       operationId: getJurisdictionByUUID
       description: Retrieves a specific jurisdiction by UUID
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: uuid
-          in: path
-          required: true
-          description: Jurisdiction UUID
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: uuid
+        in: path
+        required: true
+        description: Jurisdiction UUID
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Jurisdiction retrieved successfully
@@ -994,29 +1069,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     put:
       tags:
-        - Jurisdiction
+      - Jurisdiction
       summary: Replace jurisdiction
       operationId: replaceJurisdiction
       description: Replaces an existing jurisdiction
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: uuid
-          in: path
-          required: true
-          description: Jurisdiction UUID
-          schema:
-            type: string
-            format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: uuid
+        in: path
+        required: true
+        description: Jurisdiction UUID
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
@@ -1089,166 +1171,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+    parameters:
+    - name: uuid
+      in: path
+      required: true
+      schema:
+        type: string
 components:
   securitySchemes:
     BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth
   parameters:
     RequestIdHeader:
-      name: X-Request-ID
-      in: header
-      required: false
-      description: Unique identifier for tracking each request
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      name: X-Correlation-ID
-      in: header
-      required: false
-      description: Used for distributed tracing across multiple services
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      name: User-Agent
-      in: header
-      required: false
-      description: Identifies the client making the request
-      schema:
-        type: string
-        minLength: 5
-        maxLength: 64
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      description: Identifies the tenant making the request
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      name: X-Forwarded-For
-      in: header
-      required: false
-      description: Client IP address for tracing in load-balanced environments
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      name: X-Client-Id
-      in: header
-      required: false
-      description: Unique identifier assigned to the client
-      schema:
-        type: string
-        minLength: 3
-        maxLength: 100
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
     ClientSecret:
-      name: X-Client-Secret
-      in: header
-      required: false
-      description: Secret key used to authenticate the client
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 256
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      name: X-Time-Stamp
-      in: header
-      required: false
-      description: Epoch timestamp in milliseconds when the request was made
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
   headers:
     X-Response-Time:
-      description: Total time taken to process the request in milliseconds
-      schema:
-        type: integer
-        minimum: 0
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-      description: Server-side timestamp in epoch milliseconds when response was generated
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-      description: Echoes the X-Request-ID from the request for tracking
-      schema:
-        type: string
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-      description: Echoes the X-Correlation-ID to trace request across services
-      schema:
-        type: string
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-      description: Echoes the X-Tenant-ID from the request confirming tenant scope
-      schema:
-        type: string
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-      description: Maximum number of allowed requests in a given timeframe
-      schema:
-        type: integer
-        minimum: 1
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-      description: Remaining number of requests in the current rate limit window
-      schema:
-        type: integer
-        minimum: 0
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-      description: Time in UTC epoch seconds when the rate limit will reset
-      schema:
-        type: integer
-        minimum: 0
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
   schemas:
     Error:
-      type: object
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: string
-          description: Module-specific error code
-          example: Employee.NotFound
-        message:
-          type: string
-          description: Readable error message
-          example: Employee not found
-        description:
-          type: string
-          description: Optional long description for debugging
-        params:
-          type: array
-          description: Optional placeholders for dynamic messages
-          items:
-            type: string
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
     AuditDetail:
       type: object
       description: Contains audit details tracking record creation and modification
@@ -1271,13 +1240,12 @@ components:
           type: integer
           format: int64
           description: Timestamp (epoch milliseconds) when the record was last modified
-
     EmployeeCreateRequest:
       type: object
       required:
-        - employeeType
-        - department
-        - designation
+      - employeeType
+      - department
+      - designation
       properties:
         code:
           type: string
@@ -1322,7 +1290,6 @@ components:
           type: boolean
           default: true
           description: Whether employee is active
-
     EmployeeUpdateRequest:
       type: object
       properties:
@@ -1350,7 +1317,6 @@ components:
         isActive:
           type: boolean
           description: Active status
-
     EmployeePatchRequest:
       type: object
       description: Partial update request for employee - all fields are optional
@@ -1374,12 +1340,11 @@ components:
           maxLength: 256
         isActive:
           type: boolean
-
     EmployeeResponse:
       type: object
       required:
-        - id
-        - isActive
+      - id
+      - isActive
       properties:
         id:
           type: string
@@ -1421,15 +1386,14 @@ components:
           description: Associated jurisdictions
         auditDetails:
           $ref: '#/components/schemas/AuditDetail'
-
     EmployeeListResponse:
       type: object
       required:
-        - employees
-        - totalCount
-        - page
-        - size
-        - hasMore
+      - employees
+      - totalCount
+      - page
+      - size
+      - hasMore
       properties:
         employees:
           type: array
@@ -1447,12 +1411,11 @@ components:
           maximum: 100
         hasMore:
           type: boolean
-
     JurisdictionCreateRequest:
       type: object
       required:
-        - employeeId
-        - boundaryRelation
+      - employeeId
+      - boundaryRelation
       properties:
         employeeId:
           type: string
@@ -1467,7 +1430,6 @@ components:
         isActive:
           type: boolean
           description: Active status
-
     JurisdictionUpdateRequest:
       type: object
       properties:
@@ -1484,15 +1446,14 @@ components:
         isActive:
           type: boolean
           description: Active status
-
     JurisdictionResponse:
       type: object
       required:
-        - id
-        - employeeId
-        - boundaryRelation
-        - isActive
-        - tenantId
+      - id
+      - employeeId
+      - boundaryRelation
+      - isActive
+      - tenantId
       properties:
         id:
           type: string
@@ -1517,15 +1478,14 @@ components:
           description: Tenant ID
         auditDetails:
           $ref: '#/components/schemas/AuditDetail'
-
     JurisdictionListResponse:
       type: object
       required:
-        - jurisdictions
-        - totalCount
-        - page
-        - size
-        - hasMore
+      - jurisdictions
+      - totalCount
+      - page
+      - size
+      - hasMore
       properties:
         jurisdictions:
           type: array

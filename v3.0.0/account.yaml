@@ -1,56 +1,87 @@
 openapi: 3.0.3
 info:
-  title: Account Management API
+  title: Account Service API
   version: 3.0.0
-  description: |
-    API for managing accounts and their configuration settings.
-    This API supports:
-    - Onboarding new accounts
-    - Updating account metadata
-    - Managing authentication and feature toggles per account via configurations
+  description: "Standardized REST APIs for managing Accounts and Account Configurations\
+    \ within the DIGIT platform.\nThis specification aligns with DIGIT 3.0 common\
+    \ standards and includes full compliance with \nplatform header and error standards.\n"
 servers:
-  - url: https://api.example.com
-    description: Production server
-  - url: https://staging-api.example.com
-    description: Staging server
+- url: https://api.example.com/account/v3
+  description: Production
+- url: https://staging-api.example.com/account/v3
+  description: Staging
+- url: http://localhost:8080/account/v3
+  description: Local Development
+security:
+- BearerAuth: []
 tags:
-  - name: Account
-    description: |
-      Operations related to account lifecycle management such as onboarding,
-      updating account information, and fetching account details.
-  - name: AccountConfig
-    description: |
-      Operations to manage per-account global configuration settings example 
-      authentication methods, login policies, feature flags, and more.
+- name: Account
+  description: Tenant account lifecycle management
+- name: AccountConfig
+  description: Account configuration management
 paths:
-  /account/v1:
+  /:
     post:
-      summary: Create a new account
-      operationId: createAccount
-      tags: 
-        - Account
+      tags:
+      - Account
+      summary: Create tenant account
+      operationId: createTenant
+      description: 'Creates a new tenant account directly without OTP verification.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Request body must contain valid tenant data
+
+
+        **Business Rules:**
+
+        - Tenant ID is auto-generated as UUID
+
+        - Email must be unique across the platform
+
+        - Account is created in active state
+
+
+        **Post-conditions:**
+
+        - Tenant account is persisted to database
+
+        - Keycloak realm is created for the tenant
+
+        - Response includes created tenant with generated ID
+
+        '
+      parameters:
+      - &id001
+        $ref: '#/components/parameters/RequestIdHeader'
+      - &id002
+        $ref: '#/components/parameters/CorrelationIdHeader'
+      - &id003
+        $ref: '#/components/parameters/UserAgentHeader'
+      - &id004
+        $ref: '#/components/parameters/TenantIdHeader'
+      - &id005
+        $ref: '#/components/parameters/ForwardedForHeader'
+      - &id006
+        $ref: '#/components/parameters/ClientId'
+      - &id007
+        $ref: '#/components/parameters/ClientSecret'
+      - &id008
+        $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccountRequest'
-      parameters: 
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/AccountIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+              $ref: '#/components/schemas/TenantCreateRequest'
       responses:
         '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountResponse'
+          description: Tenant account created successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -60,58 +91,130 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Account-ID:
-              $ref: '#/components/headers/X-Account-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '400':
-          description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
     get:
-      summary: Get list of accounts
-      tags: 
-        - Account
-      parameters: 
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/AccountIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - in: query
-          name: code
-          schema:
-            type: string
-          description: Filter accounts by code
-          required: false
-        - in: query
-          name: name
-          schema:
-            type: string
-          description: Filter accounts by name
-          required: false
+      tags:
+      - Account
+      summary: Search tenant accounts
+      operationId: listTenants
+      description: 'Retrieves a paginated list of tenant accounts with optional filtering.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - Results are filtered by tenant ID from header
+
+        - Results are sorted by creation time (descending)
+
+        - Pagination defaults to page 1, size 20 if not specified
+
+        - Maximum page size is 100
+
+
+        **Post-conditions:**
+
+        - Response includes total count of tenants matching filter
+
+        - Response includes current page number and size
+
+        - Response includes hasMore flag for client pagination
+
+        '
+      parameters:
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: page
+        in: query
+        required: false
+        description: Page number (1-indexed)
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: Number of tenants per page (max 100)
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: name
+        in: query
+        required: false
+        description: Filter by tenant name
+        schema:
+          type: string
+      - name: email
+        in: query
+        required: false
+        description: Filter by tenant email
+        schema:
+          type: string
       responses:
         '200':
-          description: List of accounts
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountResponse'
+          description: Tenant accounts retrieved successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -121,120 +224,186 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Account-ID:
-              $ref: '#/components/headers/X-Account-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '400':
-          description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/TenantListResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
     delete:
-      summary: Delete account (realm + account + config)
-      tags: 
-        - Account
+      tags:
+      - Account
+      summary: Delete account
       operationId: deleteAccount
+      description: 'Deletes a tenant account and all associated data.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - Deletes tenant realm from Keycloak
+
+        - Deletes all tenant configurations
+
+        - Deletes all tenant data from database
+
+        - Operation is irreversible
+
+
+        **Post-conditions:**
+
+        - Tenant account is permanently deleted
+
+        - All associated data is removed
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/AccountIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - in: query
-          name: tenantCode
-          schema:
-            type: string
-          description: Account code to delete
-          required: true
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       responses:
-        '204':
+        '200':
           description: Account deleted successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    example: Account, realm, and configuration deleted successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Account-ID:
-              $ref: '#/components/headers/X-Account-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '400':
-          description: Bad Request
+                  deleted:
+                    type: boolean
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /account/v1/{id}:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /{id}:
     put:
-      summary: Update account by ID
-      tags: 
-        - Account
-      operationId: updateAccount
-      parameters: 
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/AccountIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Account ID
+      tags:
+      - Account
+      summary: Update tenant account
+      operationId: updateTenant
+      description: Updates an existing tenant account
+      parameters:
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Tenant ID (UUID)
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccountRequest'
+              $ref: '#/components/schemas/TenantUpdateRequest'
       responses:
         '200':
-          description: Account updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountResponse'
+          description: Tenant account updated successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -244,54 +413,290 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Account-ID:
-              $ref: '#/components/headers/X-Account-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '400':
-          description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Tenant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /account/v1/config:
+                $ref: '#/components/schemas/Error'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  /signup:
     post:
-      summary: Create account configuration
-      tags: 
-        - AccountConfig
-      operationId: createAccountConfig
+      tags:
+      - Account
+      summary: Initiate tenant account signup with OTP verification
+      operationId: createSignup
+      description: 'Initiates tenant account creation with OTP-based email verification.
+
+        Calls the OTP service to generate and send an OTP to the provided email.
+
+
+        **Pre-conditions:**
+
+        - Request body must contain valid tenant data
+
+        - Email must be unique across the platform
+
+        - OTP service must be configured for ''signup'' purpose
+
+
+        **Business Rules:**
+
+        - OTP is generated via OTP service and sent to provided email
+
+        - Account is not created until OTP is verified via /v3/signup/verify
+
+        - OTP expires after configured duration (typically 10 minutes)
+
+        - Multiple signup requests are allowed (previous OTP is invalidated)
+
+        - referenceId is a signed JWT that encodes email, purpose, and expiry
+
+
+        **Post-conditions:**
+
+        - OTP is sent to email via Notification service
+
+        - Response includes referenceId (JWT) for verification
+
+        - Signup state is stored temporarily in cache
+
+        '
+      parameters:
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccountConfigRequest'
+              type: object
+              required:
+              - name
+              - email
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  description: Tenant name (required)
+                email:
+                  type: string
+                  format: email
+                  minLength: 5
+                  maxLength: 256
+                  description: Tenant email address (required)
+                phone:
+                  type: string
+                  minLength: 10
+                  maxLength: 20
+                  description: Tenant phone number
+                address:
+                  type: string
+                  minLength: 5
+                  maxLength: 512
+                  description: Tenant address
+                city:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  description: City
+                state:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  description: State
+                pincode:
+                  type: string
+                  minLength: 5
+                  maxLength: 10
+                  description: Postal code
+      responses:
+        '200':
+          description: Signup initiated successfully, OTP sent to email
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupInitiateResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters: []
+  /signup/verify:
+    post:
+      tags:
+      - Account
+      summary: Verify signup OTP and create account
+      operationId: verifySignup
+      description: 'Verifies the OTP via OTP service and creates the tenant account.
+
+
+        **Pre-conditions:**
+
+        - OTP must have been generated via /v3/signup endpoint
+
+        - OTP must not have expired
+
+        - referenceId must be valid and not tampered with
+
+        - Email must match the signup request
+
+
+        **Business Rules:**
+
+        - OTP is verified against OTP service
+
+        - Account is created only after successful OTP verification
+
+        - Keycloak realm is created for the tenant
+
+        - OTP is invalidated after successful verification (single-use)
+
+        - referenceId JWT is decoded to extract email and purpose
+
+
+        **Post-conditions:**
+
+        - Tenant account is created and active
+
+        - Keycloak realm is provisioned
+
+        - Response includes created tenant details
+
+        '
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/AccountIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupVerifyRequest'
       responses:
         '201':
-          description: Account configuration created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountConfigResponse'
+          description: Signup verified and account created successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -301,122 +706,129 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Account-ID:
-              $ref: '#/components/headers/X-Account-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
         '400':
-          description: Bad Request
+          description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or tampered referenceId
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-    get:
-      summary: Get account configuration by account code
-      tags: 
-        - AccountConfig
-      operationId: getAccountConfig
-      parameters:
-        - name: code
-          in: query
-          required: false
-          description: Filter by account code
-          schema:
-            type: string
-        - name: name
-          in: query
-          required: false
-          description: Filter by configuration name
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/AccountIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-      responses:
-        '200':
-          description: Account configurations
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: OTP expired
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccountConfigResponse'
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid OTP or OTP verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: Locked - too many failed OTP attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
           headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Account-ID:
-              $ref: '#/components/headers/X-Account-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '400':
-          description: Bad Request
+            Retry-After:
+              schema:
+                type: integer
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /account/v1/config/{id}:
-    put:
-      summary: Update account configuration
-      tags: 
-        - AccountConfig
-      operationId: updateAccountConfig
+                $ref: '#/components/schemas/Error'
+    parameters: []
+  /signup/resend:
+    post:
+      tags:
+      - Account
+      summary: Resend signup OTP
+      operationId: resendSignupOTP
+      description: 'Resends OTP to the email address via OTP service for signup verification.
+
+        Invalidates the previous OTP and generates a fresh one.
+
+
+        **Pre-conditions:**
+
+        - Email must have an active signup request
+
+        - Previous OTP must not have been verified
+
+        - referenceId must be valid and not tampered with
+
+        - Cooldown period must have elapsed since last generate/resend
+
+
+        **Business Rules:**
+
+        - New OTP is generated via OTP service and sent to email
+
+        - Previous OTP is invalidated
+
+        - Rate limiting applies to prevent abuse (maxResendsPerHour)
+
+        - Cooldown window must elapse before resend is allowed
+
+        - New referenceId JWT is returned (old one is invalidated)
+
+
+        **Post-conditions:**
+
+        - New OTP is sent to email
+
+        - Previous OTP is no longer valid
+
+        - New referenceId must be used for verification
+
+        '
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Unique identifier of the account configuration
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/AccountIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccountConfigRequest'
+              $ref: '#/components/schemas/ResendOTPRequest'
       responses:
         '200':
-          description: Account configuration updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountConfigResponse'
+          description: OTP resent successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -426,221 +838,738 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Account-ID:
-              $ref: '#/components/headers/X-Account-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupResendResponse'
         '400':
-          description: Bad Request
+          description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or tampered referenceId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
-          description: Account configuration not found
+          description: Signup request not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: OTP expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: Locked - identifier in lockout period
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests or cooldown not elapsed
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
+    parameters: []
+  /config:
+    post:
+      tags:
+      - AccountConfig
+      summary: Create account configuration
+      operationId: createTenantConfig
+      description: Creates a new configuration for a tenant account
+      parameters:
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantConfigCreateRequest'
+      responses:
+        '201':
+          description: Configuration created successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantConfigResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags:
+      - AccountConfig
+      summary: Search account configurations
+      operationId: listTenantConfigs
+      description: Retrieves a paginated list of configurations for a tenant
+      parameters:
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: page
+        in: query
+        required: false
+        description: Page number (1-indexed)
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: Number of configurations per page (max 100)
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: configKey
+        in: query
+        required: false
+        description: Filter by configuration key
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Configurations retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantConfigListResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters: []
+  /config/{id}:
+    put:
+      tags:
+      - AccountConfig
+      summary: Update account configuration
+      operationId: updateTenantConfig
+      description: Updates an existing account configuration
+      parameters:
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: id
+        in: path
+        required: true
+        description: Configuration ID (UUID)
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantConfigUpdateRequest'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantConfigResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
 components:
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth
   parameters:
     RequestIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
-    AccountIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
+    TenantIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
     ClientSecret:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
   headers:
     X-Response-Time:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
-    X-Account-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
+    X-Tenant-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
   schemas:
     Error:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
-    ErrorResponse:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
+    AuditDetails:
       type: object
+      description: Contains audit details tracking record creation and modification
       properties:
-        Errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Error'
-    AuditDetail:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
-    Document:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Document ID
-        tenantId:
-          type: string
-          description: Account ID
-        tenantConfigId:
-          type: string
-          description: Account Config ID
-        type:
-          type: string
-          description: Document type
-        fileStoreId:
-          type: string
-          description: File store ID
-        url:
-          type: string
-          description: Document URL
-        isActive:
-          type: boolean
-          description: Whether document is active
-        auditDetails:
-          $ref: '#/components/schemas/AuditDetail'
-    Account:
-      type: object
-      description: Details of an account
-      required:
-        - name
-        - email
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the account
-          minLength: 2
-          maxLength: 128
-        code:
-          type: string
-          description: Unique code for the account
-          minLength: 1
-          maxLength: 50
-        name:
-          type: string
-          description: Display name for the account
-          minLength: 1
-          maxLength: 50
-        email:
-          type: string
-          description: Contact email address of the account
-          format: email
-          maxLength: 64
-        additionalAttributes:
-          type: object
-          description: Any additional metadata as key-value pairs
-          additionalProperties: true
-        isActive:
-          type: boolean
-          description: Flag indicating whether the account is active
-        tenantId:
-          type: string
-          description: Tenant ID
         createdBy:
           type: string
-          description: User who created the account
-        lastModifiedBy:
-          type: string
-          description: User who last modified the account
+          description: UUID of the user or system that created the record
+          minLength: 2
+          maxLength: 64
         createdTime:
           type: integer
           format: int64
-          description: Creation timestamp
-        lastModifiedTime:
+          description: Timestamp (epoch milliseconds) when the record was created
+        modifiedBy:
+          type: string
+          description: UUID of the user or system that updated the record
+          minLength: 2
+          maxLength: 64
+        modifiedTime:
           type: integer
           format: int64
-          description: Last modification timestamp
-    AccountRequest:
+          description: Timestamp (epoch milliseconds) when the record was last modified
+    TenantCreateRequest:
+      type: object
+      required:
+      - name
+      - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Tenant name (required)
+        email:
+          type: string
+          format: email
+          minLength: 5
+          maxLength: 256
+          description: Tenant email address (required)
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+          description: Tenant phone number
+        address:
+          type: string
+          minLength: 5
+          maxLength: 512
+          description: Tenant address
+        city:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: City
+        state:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: State
+        pincode:
+          type: string
+          minLength: 5
+          maxLength: 10
+          description: Postal code
+    SignupVerifyRequest:
+      type: object
+      required:
+      - referenceId
+      - otp
+      - purpose
+      properties:
+        referenceId:
+          type: string
+          minLength: 10
+          maxLength: 2048
+          description: 'The signed JWT returned by /v3/signup endpoint.
+
+            Encodes email, purpose, and expiry. Do not parse or modify.
+
+            '
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        otp:
+          type: string
+          minLength: 4
+          maxLength: 8
+          pattern: ^[0-9]{4,8}$
+          description: The numeric OTP received via email (typically 6 digits)
+          example: '482910'
+        purpose:
+          type: string
+          enum:
+          - signup
+          description: The purpose for which OTP was generated (must be 'signup')
+          example: signup
+    ResendOTPRequest:
+      type: object
+      required:
+      - referenceId
+      properties:
+        referenceId:
+          type: string
+          minLength: 10
+          maxLength: 2048
+          description: 'The signed JWT returned by previous /v3/signup or /v3/signup/resend
+            call.
+
+            Used to decode email and purpose for resend.
+
+            '
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    TenantUpdateRequest:
       type: object
       properties:
-        tenant:
-          $ref: '#/components/schemas/Account'
-    AccountResponse:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Tenant name
+        email:
+          type: string
+          format: email
+          minLength: 5
+          maxLength: 256
+          description: Tenant email address
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 20
+          description: Tenant phone number
+        address:
+          type: string
+          minLength: 5
+          maxLength: 512
+          description: Tenant address
+        city:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: City
+        state:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: State
+        pincode:
+          type: string
+          minLength: 5
+          maxLength: 10
+          description: Postal code
+    TenantResponse:
       type: object
+      required:
+      - id
+      - name
+      - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: System-generated unique identifier
+        name:
+          type: string
+          description: Tenant name
+        email:
+          type: string
+          format: email
+          description: Tenant email address
+        phone:
+          type: string
+          description: Tenant phone number
+        address:
+          type: string
+          description: Tenant address
+        city:
+          type: string
+          description: City
+        state:
+          type: string
+          description: State
+        pincode:
+          type: string
+          description: Postal code
+        isActive:
+          type: boolean
+          description: Active status
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetails'
+    TenantListResponse:
+      type: object
+      required:
+      - tenants
+      - totalCount
+      - page
+      - size
+      - hasMore
       properties:
         tenants:
           type: array
           items:
-            $ref: '#/components/schemas/Account'
-    AccountConfig:
+            $ref: '#/components/schemas/TenantResponse'
+        totalCount:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        hasMore:
+          type: boolean
+    SignupInitiateResponse:
       type: object
-      description: Details of account-specific configuration
+      required:
+      - referenceId
+      - expiresIn
+      properties:
+        referenceId:
+          type: string
+          description: 'Signed JWT encoding email, purpose, and expiry.
+
+            Submit this on /v3/signup/verify and /v3/signup/resend.
+
+            Do not parse or modify it.
+
+            '
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresIn:
+          type: integer
+          description: Seconds until this OTP expires
+          example: 600
+        cooldownSeconds:
+          type: integer
+          description: Minimum seconds to wait before calling /v3/signup/resend
+          example: 60
+    SignupResendResponse:
+      type: object
+      required:
+      - referenceId
+      - expiresIn
+      properties:
+        referenceId:
+          type: string
+          description: "New signed JWT for the freshly issued OTP.\nReplaces the previous\
+            \ referenceId \u2014 the old one is now invalid.\nSubmit this new token\
+            \ on /v3/signup/verify or /v3/signup/resend.\n"
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...(new)
+        expiresIn:
+          type: integer
+          description: Seconds until the new OTP expires
+          example: 600
+        cooldownSeconds:
+          type: integer
+          description: Minimum seconds to wait before calling /v3/signup/resend again
+          example: 60
+    TenantConfigCreateRequest:
+      type: object
+      required:
+      - tenantId
+      - configKey
+      - configValue
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+          description: Tenant ID (required)
+        configKey:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Configuration key (required)
+        configValue:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          description: Configuration value (required)
+        description:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Configuration description
+    TenantConfigUpdateRequest:
+      type: object
+      properties:
+        configKey:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Configuration key
+        configValue:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          description: Configuration value
+        description:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Configuration description
+    TenantConfigResponse:
+      type: object
+      required:
+      - id
+      - tenantId
+      - configKey
+      - configValue
       properties:
         id:
           type: string
-          description: Unique identifier of this account configuration
-        defaultLoginType:
+          format: uuid
+          readOnly: true
+          description: System-generated unique identifier
+        tenantId:
           type: string
-          description: Default login type
-        otpLength:
+          format: uuid
+          description: Tenant ID
+        configKey:
           type: string
-          description: OTP length
-        code:
+          description: Configuration key
+        configValue:
           type: string
-          description: Configuration code
-        name:
+          description: Configuration value
+        description:
           type: string
-          description: Configuration name
-        enableUserBasedLogin:
-          type: boolean
-          description: Enable user-based login
-        additionalAttributes:
-          type: object
-          description: Arbitrary metadata as key-value pairs
-          additionalProperties: true
-        documents:
-          type: array
-          description: List of document requirements or references for the account
-          items:
-            $ref: '#/components/schemas/Document'
+          description: Configuration description
         isActive:
           type: boolean
-          description: Indicates if the account configuration is currently active
-        languages:
-          type: array
-          items:
-            type: string
-          description: Supported languages
+          description: Active status
         auditDetails:
-          $ref: '#/components/schemas/AuditDetail'
-    AccountConfigRequest:
+          $ref: '#/components/schemas/AuditDetails'
+    TenantConfigListResponse:
       type: object
+      required:
+      - configs
+      - totalCount
+      - page
+      - size
+      - hasMore
       properties:
-        tenantConfig:
-          $ref: '#/components/schemas/AccountConfig'
-    AccountConfigResponse:
-      type: object
-      properties:
-        tenantConfigs:
+        configs:
           type: array
           items:
-            $ref: '#/components/schemas/AccountConfig'
+            $ref: '#/components/schemas/TenantConfigResponse'
+        totalCount:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        hasMore:
+          type: boolean

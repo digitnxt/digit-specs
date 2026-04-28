@@ -2,41 +2,42 @@ openapi: 3.0.3
 info:
   title: File Upload API
   version: 3.0.0
-  description: |
-    API for managing file uploads and downloads using signed URLs, as well as maintaining document type metadata.
-    
+  description: 'API for managing file uploads and downloads using signed URLs, as
+    well as maintaining document type metadata.
+
+
     This API supports:
+
     - Generating signed upload/download URLs
+
     - Confirming uploads
+
     - Fetching uploaded files
+
     - Managing document types (metadata for uploaded files)
 
+    '
 servers:
-  - url: https://api.example.com/filestore/v3/files
-    description: Production server
-  - url: https://staging-api.example.com/filestore/v3/files
-    description: Staging server
-
+- url: https://api.example.com/filestore/v3/files
+  description: Production server
+- url: https://staging-api.example.com/filestore/v3/files
+  description: Staging server
 security:
-  - BearerAuth: []
-
+- BearerAuth: []
 tags:
-  - name: FileStore
-    description: |
-      Operations related to uploading and downloading files using signed or direct endpoints. 
-      Includes upload confirmation and download URL generation.
-  - name: DocumentCategory
-    description: |
-      Operations for managing metadata of document types used across various services. 
-      Includes creation, update, retrieval, and soft deletion.
-
+- name: FileStore
+  description: "Operations related to uploading and downloading files using signed\
+    \ or direct endpoints. \nIncludes upload confirmation and download URL generation.\n"
+- name: DocumentCategory
+  description: "Operations for managing metadata of document types used across various\
+    \ services. \nIncludes creation, update, retrieval, and soft deletion.\n"
 paths:
   /document-categories:
     post:
       summary: Create a new document type
       operationId: createDocumentCategory
       tags:
-        - DocumentCategory
+      - DocumentCategory
       requestBody:
         required: true
         content:
@@ -44,14 +45,22 @@ paths:
             schema:
               $ref: '#/components/schemas/DocumentCategory'
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - &id001
+        $ref: '#/components/parameters/RequestIdHeader'
+      - &id002
+        $ref: '#/components/parameters/CorrelationIdHeader'
+      - &id003
+        $ref: '#/components/parameters/UserAgentHeader'
+      - &id004
+        $ref: '#/components/parameters/TenantIdHeader'
+      - &id005
+        $ref: '#/components/parameters/ForwardedForHeader'
+      - &id006
+        $ref: '#/components/parameters/ClientId'
+      - &id007
+        $ref: '#/components/parameters/ClientSecret'
+      - &id008
+        $ref: '#/components/parameters/TimeStamp'
       responses:
         '201':
           description: Document type created
@@ -90,37 +99,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs POST on /document-categories.
     get:
       summary: Search document types by filters
       operationId: searchDocumentCategory
       tags:
-        - DocumentCategory
+      - DocumentCategory
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - in: query
-          name: type
-          schema:
-            type: string
-          description: Filter by document type
-        - in: query
-          name: docCode
-          schema:
-            type: string
-          description: Filter by document code
-        - in: query
-          name: isSensitive
-          schema:
-            type: boolean
-          description: Filter by sensitivity
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Filter by document type
+      - in: query
+        name: docCode
+        schema:
+          type: string
+        description: Filter by document code
+      - in: query
+        name: isSensitive
+        schema:
+          type: boolean
+        description: Filter by sensitivity
       responses:
         '200':
           description: List of document types
@@ -161,28 +175,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs GET on /document-categories.
+    parameters: []
   /document-categories/{docCode}:
     get:
       summary: Get a document type by docCode
       operationId: getDocumentCategoryByCode
       tags:
-        - DocumentCategory
+      - DocumentCategory
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: docCode
-          in: path
-          required: true
-          description: Unique document code
-          schema:
-            type: string
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: docCode
+        in: path
+        required: true
+        description: Unique document code
+        schema:
+          type: string
       responses:
         '200':
           description: Document type found
@@ -227,28 +248,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-    
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs GET on /document-categories/{docCode}.
     put:
       summary: Update a document type
       operationId: updateDocumentCategory
       tags:
-        - DocumentCategory
+      - DocumentCategory
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: docCode
-          in: path
-          required: true
-          description: Unique document code
-          schema:
-            type: string
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: docCode
+        in: path
+        required: true
+        description: Unique document code
+        schema:
+          type: string
       requestBody:
         required: true
         content:
@@ -299,27 +325,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs PUT on /document-categories/{docCode}.
     delete:
       summary: Delete or deactivate a document type
       operationId: deleteDocumentCategory
       tags:
-        - DocumentCategory
+      - DocumentCategory
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - name: docCode
-          in: path
-          required: true
-          description: Unique document code to delete or deactivate
-          schema:
-            type: string
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: docCode
+        in: path
+        required: true
+        description: Unique document code to delete or deactivate
+        schema:
+          type: string
       responses:
         '200':
           description: Deleted successfully
@@ -368,23 +400,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  
-  
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs DELETE on /document-categories/{docCode}.
+    parameters:
+    - name: docCode
+      in: path
+      required: true
+      schema:
+        type: string
   /upload:
     post:
       summary: Upload file directly
       operationId: directUpload
-      tags: 
-        - FileStore
+      tags:
+      - FileStore
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
@@ -392,8 +435,7 @@ paths:
             schema:
               type: object
               required:
-                - file
-                - tenantId
+              - file
               properties:
                 file:
                   type: array
@@ -451,34 +493,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs POST on /upload.
+    parameters: []
   /metadata:
     post:
       summary: Get file metadata by fileStoreId
       operationId: getMetadata
       tags:
-        - FileStore
+      - FileStore
       parameters:
-        - name: tenantId
-          in: query
-          required: true
-          description: Tenant identifier
-          schema:
-            type: string
-        - name: fileStoreId
-          in: query
-          required: true
-          description: File store identifier
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: tenantId
+        in: query
+        required: false
+        description: Tenant identifier
+        schema:
+          type: string
+      - name: fileStoreId
+        in: query
+        required: true
+        description: File store identifier
+        schema:
+          type: string
       responses:
         '200':
           description: File metadata retrieved successfully
@@ -517,34 +566,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs POST on /metadata.
+    parameters: []
   /tag:
     post:
       summary: Get files by tag
       operationId: getFilesByTag
       tags:
-        - FileStore
+      - FileStore
       parameters:
-        - name: tenantId
-          in: query
-          required: true
-          description: Tenant identifier
-          schema:
-            type: string
-        - name: tag
-          in: query
-          required: true
-          description: Tag to filter files
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: tenantId
+        in: query
+        required: false
+        description: Tenant identifier
+        schema:
+          type: string
+      - name: tag
+        in: query
+        required: true
+        description: Tag to filter files
+        schema:
+          type: string
       responses:
         '200':
           description: Files retrieved by tag successfully
@@ -583,23 +639,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs POST on /tag.
+    parameters: []
   /upload-url:
     post:
       summary: Generate signed URL for file upload
       operationId: generateUploadUrl
       tags:
-        - FileStore
+      - FileStore
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
@@ -644,23 +706,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs POST on /upload-url.
+    parameters: []
   /confirm-upload:
     post:
       summary: Confirm file upload using fileStoreId
       operationId: confirmUpload
       tags:
-        - FileStore
+      - FileStore
       parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
@@ -705,35 +773,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs POST on /confirm-upload.
+    parameters: []
   /download-urls:
     get:
       summary: Generate signed download URLs for given fileStoreIds
       operationId: getDownloadUrls
       tags:
-        - FileStore
+      - FileStore
       parameters:
-        - name: tenantId
-          in: query
-          required: true
-          description: Tenant identifier
-          schema:
-            type: string
-        - name: fileStoreIds
-          in: query
-          required: true
-          description: Comma-separated list of fileStoreIds
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: tenantId
+        in: query
+        required: false
+        description: Tenant identifier
+        schema:
+          type: string
+      - name: fileStoreIds
+        in: query
+        required: true
+        description: Comma-separated list of fileStoreIds
+        schema:
+          type: string
       responses:
         '200':
           description: Map of fileStoreIds to signed download URLs
@@ -772,37 +846,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
-
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs GET on /download-urls.
+    parameters: []
   /{fileStoreId}:
     get:
       summary: Download file by fileStoreId (for direct download only)
       operationId: downloadFile
       tags:
-        - FileStore
+      - FileStore
       parameters:
-        - name: fileStoreId
-          in: path
-          required: true
-          description: Unique identifier of the file to download
-          schema:
-            type: string
-        - name: tenantId
-          in: query
-          required: true
-          description: Tenant identifier
-          schema:
-            type: string
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - name: fileStoreId
+        in: path
+        required: true
+        description: Unique identifier of the file to download
+        schema:
+          type: string
+      - name: tenantId
+        in: query
+        required: false
+        description: Tenant identifier
+        schema:
+          type: string
       responses:
         '200':
           description: File download stream
@@ -858,62 +936,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  
-
-
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Performs GET on /{fileStoreId}.
+    parameters:
+    - name: fileStoreId
+      in: path
+      required: true
+      schema:
+        type: string
 components:
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth
   parameters:
     RequestIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
     ClientSecret:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
-  
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
   headers:
     X-Response-Time:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-        $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
-    
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
   schemas:
     Error:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
-    
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
     AuditDetail:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
-    
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail
     Document:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Document'
-    
-
-
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Document
     UploadFileResponse:
       type: object
       properties:
@@ -921,7 +1001,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/File'
-    
     File:
       type: object
       properties:
@@ -935,7 +1014,6 @@ components:
           description: Tenant identifier
           minLength: 2
           maxLength: 64
-
     StorageResponse:
       type: object
       properties:
@@ -943,14 +1021,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/File'
-    
     UploadRequest:
       type: object
       required:
-        - fileName
-        - contentType
-        - module
-        - tag
+      - fileName
+      - contentType
+      - module
+      - tag
       properties:
         fileName:
           type: string
@@ -972,12 +1049,11 @@ components:
           description: Tag to associate with the file
           minLength: 1
           maxLength: 128
-    
     UploadResponse:
       type: object
       required:
-        - preSignedUrl
-        - fileStoreId
+      - preSignedUrl
+      - fileStoreId
       properties:
         preSignedUrl:
           type: string
@@ -988,29 +1064,28 @@ components:
           description: Unique identifier for the file
           minLength: 2
           maxLength: 128
-    
     ConfirmUploadRequest:
       type: object
       required:
-        - fileStoreId
+      - fileStoreId
       properties:
         fileStoreId:
           type: string
           description: Unique identifier of the uploaded file
           minLength: 2
           maxLength: 128
-    
     ConfirmUploadResponse:
       type: object
       required:
-        - status
+      - status
       properties:
         status:
           type: string
-          enum: [VALID, INVALID]
+          enum:
+          - VALID
+          - INVALID
           description: Upload validation status
           example: VALID
-
     DownloadUrlsResponse:
       type: object
       properties:
@@ -1021,7 +1096,6 @@ components:
       additionalProperties:
         type: string
         description: Map of fileStoreId to download URL
-    
     FileStoreResponse:
       type: object
       properties:
@@ -1034,7 +1108,6 @@ components:
           type: string
           format: uri
           description: Signed download URL
-    
     FileMetadata:
       type: object
       properties:
@@ -1073,7 +1146,6 @@ components:
           description: Tenant identifier
           minLength: 2
           maxLength: 64
-    
     FilesByTagResponse:
       type: object
       properties:
@@ -1081,7 +1153,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FileInfo'
-    
     FileInfo:
       type: object
       properties:
@@ -1109,7 +1180,6 @@ components:
           description: Tag associated with the file
           minLength: 1
           maxLength: 128
-
     DownloadFileDetail:
       type: object
       properties:
@@ -1138,20 +1208,20 @@ components:
           type: boolean
           default: true
           description: Whether the file is active
-    
     DocumentCategory:
       type: object
       required:
-        - type
-        - code
-        - allowedFormats
-        - maxSize
-        - isSensitive
+      - type
+      - code
+      - allowedFormats
+      - maxSize
+      - isSensitive
       properties:
         id:
           type: string
           format: uuid
-          description: System generated unique identifier of the category for internal referance
+          description: System generated unique identifier of the category for internal
+            referance
           readOnly: true
         type:
           type: string
@@ -1171,13 +1241,13 @@ components:
         minSize:
           type: string
           description: Minimum allowed size (e.g., "1MB")
-          pattern: '^\d+(\.\d+)?(KB|MB|GB)$'
-          example: "1MB"
+          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
+          example: 1MB
         maxSize:
           type: string
           description: Maximum allowed size (e.g., "5MB")
-          pattern: '^\d+(\.\d+)?(KB|MB|GB)$'
-          example: "5MB"
+          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
+          example: 5MB
         isSensitive:
           type: boolean
           description: Marks if document contains PII or sensitive info
@@ -1191,6 +1261,3 @@ components:
           default: true
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
-    
-
-    

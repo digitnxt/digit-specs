@@ -6,16 +6,12 @@ info:
     \ Access Control \nand Job-Based Access Control  for Kong gateway integration.\n\
     Manages access control rules with tenant-aware operations, version tracking, and\
     \ internal\nendpoints for Kong plugin integration.\n"
-  contact:
-    name: Platform Team
-  license:
-    name: Apache 2.0
 servers:
-- url: https://api.example.com/access-control/v1
+- url: https://api.example.com/access-control/v1/v3
   description: Production
-- url: https://staging-api.example.com/access-control/v1
+- url: https://staging-api.example.com/access-control/v1/v3
   description: Staging
-- url: http://localhost:8080/access-control/v1
+- url: http://localhost:8080/access-control/v1/v3
   description: Local Development
 security:
 - BearerAuth: []
@@ -70,14 +66,22 @@ paths:
 
         '
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - &id001
+        $ref: '#/components/parameters/RequestIdHeader'
+      - &id002
+        $ref: '#/components/parameters/CorrelationIdHeader'
+      - &id003
+        $ref: '#/components/parameters/UserAgentHeader'
+      - &id004
+        $ref: '#/components/parameters/TenantIdHeader'
+      - &id005
+        $ref: '#/components/parameters/ForwardedForHeader'
+      - &id006
+        $ref: '#/components/parameters/ClientId'
+      - &id007
+        $ref: '#/components/parameters/ClientSecret'
+      - &id008
+        $ref: '#/components/parameters/TimeStamp'
       requestBody:
         required: true
         content:
@@ -119,7 +123,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RbacRuleResponse'
         '400':
-          description: Validation error - invalid rule configuration
+          description: Validation error
           content:
             application/json:
               schema:
@@ -194,14 +198,14 @@ paths:
 
         '
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: page
         in: query
         required: false
@@ -250,7 +254,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RbacRuleListResponse'
         '400':
-          description: Validation error - invalid query parameters
+          description: Validation error
           content:
             application/json:
               schema:
@@ -279,6 +283,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    parameters: []
   /rbac/rules/bulk:
     post:
       tags:
@@ -314,14 +319,14 @@ paths:
 
         '
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
@@ -367,7 +372,7 @@ paths:
                     items:
                       $ref: '#/components/schemas/RbacRule'
         '400':
-          description: Validation error - invalid rule configuration
+          description: Validation error
           content:
             application/json:
               schema:
@@ -402,6 +407,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    parameters: []
   /rbac/rules/tenant:
     delete:
       tags:
@@ -436,14 +442,14 @@ paths:
 
         '
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       responses:
         '200':
           description: Rules deleted successfully
@@ -494,6 +500,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
   /rbac/rules/{id}:
     get:
       tags:
@@ -525,14 +540,14 @@ paths:
 
         '
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: id
         in: path
         required: true
@@ -592,6 +607,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     put:
       tags:
       - RBAC Rules
@@ -634,14 +657,14 @@ paths:
 
         '
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: id
         in: path
         required: true
@@ -680,7 +703,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RbacRuleResponse'
         '400':
-          description: Validation error - invalid rule configuration
+          description: Validation error
           content:
             application/json:
               schema:
@@ -757,14 +780,14 @@ paths:
 
         '
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: id
         in: path
         required: true
@@ -818,6 +841,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
   /jbac/rules:
     post:
       tags:
@@ -826,14 +863,14 @@ paths:
       operationId: createJbacRule
       description: Creates a new Job-Based Access Control rule for the tenant
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
@@ -907,14 +944,14 @@ paths:
       operationId: listJbacRules
       description: Retrieves a paginated list of JBAC rules for the tenant
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: page
         in: query
         required: false
@@ -989,6 +1026,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    parameters: []
   /jbac/rules/bulk:
     post:
       tags:
@@ -997,14 +1035,14 @@ paths:
       operationId: bulkCreateJbacRules
       description: Creates multiple JBAC rules in a single request
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       requestBody:
         required: true
         content:
@@ -1085,6 +1123,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    parameters: []
   /jbac/rules/tenant:
     delete:
       tags:
@@ -1093,14 +1132,14 @@ paths:
       operationId: deleteJbacRulesByTenant
       description: Deletes all JBAC rules for the tenant
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       responses:
         '200':
           description: Rules deleted successfully
@@ -1150,6 +1189,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
   /jbac/rules/{id}:
     get:
       tags:
@@ -1158,14 +1206,14 @@ paths:
       operationId: getJbacRule
       description: Retrieves a specific JBAC rule by ID
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: id
         in: path
         required: true
@@ -1224,6 +1272,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     put:
       tags:
       - JBAC Rules
@@ -1231,14 +1287,14 @@ paths:
       operationId: updateJbacRule
       description: Updates an existing JBAC rule
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: id
         in: path
         required: true
@@ -1324,14 +1380,14 @@ paths:
       operationId: deleteJbacRule
       description: Deletes a JBAC rule
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       - name: id
         in: path
         required: true
@@ -1384,16 +1440,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
   /internal/rbac/rules:
     get:
       tags:
       - Internal
-      summary: Get all RBAC rules 
+      summary: Get all RBAC rules
       operationId: listAllRbacRules
       description: Internal endpoint for Kong plugin to fetch all active RBAC rules
       security: []
       parameters:
-      - $ref: '#/components/parameters/TenantIdHeader'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       responses:
         '200':
           description: Rules retrieved successfully
@@ -1442,16 +1519,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters: []
   /internal/rbac/rules/version:
     get:
       tags:
       - Internal
-      summary: Get RBAC rules version 
+      summary: Get RBAC rules version
       operationId: getAllRbacRulesVersion
       description: Internal endpoint to get RBAC ruleset version hash for cache validation
       security: []
       parameters:
-      - $ref: '#/components/parameters/TenantIdHeader'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       responses:
         '200':
           description: Version retrieved successfully
@@ -1492,16 +1583,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters: []
   /internal/jbac/rules:
     get:
       tags:
       - Internal
-      summary: Get all JBAC rules 
+      summary: Get all JBAC rules
       operationId: listAllJbacRules
       description: Internal endpoint for Kong plugin to fetch all active JBAC rules
       security: []
       parameters:
-      - $ref: '#/components/parameters/TenantIdHeader'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       responses:
         '200':
           description: Rules retrieved successfully
@@ -1550,16 +1663,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters: []
   /internal/jbac/rules/version:
     get:
       tags:
       - Internal
-      summary: Get JBAC rules version 
+      summary: Get JBAC rules version
       operationId: getAllJbacRulesVersion
       description: Internal endpoint to get JBAC ruleset version hash for cache validation
       security: []
       parameters:
-      - $ref: '#/components/parameters/TenantIdHeader'
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
       responses:
         '200':
           description: Version retrieved successfully
@@ -1600,147 +1727,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters: []
 components:
   securitySchemes:
     BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth
   parameters:
     RequestIdHeader:
-      name: X-Request-ID
-      in: header
-      required: false
-      description: Unique identifier for tracking each request
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      name: X-Correlation-ID
-      in: header
-      required: false
-      description: Used for distributed tracing across multiple services
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      name: User-Agent
-      in: header
-      required: false
-      description: Identifies the client making the request
-      schema:
-        type: string
-        minLength: 5
-        maxLength: 64
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      description: Identifies the tenant making the request
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      name: X-Forwarded-For
-      in: header
-      required: false
-      description: Client IP address for tracing in load-balanced environments
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      name: X-Client-Id
-      in: header
-      required: false
-      description: Unique identifier assigned to the client
-      schema:
-        type: string
-        minLength: 3
-        maxLength: 100
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
     ClientSecret:
-      name: X-Client-Secret
-      in: header
-      required: false
-      description: Secret key used to authenticate the client
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 256
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      name: X-Time-Stamp
-      in: header
-      required: false
-      description: Epoch timestamp in milliseconds when the request was made
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
   headers:
     X-Response-Time:
-      description: Total time taken to process the request in milliseconds
-      schema:
-        type: integer
-        minimum: 0
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-      description: Server-side timestamp in epoch milliseconds when response was generated
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-      description: Echoes the X-Request-ID from the request for tracking
-      schema:
-        type: string
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-      description: Echoes the X-Correlation-ID to trace request across services
-      schema:
-        type: string
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-      description: Echoes the X-Tenant-ID from the request confirming tenant scope
-      schema:
-        type: string
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-      description: Maximum number of allowed requests in a given timeframe
-      schema:
-        type: integer
-        minimum: 1
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-      description: Remaining number of requests in the current rate limit window
-      schema:
-        type: integer
-        minimum: 0
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-      description: Time in UTC epoch seconds when the rate limit will reset
-      schema:
-        type: integer
-        minimum: 0
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
   schemas:
     Error:
-      type: object
-      required:
-      - code
-      - message
-      properties:
-        code:
-          type: string
-          description: Module-specific error code
-          example: Rule.NotFound
-        message:
-          type: string
-          description: Readable error message
-          example: Rule not found
-        description:
-          type: string
-          description: Optional long description for debugging
-        params:
-          type: array
-          description: Optional placeholders for dynamic messages
-          items:
-            type: string
+      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
     RbacRule:
       type: object
       required:
