@@ -176,27 +176,7 @@ components:
 
   schemas:
     Error:
-      type: object
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: string
-          description: Module-specific error code in dot-notation
-          example: Individual.NotFound
-        message:
-          type: string
-          description: Human-readable error message
-          example: Individual not found
-        description:
-          type: string
-          description: Optional long description for debugging
-        params:
-          type: array
-          description: Optional placeholders for dynamic messages
-          items:
-            type: string
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
 
     AuditDetails:
       type: object
@@ -710,6 +690,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IndividualResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           headers:
@@ -888,6 +876,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeleteResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           headers:
