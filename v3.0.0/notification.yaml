@@ -319,7 +319,7 @@ paths:
   /template/preview:
     post:
       summary: Preview a notification template
-      description: Renders a template with a given payload without sending a notification.
+      description: Renders a template with a given payload without sending a notification (Dry-run operation).
       operationId: previewNotificationTemplate
       tags: [Template Management]
       parameters:

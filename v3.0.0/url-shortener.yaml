@@ -30,7 +30,7 @@ paths:
 
   # ── SHORTEN ──────────────────────────────────────────────────────────────────
 
-  /shortener:
+  /short-url:
     post:
       summary: Shorten URL
       description: |
@@ -110,8 +110,6 @@ paths:
       description: |
         Resolves the short key and issues a 307 Temporary Redirect to the original URL.
         Returns 404 if the key does not exist.
-        Note: this route is registered directly on the server root, not under the
-        /url-shortener context path.
       operationId: redirectURL
       tags: [URL Shortener]
       parameters:
