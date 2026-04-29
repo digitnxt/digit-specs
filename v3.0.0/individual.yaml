@@ -38,92 +38,25 @@ security:
 components:
   securitySchemes:
     BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
 
   parameters:
     RequestIdHeader:
-      name: X-Request-ID
-      in: header
-      required: false
-      description: Unique identifier for tracking each request
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
     CorrelationIdHeader:
-      name: X-Correlation-ID
-      in: header
-      required: false
-      description: Used for distributed tracing across multiple services
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
-      name: User-Agent
-      in: header
-      required: false
-      description: Identifies the client making the request
-      schema:
-        type: string
-        minLength: 5
-        maxLength: 64
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      description: Identifies the tenant making the request
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
-      name: X-Forwarded-For
-      in: header
-      required: false
-      description: Client IP address (used for tracing in load-balanced environments)
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
     ClientId:
-      name: X-Client-Id
-      in: header
-      required: false
-      description: Unique identifier assigned to the client making the request
-      schema:
-        type: string
-        minLength: 3
-        maxLength: 100
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
     ClientSecret:
-      name: X-Client-Secret
-      in: header
-      required: false
-      description: Secret key used to authenticate the client making the request
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 256
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
     TimeStamp:
-      name: X-Time-Stamp
-      in: header
-      required: false
-      description: Epoch timestamp (in milliseconds) indicating when the request was made
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: false
-      description: Unique identifier for idempotent requests
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
     IndividualIdPath:
       name: id
       in: path
@@ -136,70 +69,28 @@ components:
 
   headers:
     X-Response-Time:
-      description: Total time taken to process the request (in milliseconds)
-      schema:
-        type: integer
-        minimum: 0
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
     X-Response-Timestamp:
-      description: Server-side timestamp (epoch milliseconds) when the response was generated
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
     X-Request-ID:
-      description: Echoes the X-Request-ID from the request for tracking and correlation
-      schema:
-        type: string
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
     X-Correlation-ID:
-      description: Echoes the X-Correlation-ID to trace the request across services
-      schema:
-        type: string
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
     X-Tenant-ID:
-      description: Echoes the X-Tenant-ID from the request, confirming tenant scope
-      schema:
-        type: string
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
     X-Rate-Limit:
-      description: Indicates the maximum number of allowed requests in a given timeframe
-      schema:
-        type: integer
-        minimum: 1
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
     X-Rate-Limit-Remaining:
-      description: Indicates the remaining number of requests in the current rate limit window
-      schema:
-        type: integer
-        minimum: 0
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
     X-Rate-Limit-Reset:
-      description: Indicates the time (in UTC epoch seconds) when the rate limit will reset
-      schema:
-        type: integer
-        minimum: 0
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
 
   schemas:
     Error:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
 
-    AuditDetails:
-      type: object
-      description: Contains audit details tracking record creation and modification
-      properties:
-        createdBy:
-          type: string
-          description: UUID of the user or system that created the record
-          minLength: 2
-          maxLength: 64
-        createdTime:
-          type: integer
-          format: int64
-          description: Timestamp (epoch milliseconds) when the record was created
-        modifiedBy:
-          type: string
-          description: UUID of the user or system that updated the record
-          minLength: 2
-          maxLength: 64
-        modifiedTime:
-          type: integer
-          format: int64
-          description: Timestamp (epoch milliseconds) when the record was last modified
+    AuditDetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
 
     Address:
       type: object
@@ -280,7 +171,6 @@ components:
       type: object
       description: Represents a citizen record in the Individual Registry
       required:
-        - tenantId
         - name
         - dateOfBirth
       properties:
@@ -291,11 +181,6 @@ components:
           minLength: 2
           maxLength: 64
           description: System-generated unique identifier for the individual
-        tenantId:
-          type: string
-          minLength: 2
-          maxLength: 64
-          description: Tenant identifier
         name:
           type: string
           minLength: 2
@@ -327,26 +212,21 @@ components:
           description: Array of documents associated with the individual
           items:
             $ref: '#/components/schemas/Document'
-        auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
         additionalFields:
           type: object
           description: Additional custom fields for extensibility
           additionalProperties: true
+          readOnly: true
 
     IndividualRequest:
       type: object
       description: Request payload for creating or updating an individual
       required:
-        - tenantId
         - name
         - dateOfBirth
       properties:
-        tenantId:
-          type: string
-          minLength: 2
-          maxLength: 64
-          description: Tenant identifier
         name:
           type: string
           minLength: 2
@@ -414,11 +294,6 @@ components:
           format: uuid
           readOnly: true
           description: System-generated unique identifier
-        tenantId:
-          type: string
-          minLength: 2
-          maxLength: 64
-          description: Tenant identifier
         key:
           type: string
           minLength: 2
@@ -429,9 +304,8 @@ components:
           minLength: 1
           maxLength: 4096
           description: Configuration value
-        auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
-
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
 
     IndividualSearchResponse:
       type: object
@@ -453,7 +327,7 @@ components:
 
 paths:
 
-  /:
+  /individuals:
     post:
       tags:
         - Individuals
@@ -631,6 +505,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '404':
+          description: No individuals found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '429':
           description: Too Many Requests - rate limit exceeded
           headers:
@@ -649,7 +529,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /{id}:
+  /individuals/{id}:
     get:
       tags:
         - Individuals
@@ -700,29 +580,23 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
           content:
             application/json:
               schema:
@@ -790,23 +664,6 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
           content:
             application/json:
               schema:
@@ -825,6 +682,17 @@ paths:
                 $ref: '#/components/schemas/Error'
         '422':
           description: Unprocessable - business rule violation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
           content:
             application/json:
               schema:
@@ -886,29 +754,23 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
           content:
             application/json:
               schema:
@@ -1013,6 +875,17 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
           content:
             application/json:
               schema:
