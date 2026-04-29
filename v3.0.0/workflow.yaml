@@ -30,36 +30,22 @@ tags:
   description: Trigger or search auto-escalation runs.
 components:
   parameters:
-    TenantHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema:
-        type: string
-      description: Tenant identifier used to scope the request.
-    ClientHeader:
-      name: X-Client-Id
-      in: header
-      required: false
-      schema:
-        type: string
-      description: Client/user identifier captured for audit; required by some endpoints.
     RequestIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
     ClientSecret:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
   responses:
     ErrorResponse:
       description: API error response
@@ -71,18 +57,7 @@ components:
       description: Operation completed successfully with no body.
   schemas:
     AuditDetail:
-      type: object
-      properties:
-        createdBy:
-          type: string
-        createdTime:
-          type: integer
-          format: int64
-        modifiedBy:
-          type: string
-        modifiedTime:
-          type: integer
-          format: int64
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
     Document:
       type: object
       properties:
@@ -458,27 +433,32 @@ components:
           items:
             type: string
     Error:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
   securitySchemes:
     BearerAuth:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
   headers:
     X-Response-Time:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
+    Retry-After:
+      description: Seconds to wait before retrying.
+      schema:
+        type: integer
+        minimum: 1
 paths:
   /process:
     post:
@@ -546,8 +526,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs POST on /workflow/v3/process.
-      operationId: postWorkflowV3Process
+      operationId: createProcess
     get:
       tags:
       - Process
@@ -607,8 +596,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/process.
-      operationId: getWorkflowV3Process
+      operationId: searchProcesses
     delete:
       tags:
       - Process
@@ -676,7 +674,16 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-      operationId: deleteWorkflowV3Process
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: deleteProcesses
   /process/definition:
     get:
       tags:
@@ -737,11 +744,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/process/definition.
-      operationId: getWorkflowV3ProcessDefinition
+      operationId: getProcessDefinition
   /process/{id}:
     parameters:
-    - $ref: '#/components/parameters/TenantHeader'
+    - $ref: '#/components/parameters/TenantIdHeader'
     - name: id
       in: path
       required: true
@@ -798,6 +814,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -808,7 +833,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs GET on /workflow/v3/process/{id}.
-      operationId: getWorkflowV3ProcessId
+      operationId: getProcessById
     put:
       tags:
       - Process
@@ -876,8 +901,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs PUT on /workflow/v3/process/{id}.
-      operationId: putWorkflowV3ProcessId
+      operationId: updateProcessById
     delete:
       tags:
       - Process
@@ -934,6 +968,15 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -944,10 +987,10 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/process/{id}.
-      operationId: deleteWorkflowV3ProcessId
+      operationId: deleteProcessById
   /process/{processId}/state:
     parameters:
-    - $ref: '#/components/parameters/TenantHeader'
+    - $ref: '#/components/parameters/TenantIdHeader'
     - name: processId
       in: path
       required: true
@@ -1017,8 +1060,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs POST on /workflow/v3/process/{processId}/state.
-      operationId: postWorkflowV3ProcessProcessidState
+      operationId: createState
     get:
       tags:
       - State
@@ -1078,11 +1130,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/process/{processId}/state.
-      operationId: getWorkflowV3ProcessProcessidState
+      operationId: searchStates
   /state/{id}:
     parameters:
-    - $ref: '#/components/parameters/TenantHeader'
+    - $ref: '#/components/parameters/TenantIdHeader'
     - name: id
       in: path
       required: true
@@ -1139,6 +1200,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1149,7 +1219,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs GET on /workflow/v3/state/{id}.
-      operationId: getWorkflowV3StateId
+      operationId: getStateById
     put:
       tags:
       - State
@@ -1215,8 +1285,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs PUT on /workflow/v3/state/{id}.
-      operationId: putWorkflowV3StateId
+      operationId: updateStateById
     delete:
       tags:
       - State
@@ -1269,6 +1348,15 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1279,10 +1367,10 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/state/{id}.
-      operationId: deleteWorkflowV3StateId
+      operationId: deleteStateById
   /state/{stateId}/action:
     parameters:
-    - $ref: '#/components/parameters/TenantHeader'
+    - $ref: '#/components/parameters/TenantIdHeader'
     - name: stateId
       in: path
       required: true
@@ -1352,8 +1440,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs POST on /workflow/v3/state/{stateId}/action.
-      operationId: postWorkflowV3StateStateidAction
+      operationId: createAction
     get:
       tags:
       - Action
@@ -1413,11 +1510,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/state/{stateId}/action.
-      operationId: getWorkflowV3StateStateidAction
+      operationId: searchActions
   /action/{id}:
     parameters:
-    - $ref: '#/components/parameters/TenantHeader'
+    - $ref: '#/components/parameters/TenantIdHeader'
     - name: id
       in: path
       required: true
@@ -1474,6 +1580,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1484,7 +1599,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs GET on /workflow/v3/action/{id}.
-      operationId: getWorkflowV3ActionId
+      operationId: getActionById
     put:
       tags:
       - Action
@@ -1550,8 +1665,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs PUT on /workflow/v3/action/{id}.
-      operationId: putWorkflowV3ActionId
+      operationId: updateActionById
     delete:
       tags:
       - Action
@@ -1604,6 +1728,15 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1614,10 +1747,10 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/action/{id}.
-      operationId: deleteWorkflowV3ActionId
+      operationId: deleteActionById
   /process/{processId}/escalation:
     parameters:
-    - $ref: '#/components/parameters/TenantHeader'
+    - $ref: '#/components/parameters/TenantIdHeader'
     - name: processId
       in: path
       required: true
@@ -1687,8 +1820,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs POST on /workflow/v3/process/{processId}/escalation.
-      operationId: postWorkflowV3ProcessProcessidEscalation
+      operationId: createEscalationConfig
     get:
       tags:
       - EscalationConfig
@@ -1748,11 +1890,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/process/{processId}/escalation.
-      operationId: getWorkflowV3ProcessProcessidEscalation
+      operationId: searchEscalationConfigs
   /escalation/{id}:
     parameters:
-    - $ref: '#/components/parameters/TenantHeader'
+    - $ref: '#/components/parameters/TenantIdHeader'
     - name: id
       in: path
       required: true
@@ -1809,6 +1960,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1819,7 +1979,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs GET on /workflow/v3/escalation/{id}.
-      operationId: getWorkflowV3EscalationId
+      operationId: getEscalationById
     put:
       tags:
       - EscalationConfig
@@ -1883,8 +2043,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs PUT on /workflow/v3/escalation/{id}.
-      operationId: putWorkflowV3EscalationId
+      operationId: updateEscalationById
     delete:
       tags:
       - EscalationConfig
@@ -1939,6 +2108,15 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1949,7 +2127,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       description: Performs DELETE on /workflow/v3/escalation/{id}.
-      operationId: deleteWorkflowV3EscalationId
+      operationId: deleteEscalationById
   /transition:
     post:
       tags:
@@ -2020,8 +2198,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs POST on /workflow/v3/transition.
-      operationId: postWorkflowV3Transition
+      operationId: createTransition
     get:
       tags:
       - Transition
@@ -2081,8 +2268,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/transition.
-      operationId: getWorkflowV3Transition
+      operationId: searchTransitions
   /auto/{processCode}/_escalate:
     post:
       tags:
@@ -2154,8 +2350,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs POST on /workflow/v3/auto/{processCode}/_escalate.
-      operationId: postWorkflowV3AutoProcesscodeEscalate
+      operationId: runAutoEscalation
     parameters:
     - name: processCode
       in: path
@@ -2222,7 +2427,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       description: Performs GET on /workflow/v3/auto/_search.
-      operationId: getWorkflowV3AutoSearch
+      operationId: searchAutoEscalationRuns
 security:
 - BearerAuth: []
