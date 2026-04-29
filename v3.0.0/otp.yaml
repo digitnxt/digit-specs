@@ -5,10 +5,7 @@ info:
   description: "REST APIs for OTP generation, verification, configuration, invalidation\
     \ and resend.\n\nA tenant configures one or more purposes (e.g., login, transaction,\
     \ forgot-password).\nEach purpose defines OTP length, TTL, rate limits, and lockout\
-    \ behaviour.\n\nThe `tenantId` is always resolved from the Header \u2014 \nThe\
-    \ `referenceId` returned by `/generate` is a signed JWT encoding `tenantId`, `identifier`,\n\
-    and `purpose`. It must be submitted as-is on `/verify` and `/invalidate`. It cannot\
-    \ be tampered with.\n"
+    \ behaviour.\n"
 servers:
 - url: https://api.example.com/otp/v3
   description: Production server
