@@ -14,7 +14,7 @@ servers:
 security:
 - BearerAuth: []
 paths:
-  /:
+  /boundaries:
     get:
       tags:
       - Boundary Entities
@@ -96,6 +96,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -169,6 +174,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -179,7 +189,7 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
-  /{id}:
+  /boundaries/{id}:
     put:
       tags:
       - Boundary Entities
@@ -255,6 +265,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -331,6 +346,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -402,6 +422,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -427,6 +452,7 @@ paths:
         description: Search by hierarchy type.
         required: true
         schema:
+          minLength: 1
           maxLength: 256
           type: string
           format: varchar
@@ -476,6 +502,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -562,6 +593,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -636,6 +672,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -660,6 +701,7 @@ paths:
         in: query
         description: Type Of the BoundaryType Like REVENUE, ADMIN
         schema:
+          minLength: 1
           maxLength: 128
           type: string
           format: varchar
@@ -667,6 +709,7 @@ paths:
         in: query
         description: boundary type within the tenant boundary structure.
         schema:
+          minLength: 1
           maxLength: 64
           type: string
           format: varchar
@@ -759,6 +802,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -845,6 +893,11 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             '*/*':
               schema:
@@ -922,9 +975,6 @@ components:
           type: string
           readOnly: true
           description: read-only db entity uuid.
-        tenantId:
-          type: string
-          description: Unique tenant identifier.
         code:
           type: string
           description: code of the boundary.
@@ -937,8 +987,8 @@ components:
           type: string
           description: Request ID for tracking
         auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
-    AuditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    AuditDetail:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
     EnrichedBoundary:
       type: object
@@ -958,7 +1008,7 @@ components:
             $ref: '#/components/schemas/EnrichedBoundary'
           description: children boundaries of the current boundary
         auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
+          $ref: '#/components/schemas/AuditDetail'
     BoundaryRelation:
       required:
       - code
@@ -973,9 +1023,6 @@ components:
         code:
           type: string
           description: Code of the boundary.
-        tenantId:
-          type: string
-          description: Unique tenant identifier.
         hierarchyType:
           type: string
           description: Code of the hierarchy type for which boundary relationship
@@ -993,13 +1040,10 @@ components:
           type: string
           description: Request ID for tracking
         auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
+          $ref: '#/components/schemas/AuditDetail'
     HierarchyRelation:
       type: object
       properties:
-        tenantId:
-          type: string
-          description: unique id of the boundary tenant.
         hierarchyType:
           type: string
           description: Hierarchy type from master data
@@ -1057,9 +1101,6 @@ components:
         id:
           type: string
           description: UUID of the hierarchy definition
-        tenantId:
-          type: string
-          description: unique id of the boundary tenant.
         hierarchyType:
           type: string
           description: Hierarchy type from master data
@@ -1071,7 +1112,7 @@ components:
           type: string
           description: Request ID for tracking
         auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
+          $ref: '#/components/schemas/AuditDetail'
     BoundaryHierarchyRequest:
       type: object
       properties:

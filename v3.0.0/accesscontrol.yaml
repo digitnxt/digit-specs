@@ -1924,9 +1924,6 @@ components:
           type: string
           format: uuid
           description: Rule ID
-        tenantId:
-          type: string
-          description: Tenant ID
         roleNames:
           type: array
           items:
@@ -2160,9 +2157,6 @@ components:
           type: string
           format: uuid
           description: Rule ID
-        tenantId:
-          type: string
-          description: Tenant ID
         name:
           type: string
           description: Rule name

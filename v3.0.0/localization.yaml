@@ -267,6 +267,7 @@ paths:
         required: true
         content:
           application/json:
+            example: {}
             schema:
               $ref: '#/components/schemas/CreateMessagesRequest'
       responses:

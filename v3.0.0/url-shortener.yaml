@@ -106,6 +106,7 @@ paths:
 
   /{key}:
     get:
+      security: []
       summary: Redirect to original URL
       description: |
         Resolves the short key and issues a 307 Temporary Redirect to the original URL.

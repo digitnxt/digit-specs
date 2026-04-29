@@ -96,7 +96,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -178,7 +183,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -257,7 +267,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -340,7 +355,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -421,7 +441,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -520,7 +545,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -599,7 +629,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -678,7 +713,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -751,7 +791,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -824,7 +869,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -903,7 +953,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -999,7 +1054,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too Many Requests
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:

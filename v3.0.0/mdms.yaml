@@ -81,6 +81,10 @@ paths:
         '429':
           description: Too many requests - rate limit exceeded
           headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -158,6 +162,10 @@ paths:
         '429':
           description: Too many requests - rate limit exceeded
           headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -238,6 +246,10 @@ paths:
         '429':
           description: Too many requests - rate limit exceeded
           headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -323,6 +335,10 @@ paths:
         '429':
           description: Too many requests - rate limit exceeded
           headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -435,6 +451,10 @@ paths:
         '429':
           description: Too many requests - rate limit exceeded
           headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:

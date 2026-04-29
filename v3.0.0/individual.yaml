@@ -96,9 +96,6 @@ components:
       type: object
       description: Represents a physical address with location details
       properties:
-        tenantId:
-          type: string
-          description: Tenant unique identifier
         addressId:
           type: string
           readOnly: true
@@ -347,6 +344,7 @@ paths:
         required: true
         content:
           application/json:
+            example: {}
             schema:
               $ref: '#/components/schemas/IndividualRequest'
       responses:

@@ -70,6 +70,7 @@ paths:
         required: true
         content:
           application/json:
+            example: []
             schema:
               type: array
               minItems: 1

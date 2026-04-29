@@ -180,7 +180,7 @@ components:
           isActive:
             type: boolean
           auditDetails:
-            $ref: '#/components/schemas/AuditDetails'
+            $ref: '#/components/schemas/AuditDetail'
     RefSchema:
       type: object
       required:
@@ -219,7 +219,7 @@ components:
           - btree
           - gin
           description: Postgres index method; btree if omitted.
-    AuditDetails:
+    AuditDetail:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
     DataRequest:
       type: object
@@ -271,7 +271,7 @@ components:
           format: date-time
           nullable: true
         auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
+          $ref: '#/components/schemas/AuditDetail'
     SearchRequest:
       type: object
       properties:
@@ -353,11 +353,6 @@ components:
     IsExistRequest:
       type: object
       properties:
-        tenantId:
-          type: string
-          description: Tenant identifier to check; defaults to the header value when
-            omitted.
-          readOnly: true
         field:
           type: string
           description: Field path or column to test (registryId by default).
