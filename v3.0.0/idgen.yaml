@@ -1,17 +1,21 @@
-openapi: 3.0.0
+openapi: 3.0.3
+
 info:
   title: ID Generator Service API
   version: 3.0.0
   description: |
     A DIGIT microservice that generates unique, human-readable IDs from user-defined templates. 
-    It supports formatted dates, scoped and padded sequences (Postgres-backed for concurrency safety), 
-    random segments with flexible charsets, and dynamic variable substitution.
+
+    It supports formatted dates, scoped and padded sequences (Postgres-backed for concurrency safety), random segments with flexible charsets, and dynamic variable substitution.
+
+    Templates are versioned and immutable.
+    All endpoints require X-Tenant-ID header for tenant scoping.
     
 servers:
-  - url: http://localhost:8080/idgen
-    description: Local development server
-  - url: https://api.example.com/idgen
+  - url: https://api.example.com/idgen/v3
     description: Production server
+  - url: https://staging-api.example.com/idgen/v3
+    description: Staging server
 
 security:
   - BearerAuth: []
@@ -19,93 +23,72 @@ security:
 tags:
   - name: Template Management
     description: Operations for managing ID generation templates
+
   - name: ID Generation
     description: Operations for generating IDs from templates
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+
 paths:
-  /v1/template:
+
+  # ── Template ──────────────────────────────────────────────────────────────────
+
+  /template:
     post:
-      tags:
-        - Template Management
-      summary: Create a new ID generation template
-      description: |
-        Registers a new ID generation template with configuration and initializes its sequence.
-        Creates version v1 of the template.
-      operationId: createTemplate
+      summary: Create a new ID Gen template
+      description: Registers a new ID Gen template with configuration and initializes its sequence. Creates version v1 of the template.
+      operationId: createIDGenTemplate
+      tags: [Template Management]
       parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ClientIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/IDGenTemplateRequest'
-            examples:
-              receiptId:
-                summary: Receipt ID Template
-                value:
-                  templateCode: "receipt-id"
-                  config:
-                    template: "{tenant}-{DATE:yyyy-mm-dd}-{SEQ}-{RAND}"
-                    sequence:
-                      scope: "daily"
-                      start: 1
-                      padding:
-                        length: 6
-                        char: "0"
-                    random:
-                      length: 4
-                      charset: "A-Z0-9"
-              orgId:
-                summary: Organization ID Template
-                value:
-                  templateCode: "orgId"
-                  config:
-                    template: "{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}"
-                    sequence:
-                      scope: "daily"
-                      start: 1
-                      padding:
-                        length: 4
-                        char: "0"
-                    random:
-                      length: 2
-                      charset: "A-Z0-9"
       responses:
         '201':
           description: Template created successfully
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/IDGenTemplateResponse'
-              example:
-                id: "550e8400-e29b-41d4-a716-446655440000"
-                tenantId: "pg"
-                templateCode: "receipt-id"
-                version: "v1"
-                config:
-                  template: "{tenant}-{DATE:yyyy-mm-dd}-{SEQ}-{RAND}"
-                  sequence:
-                    scope: "daily"
-                    start: 1
-                    padding:
-                      length: 6
-                      char: "0"
-                  random:
-                    length: 4
-                    charset: "A-Z0-9"
-                auditDetails:
-                  createdBy: "550e8400-e29b-41d4-a716-446655440000"
-                  createdTime: 1704067200000
         '400':
-          description: Bad Request
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (duplicate code within tenant)
+          description: Conflict (duplicate code within tenant). Use PUT to update
           content:
             application/json:
               schema:
@@ -118,50 +101,64 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     put:
-      tags:
-        - Template Management
       summary: Update an existing template
-      description: |
-        Creates a new immutable version of an existing template's configuration.
-        Increments the version number (e.g., v1 -> v2).
-      operationId: updateTemplate
+      description: Creates a new immutable version of an existing template's configuration. Increments the version number (e.g., v1 -> v2).
+      operationId: updateIDGenTemplate
+      tags: [Template Management]
       parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ClientIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/IDGenTemplateRequest'
-            example:
-              templateCode: "orgId"
-              config:
-                template: "{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}"
-                sequence:
-                  scope: "daily"
-                  start: 1
-                  padding:
-                    length: 3
-                    char: "0"
-                random:
-                  length: 3
-                  charset: "A-Z0-9"
       responses:
-        '201':
+        '200':
           description: Template updated successfully (new version created)
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/IDGenTemplateResponse'
         '400':
-          description: Bad Request
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict — immutable field change attempted (e.g., purpose).
           content:
             application/json:
               schema:
@@ -174,8 +171,6 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     get:
-      tags:
-        - Template Management
       summary: Search templates
       description: |
         Search for templates by various criteria.
@@ -185,58 +180,61 @@ paths:
         - If templateCode is provided without version: returns latest version of that template
         - If ids are provided: returns those specific template rows
         - If version is provided: templateCode is required
-      operationId: searchTemplates
+      operationId: searchIDGenTemplates
+      tags: [Template Management]
       parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
         - name: templateCode
           in: query
           description: Template code to search for
           schema:
             type: string
-          example: "orgId"
         - name: ids
           in: query
           description: Comma-separated list of template UUIDs
           schema:
             type: string
-          example: "da880db9-369e-484d-b4d0-37c6274485dd,bea96bb4-a4ec-449e-8b60-9e79869e2700"
         - name: version
           in: query
           description: Template version (requires templateCode)
           schema:
             type: string
             pattern: '^v\d+$'
-          example: "v1"
       responses:
         '200':
           description: Templates found
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/IDGenTemplateResponse'
-              example:
-                - id: "550e8400-e29b-41d4-a716-446655440000"
-                  tenantId: "pg"
-                  templateCode: "orgId"
-                  version: "v1"
-                  config:
-                    template: "{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}"
-                    sequence:
-                      scope: "daily"
-                      start: 1
-                      padding:
-                        length: 4
-                        char: "0"
-                    random:
-                      length: 2
-                      charset: "A-Z0-9"
-                  auditDetails:
-                    createdBy: "550e8400-e29b-41d4-a716-446655440000"
-                    createdTime: 1704067200000
         '400':
-          description: Bad Request
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
               schema:
@@ -249,8 +247,6 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     delete:
-      tags:
-        - Template Management
       summary: Delete a template version
       description: |
         Delete a specific version of a template.
@@ -259,16 +255,23 @@ paths:
         - Deleting a non-latest version: only that versioned row is removed
         - Deleting the latest version when other versions exist: only the latest row is removed
         - Deleting the only version: template, scope resets, sequence lookup, and Postgres sequence are fully cleaned up
-      operationId: deleteTemplate
+      operationId: deleteIDGenTemplate
+      tags: [Template Management]
       parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
         - name: templateCode
           in: query
           required: true
           description: Template code to delete
           schema:
             type: string
-          example: "orgId"
         - name: version
           in: query
           required: true
@@ -276,12 +279,36 @@ paths:
           schema:
             type: string
             pattern: '^v\d+$'
-          example: "v2"
       responses:
         '200':
           description: Template deleted successfully
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
         '400':
-          description: Bad Request
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
               schema:
@@ -299,64 +326,71 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
   
-  /v1/generate:
+  # ── GENERATE ID ────────────────────────────────────────────────────────────────
+
+  /generate:
     post:
-      tags:
-        - ID Generation
       summary: Generate an ID from a template
-      description: |
-        Generates a unique ID from a registered template using optional variables.
-        Uses the latest version of the template for the given tenant.
-      operationId: generateId
+      description: Generates a unique ID from a registered template using optional variables. Uses the latest version of the template for the given tenant.
+      operationId: generateIDGenID
+      tags: [ID Generation]      
       parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/GenerateIDRequest'
-            examples:
-              withVariables:
-                summary: Generate with variables
-                value:
-                  templateCode: "receipt-id"
-                  variables:
-                    tenant: "pb"
-                    dept: "REV"
-              orgId:
-                summary: Generate organization ID
-                value:
-                  templateCode: "orgId"
-                  variables:
-                    ORG: "PG"
       responses:
         '200':
           description: ID generated successfully
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenerateIDResponse'
-              examples:
-                receiptId:
-                  summary: Receipt ID generated
-                  value:
-                    tenantId: "pb"
-                    templateCode: "receipt-id"
-                    version: "v3"
-                    id: "pb-2025-09-22-000123-A9XZ"
-                orgId:
-                  summary: Organization ID generated
-                  value:
-                    tenantId: "pg"
-                    templateCode: "orgId"
-                    version: "v1"
-                    id: "PG-20250703-0001-A9"
         '400':
-          description: Bad Request
+          description: Bad request.
           content:
             application/json:
               schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: 'Unprocessable'
+          content:
+            application/json:
+              schema: 
                 $ref: '#/components/schemas/Error'
         '500':
           description: Generation failed
@@ -365,58 +399,136 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+
 components:
+
+  # ── Security ────────────────────────────────────────────────────────────────
+
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
+
+  # ── Parameters ──────────────────────────────────────────────────────────────
 
   parameters:
+    RequestIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
+    CorrelationIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
+    UserAgentHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
-    
-    ClientIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
+    ForwardedForHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
+    ClientId:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
+    ClientSecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
+    TimeStamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Provide a unique value to prevent duplicate creations on retries.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
   
+  # ── Response Headers ─────────────────────────────────────────────────────────
+
+  headers:
+    X-Response-Time:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
+    X-Response-Timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
+    X-Request-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
+    X-Correlation-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
+    X-Tenant-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
+    X-Rate-Limit:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
+    X-Rate-Limit-Remaining:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
+    X-Rate-Limit-Reset:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
+
+  # ── Schemas ──────────────────────────────────────────────────────────────────
+
   schemas:
-    IDGenTemplateRequest:
+
+    # ── Common refs ─────────────────────────────────────────────────────────────
+
+    Error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
+
+    AuditDetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
+
+    # ── Enums ───────────────────────────────────────────────────────────────────
+
+    SequenceScope:
+      type: string
+      description: Allowed sequence scope(s) for counter resets
+      enum: [GLOBAL, DAILY, MONTHLY, YEARLY]
+      default: GLOBAL
+      example: DAILY
+
+    # ── Template Schemas ──────────────────────────────────────────────────────────
+
+    PaddingConfig:
       type: object
-      required:
-        - templateCode
-        - config
       properties:
-        templateCode:
+        length:
+          type: integer
+          minimum: 1
+          description: Minimum width in characters
+          example: 4
+        char:
           type: string
-          description: Unique identifier for the template
-          example: "receipt-id"
-        config:
-          $ref: '#/components/schemas/IDGenTemplateConfig'
-    
-    IDGenTemplateResponse:
+          minLength: 1
+          maxLength: 1
+          default: "0"
+          description: Character used for left-padding
+          example: "0"
+
+    SequenceConfig:
       type: object
       properties:
-        id:
+        scope:
+          $ref: "#/components/schemas/SequenceScope"
+        start:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Initial value when sequence is first used or after reset
+          example: 1
+        padding:
+          $ref: '#/components/schemas/PaddingConfig'
+
+    RandomConfig:
+      type: object
+      properties:
+        length:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Number of random characters to generate
+          example: 2
+        charset:
           type: string
-          format: uuid
-          description: Unique identifier for this template version
-          example: "550e8400-e29b-41d4-a716-446655440000"
-        tenantId:
-          type: string
-          description: Tenant identifier
-          example: "pg"
-        templateCode:
-          type: string
-          description: Template code
-          example: "receipt-id"
-        version:
-          type: string
-          pattern: '^v\d+$'
-          description: Template version
-          example: "v1"
-        config:
-          $ref: '#/components/schemas/IDGenTemplateConfig'
-        auditDetails:
-          $ref: '#/components/schemas/AuditDetails'
-    
+          description: |
+            Allowed characters for random generation.
+            Supports ranges like A-Z, a-z, 0-9 and combinations like A-Za-z0-9
+          example: "A-Z0-9"
+
     IDGenTemplateConfig:
       type: object
       required:
@@ -424,6 +536,8 @@ components:
       properties:
         template:
           type: string
+          minLength: 2
+          maxLength: 256
           description: |
             Template pattern containing static text and dynamic tokens.
             
@@ -442,57 +556,49 @@ components:
           $ref: '#/components/schemas/SequenceConfig'
         random:
           $ref: '#/components/schemas/RandomConfig'
+
+
+    IDGenTemplateRequest:
+      type: object
+      required:
+        - templateCode
+        - config
+      properties:
+        templateCode:
+          type: string
+          minLength: 2
+          maxLength: 64
+          description: Unique identifier for the template
+          example: "receipt-id"
+        config:
+          $ref: '#/components/schemas/IDGenTemplateConfig'
     
-    SequenceConfig:
+    IDGenTemplateResponse:
       type: object
       properties:
-        scope:
+        id:
           type: string
-          enum: [global, daily, monthly, yearly]
-          default: global
-          description: When the counter resets
-          example: "daily"
-        start:
-          type: integer
-          minimum: 1
-          default: 1
-          description: Initial value when sequence is first used or after reset
-          example: 1
-        padding:
-          $ref: '#/components/schemas/PaddingConfig'
-    
-    PaddingConfig:
-      type: object
-      properties:
-        length:
-          type: integer
-          minimum: 1
-          description: Minimum width in characters
-          example: 4
-        char:
+          format: uuid
+          readOnly: true
+          description: Unique identifier for this template version
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        templateCode:
           type: string
-          minLength: 1
-          maxLength: 1
-          default: "0"
-          description: Character used for left-padding
-          example: "0"
-    
-    RandomConfig:
-      type: object
-      properties:
-        length:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Number of random characters to generate
-          example: 2
-        charset:
+          description: Template code
+          example: "receipt-id"
+        version:
           type: string
-          description: |
-            Allowed characters for random generation.
-            Supports ranges like A-Z, a-z, 0-9 and combinations like A-Za-z0-9
-          example: "A-Z0-9"
-    
+          pattern: '^v\d+$'
+          readOnly: true
+          description: Template version
+          example: "v1"
+        config:
+          $ref: '#/components/schemas/IDGenTemplateConfig'
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+     
+    # ── ID Generation Schemas ────────────────────────────────────────────────────────
+
     GenerateIDRequest:
       type: object
       required:
@@ -500,6 +606,8 @@ components:
       properties:
         templateCode:
           type: string
+          minLength: 2
+          maxLength: 64
           description: Template code to use for ID generation
           example: "receipt-id"
         variables:
@@ -514,10 +622,6 @@ components:
     GenerateIDResponse:
       type: object
       properties:
-        tenantId:
-          type: string
-          description: Tenant identifier
-          example: "pb"
         templateCode:
           type: string
           description: Template code used
@@ -525,16 +629,10 @@ components:
         version:
           type: string
           pattern: '^v\d+$'
+          readOnly: true
           description: Template version used
           example: "v3"
         id:
           type: string
           description: Generated unique ID
           example: "pb-2025-09-22-000123-A9XZ"
-    
-    AuditDetails:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
-    
-    Error:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
-  

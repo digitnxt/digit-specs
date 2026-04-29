@@ -4,8 +4,8 @@ info:
   version: 3.0.0
   description: |
     REST APIs to manage Business Services in the DIGIT Billing & Collection domain.
-    A Business Service represents a billable service (e.g., Property Tax, Trade License, Water/Sewerage)
-    and its collection behavior and defaults.
+
+    A Business Service represents a billable service (e.g., Property Tax, Trade License, Water/Sewerage) and its collection behavior and defaults.
 
 servers:
   - url: https://api.example.com/billing/v3
@@ -32,10 +32,17 @@ tags:
   - name: Payment
     description: Manage payment collections, validation & processing
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+
 paths:
+
+  # ─── Business Services ───────────────────────────────────────────────────────
   /business-services:
     post:
       summary: Create one or more business services
+      description: Creates one or more business service configurations that define billable services and their collection behavior, defaults, and payment rules.
       operationId: createBusinessServices
       tags: [BusinessService]
       parameters:
@@ -83,8 +90,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (duplicate code within tenant)
+          description: Conflict (duplicate code within tenant). Use PUT to update.
           content:
             application/json:
               schema:
@@ -98,6 +111,7 @@ paths:
 
     get:
       summary: Search business services by filters
+      description: Retrieves a list of business services filtered by code, active status, or effectiveness date with pagination support.
       operationId: searchBusinessServices
       tags: [BusinessService]
       parameters:
@@ -155,6 +169,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -165,6 +185,7 @@ paths:
   /business-services/{code}:
     get:
       summary: Get a business service by code
+      description: Retrieves a single business service configuration by its unique code identifier.
       operationId: getBusinessServiceByCode
       tags: [BusinessService]
       parameters:
@@ -211,6 +232,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -220,6 +247,7 @@ paths:
 
     put:
       summary: Replace a business service by code
+      description: Performs a full replacement of an existing business service configuration identified by its code.
       operationId: updateBusinessService
       tags: [BusinessService]
       parameters:
@@ -266,6 +294,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -287,6 +321,7 @@ paths:
 
     patch:
       summary: Partially update a business service by code
+      description: Updates specific fields of an existing business service without replacing the entire configuration.
       operationId: patchBusinessService
       tags: [BusinessService]
       parameters:
@@ -333,6 +368,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -348,6 +389,7 @@ paths:
 
     delete:
       summary: Soft delete (deactivate) a business service by code
+      description: Deactivates a business service by setting its active status to false, preventing further use while preserving historical data.
       operationId: deleteBusinessService
       tags: [BusinessService]
       parameters:
@@ -365,7 +407,7 @@ paths:
           description: Unique business service code
           schema: { type: string }
       responses:
-        '204':
+        '200':
           description: Deactivated successfully
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
@@ -376,6 +418,28 @@ paths:
             X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
             X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -389,9 +453,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  # ─── Tax Heads ────────────────────────────────────────────────────────────────
+
   /tax-heads:
     post:
       summary: Create one or more new tax head
+      description: Creates one or more tax head configurations that define charge components like base tax, penalty, rebate, or cess for a business service.
       operationId: createTaxHead
       tags: [TaxHead]
       parameters:
@@ -416,6 +483,15 @@ paths:
       responses:
         '201':
           description: Tax head(s) created
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
@@ -430,8 +506,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (duplicate code within tenant)
+          description: Conflict (duplicate code within tenant). Use PUT to update.
           content:
             application/json:
               schema:
@@ -445,6 +527,7 @@ paths:
 
     get:
       summary: Search tax heads by filters
+      description: Retrieves a list of tax heads filtered by code, category, active status, or linked business service with pagination support.
       operationId: searchTaxHeads
       tags: [TaxHead]
       parameters:
@@ -462,7 +545,7 @@ paths:
           description: Filter by tax head code
         - in: query
           name: category
-          schema: { type: string, enum: [TAX, CESS, PENALTY, INTEREST, REBATE, ROUNDING, OTHER] }
+          schema: { $ref: "#/components/schemas/TaxHeadCategory" }
           description: Filter by category
         - in: query
           name: isActive
@@ -483,6 +566,15 @@ paths:
       responses:
         '200':
           description: List of tax heads
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
@@ -497,6 +589,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -507,6 +605,7 @@ paths:
   /tax-heads/{code}:
     get:
       summary: Get a tax head by code
+      description: Retrieves a single tax head configuration by its unique code identifier.
       operationId: getTaxHeadByCode
       tags: [TaxHead]
       parameters:
@@ -526,16 +625,19 @@ paths:
       responses:
         '200':
           description: Tax head found
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaxHead'
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -544,6 +646,18 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -553,6 +667,7 @@ paths:
 
     put:
       summary: Replace a tax head by code
+      description: Performs a full replacement of an existing tax head configuration identified by its code.
       operationId: updateTaxHead
       tags: [TaxHead]
       parameters:
@@ -578,10 +693,33 @@ paths:
       responses:
         '200':
           description: Updated successfully
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaxHead'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -603,6 +741,7 @@ paths:
 
     patch:
       summary: Partially update a tax head by code
+      description: Updates specific fields of an existing tax head without replacing the entire configuration.
       operationId: patchTaxHead
       tags: [TaxHead]
       parameters:
@@ -627,10 +766,33 @@ paths:
       responses:
         '200':
           description: Updated successfully
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaxHead'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -646,6 +808,7 @@ paths:
 
     delete:
       summary: Soft delete (deactivate) a tax head
+      description: Deactivates a tax head by setting its active status to false, preventing further use while preserving historical data.
       operationId: deleteTaxHead
       tags: [TaxHead]
       parameters:
@@ -662,7 +825,7 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        '204':
+        '200':
           description: Deactivated successfully
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
@@ -673,6 +836,28 @@ paths:
             X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
             X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
@@ -686,9 +871,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+# ─── Demands ──────────────────────────────────────────────────────────────────
+
   /demands:
     post:
       summary: Create demands (bulk)
+      description: Creates one or more demand records representing calculated liabilities for consumers, including line items mapped to tax heads.
       operationId: createDemands
       tags: [Demand]
       parameters:
@@ -719,42 +907,62 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Demand' }
+                items: 
+                  $ref: '#/components/schemas/Demand'
         '207':
           description: Multi-Status — some items succeeded, some failed
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkResponse'
         '400':
-          description: Validation error (unknown head, invalid amounts, bad status transition, etc.)
+          description: Validation error
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
-        '409':
-          description: Conflict (duplicate create without Idempotency-Key; overlapping/duplicate demands as per policy)
+                items: 
+                  $ref: '#/components/schemas/Error' 
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
     put:
       summary: Update/replace demands (bulk)
+      description: Performs bulk full replacement of existing demands that are in editable states (DRAFT or ACTIVE), requiring the demand ID for each item.
       operationId: updateDemands
       tags: [Demand]
-      description: |
-        Bulk full-replace for Demands. Each object **must include `id`** and be in an editable state (`DRAFT` or `ACTIVE`).
-        Consider requiring `If-Match` ETag per item (future iteration) for optimistic concurrency.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -782,13 +990,26 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Demand' }
+                items: 
+                  $ref: '#/components/schemas/Demand'
         '207':
           description: Multi-Status — some items updated, some failed
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
@@ -799,20 +1020,36 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict (e.g., trying to change immutable fields such as code)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           description: 'Unprocessable (items not editable: frozen/billed/cancelled)'
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
     get:
       summary: Search demands by filters
+      description: Retrieves a list of demands filtered by business service, consumer code, status, or creation date range with pagination support.
       operationId: searchDemands
       tags: [Demand]
       parameters:
@@ -835,8 +1072,7 @@ paths:
         - in: query
           name: status
           schema:
-            type: string
-            enum: [DRAFT, ACTIVE, FROZEN, CANCELLED]
+            $ref: "#/components/schemas/DemandStatus"
           description: Filter by Demand Status
         - in: query
           name: createdFrom
@@ -863,27 +1099,40 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Demand' }
+                items: 
+                  $ref: '#/components/schemas/Demand'
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
   /demands/{id}:
     get:
       summary: Get a demand by ID
+      description: Retrieves a single demand record by its unique identifier, including all line items and current status.
       operationId: getDemandByID
       tags: [Demand]
       parameters:
@@ -908,34 +1157,45 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Demand' }
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Demand'
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
     patch:
       summary: Partially update a demand by ID
+      description: Updates specific fields of an editable demand (DRAFT or ACTIVE status) such as amounts, line items, or payer information before bill generation.
       operationId: patchDemandByID
       tags: [Demand]
-      description: |
-        Allowed only if demand is `DRAFT` or `ACTIVE` and not frozen/billed/cancelled.
-        Typical use: fix amounts, add/remove items, update payer/meta before bill issuance.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -970,32 +1230,52 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Demand' }
+              schema: 
+                $ref: '#/components/schemas/Demand'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
         '422':
           description: Unprocessable (frozen/billed/cancelled; or rule violations)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
   /demands/{id}/freeze:
     post:
       summary: Freeze a demand by ID (prevent further edits)
+      description: Transitions an ACTIVE demand to FROZEN status, locking it from further edits and preparing it for bill generation.
       operationId: freezeDemandByID
       tags: [Demand]
-      description: |
-        Transitions `ACTIVE` → `FROZEN`. Prevents further PATCH. Typically called before bill generation.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1012,23 +1292,58 @@ paths:
       responses:
         '200':
           description: Demand frozen
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Demand' }
+              schema: 
+                $ref: '#/components/schemas/Demand'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict (invalid state transition)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /demands/{id}/cancel:
     post:
       summary: Cancel a demand by ID
+      description: Cancels a demand due to incorrect assessment or other reasons, with validation to prevent cancellation of billed or partially collected demands.
       operationId: cancelDemandByID
       tags: [Demand]
-      description: |
-        Cancels a demand (e.g., wrong assessment). If already billed/partially collected, the system may
-        require adjustments instead, returning `422` with guidance.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1043,29 +1358,71 @@ paths:
           required: true
           schema: { type: string }
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                reasonCode: { type: string, description: Optional reference to reason master }
-                note: { type: string }
+              $ref: "#/components/schemas/CancelDemandRequest"
       responses:
         '200':
           description: Demand cancelled
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Demand' }
+              schema: 
+                $ref: '#/components/schemas/Demand'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict (invalid state transition)
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
         '422':
           description: Unprocessable (already billed/collected; needs adjustment route)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ─── Bills ────────────────────────────────────────────────────────────────────
 
   /bills/generate:
     post:
       summary: Generate a bill
+      description: Generates a bill from eligible ACTIVE or FROZEN demands for a specific consumer and business service, including payer details and line items.
       operationId: generateBill
       tags: [Bill]
       parameters:
@@ -1093,31 +1450,44 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bill'
         '400':
-          description: Validation error (unknown head, invalid amounts, bad status transition, etc.)
+          description: Validation error
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict (duplicate create without Idempotency-Key; overlapping/duplicate bills as per policy)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
   /bills:
     get:
       summary: Search bills by filters
+      description: Retrieves a list of bills filtered by business service, consumer codes, bill numbers, status, or payer contact information with pagination support.
       operationId: searchBills
       tags: [Bill]
       parameters:
@@ -1149,8 +1519,7 @@ paths:
           name: status
           description: Filter by Bill Status
           schema:
-            type: string
-            enum: [ACTIVE, CANCELLED, EXPIRED, PAID, PARTIALLY_PAID, PAYMENT_CANCELLED]
+            $ref: "#/components/schemas/BillStatus"
         - in: query
           name: mobileNumber
           schema: 
@@ -1183,29 +1552,40 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Bill' }
+                items: 
+                  $ref: '#/components/schemas/Bill'
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-
-
+              schema: 
+                $ref: '#/components/schemas/Error'
       
   /bills/cancel:
     post:
       summary: Cancel a bill
+      description: Cancels an existing bill by updating its status, typically used when a bill needs to be voided or superseded.
       operationId: cancelBill
       tags: [Bill]
       parameters:
@@ -1225,7 +1605,7 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateBillStatus'
       responses:
-        '201':
+        '200':
           description: Bill canceled
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
@@ -1233,31 +1613,44 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bill'
         '400':
-          description: Validation error (unknown head, invalid amounts, bad status transition, etc.)
+          description: Validation error.
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
-        '409':
-          description: Conflict (duplicate create without Idempotency-Key; overlapping/duplicate bills as per policy)
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error' 
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
   /bills/bulk-generate:
     post:
       summary: Generate bills in bulk
+      description: Initiates bulk bill generation for all eligible demands under a business service, processing asynchronously and returning a request tracking ID.
       operationId: bulkGenerateBill
       tags: [Bill]
       parameters:
@@ -1277,7 +1670,7 @@ paths:
             schema:
               $ref: '#/components/schemas/BulkBillGenerator'
       responses:
-        '202':
+        '201':
           description: Bulk bill generation request accepted
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
@@ -1285,26 +1678,51 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkBillResponse'
         '400':
-          description: Validation error (unknown head, invalid amounts, bad status transition, etc.)
+          description: Validation error
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests — generation rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
+
+  # ─── Payments ─────────────────────────────────────────────────────────────────
 
   /payments:
     post:
       summary: Create a new payment
+      description: Records a new payment transaction against one or more bills, including payment mode, instrument details, and payer information.
       operationId: createPayment
       tags: [Payment]
       parameters:
@@ -1322,7 +1740,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Payment'
+              $ref: '#/components/schemas/PaymentCreate'
       responses:
         '201':
           description: Payment created
@@ -1347,8 +1765,25 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests — generation rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
@@ -1362,6 +1797,7 @@ paths:
 
     get:
       summary: Search payments by filters
+      description: Retrieves a list of payments filtered by payment IDs, bill IDs, receipt numbers, consumer codes, statuses, or date range with pagination support.
       operationId: searchPayments
       tags: [Payment]
       parameters:
@@ -1459,6 +1895,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1469,6 +1911,7 @@ paths:
   /payments/{id}:
     get:
       summary: Get payment by ID
+      description: Retrieves a single payment record by its unique identifier, including all payment details, instrument information, and associated bills.
       operationId: getPaymentByID
       tags: [Payment]
       parameters:
@@ -1493,50 +1936,135 @@ paths:
             X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
             X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
             X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Payment' }
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Payment'
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Error' }
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: 
+                $ref: '#/components/schemas/Error'
 
+  /payments/validate:
+    post:
+      tags: [Payment]
+      summary: Validate payment (dry run)
+      description: Performs a dry-run validation of a payment request without persisting data, checking bill status, amounts, duplicates, and instrument rules.
+      operationId: validatePayment
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentCreate"
+      responses:
+        "200":
+          description: Payment is valid — returns calculated payment structure
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+  
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
 
 components:
+
+  # ── Security ────────────────────────────────────────────────────────────────
+
   securitySchemes:
     BearerAuth:
-      $ref: 'https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
+
+  # ── Parameters ──────────────────────────────────────────────────────────────
 
   parameters:
     RequestIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
     CorrelationIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
     ClientId:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
     ClientSecret:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
     TimeStamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -1547,30 +2075,99 @@ components:
         minLength: 8
         maxLength: 128
 
+  # ── Response Headers ─────────────────────────────────────────────────────────
+
   headers:
     X-Response-Time:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
     X-Response-Timestamp:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
     X-Request-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
     X-Correlation-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
     X-Tenant-ID:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
     X-Rate-Limit:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
     X-Rate-Limit-Remaining:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
     X-Rate-Limit-Reset:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
+
+  # ── Schemas ──────────────────────────────────────────────────────────────────
 
   schemas:
+
+    # ── Common refs ─────────────────────────────────────────────────────────────
+
     Error:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
 
     AuditDetail:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
+
+    # ── Enums ───────────────────────────────────────────────────────────────────
+
+    CollectionMode:
+      type: string
+      description: Allowed collection channel(s)
+      enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
+      default: BOTH
+
+    PaymentMode:
+      type: string
+      description: Enabled payment modes for this business service
+      enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, UPI, CARD, NETBANKING, WALLET, ONLINE_NEFT, ONLINE_RTGS]
+
+    TaxHeadCategory:
+      type: string
+      description: Category of the tax head
+      enum: [TAX, CESS, PENALTY, INTEREST, REBATE, ROUNDING, ARREAR, OTHER]
+      default: OTHER
+
+    DemandStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, FROZEN, PARTIALLY_PAID, PAID, ROLL_FORWARDED, CANCELLED]
+      default: ACTIVE
+      description: |
+        Demand lifecycle:
+        - **DRAFT**: Created but not yet validated/finalized. Fully editable and not eligible for billing.
+        - **ACTIVE**: Validated and eligible for billing. Minor corrections allowed until frozen (per policy).
+        - **FROZEN**: Locked for bill generation; **no edits** allowed (use adjustments or a new demand).
+        - **PARTIALLY_PAID**: Received multiple payments but total payable amount is not yet fully settled.
+        - **PAID**: Fully settled through payments. Considered Financially closed.
+        - **ROLL_FORWARDED**: Financially closed due to arrear carry-forward. Not editable and not eligible for bill generation.
+        - **CANCELLED**: Voided. Not billable. Used when assessment is withdrawn or superseded.
+
+    BillStatus:
+      type: string
+      description: Current status of the bill
+      enum: [ACTIVE, CANCELLED, EXPIRED, PAID, PARTIALLY_PAID, PAYMENT_CANCELLED]
+      default: ACTIVE
+
+    BulkBillStatus:
+      type: string
+      description: Bulk bill generation request status 
+      enum: [ACCEPTED, IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED]
+      default: ACCEPTED
+
+    PaymentStatus:
+      type: string
+      description: Status of the payment
+      enum: [NEW, DEPOSITED, CANCELLED, DISHONOURED, RECONCILED]
+
+    InstrumentStatus:
+      type: string
+      description: Status of the instrument
+      enum: [APPROVED, APPROVAL_PENDING, TO_BE_SUBMITTED, CANCELLED, DISHONOURED, REMITTED, REJECTED]
+
+    ReceiptType:
+      type: string
+      description: Type of the receipt
+      enum: [ADHOC, BILLBASED, CHALLAN]
+
+    # ── Business Service ───────────────────────────────────────────────────────
 
     BusinessService:
       type: object
@@ -1602,16 +2199,11 @@ components:
           minLength: 2
           maxLength: 128
         collectionMode:
-          type: string
-          description: Allowed collection channel(s)
-          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
-          default: BOTH
+          $ref: "#/components/schemas/CollectionMode"
         allowedPaymentModes:
           type: array
-          description: Enabled payment modes for this service
           items:
-            type: string
-            enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, CARD,ONLINE_NEFT, ONLINE_RTGS, UPI, NETBANKING, WALLET]
+            $ref: "#/components/schemas/PaymentMode"
         billExpiryDays:
           type: integer
           minimum: 0
@@ -1683,16 +2275,11 @@ components:
           minLength: 2
           maxLength: 128
         collectionMode:
-          type: string
-          description: Allowed collection channel(s)
-          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
-          default: BOTH
+          $ref: "#/components/schemas/CollectionMode"
         allowedPaymentModes:
           type: array
-          description: Enabled payment modes for this service
           items:
-            type: string
-            enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, CARD,ONLINE_NEFT, ONLINE_RTGS, UPI, NETBANKING, WALLET]
+            $ref: "#/components/schemas/PaymentMode"
         billExpiryDays:
           type: integer
           minimum: 0
@@ -1747,16 +2334,11 @@ components:
           minLength: 2
           maxLength: 128
         collectionMode:
-          type: string
-          description: Allowed collection channel(s)
-          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
-          default: BOTH
+          $ref: "#/components/schemas/CollectionMode"
         allowedPaymentModes:
           type: array
-          description: Enabled payment modes for this service
           items:
-            type: string
-            enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, CARD,ONLINE_NEFT, ONLINE_RTGS, UPI, NETBANKING, WALLET]
+            $ref: "#/components/schemas/PaymentMode"
         billExpiryDays:
           type: integer
           minimum: 0
@@ -1804,13 +2386,11 @@ components:
           minLength: 2
           maxLength: 128
         collectionMode:
-          type: string
-          enum: [ONLINE, OFFLINE, COUNTER, FIELD, BOTH]
+          $ref: "#/components/schemas/CollectionMode"
         allowedPaymentModes:
           type: array
           items:
-            type: string
-            enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, CARD,ONLINE_NEFT, ONLINE_RTGS, UPI, NETBANKING, WALLET]
+            $ref: "#/components/schemas/PaymentMode"
         billExpiryDays:
           type: integer
           minimum: 0
@@ -1836,6 +2416,8 @@ components:
           nullable: true
         isActive:
           type: boolean
+
+    # ── Tax Head ───────────────────────────────────────────────────────────────
 
     TaxHead:
       type: object
@@ -1876,10 +2458,7 @@ components:
             Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
             Pattern: uppercase letters, digits, underscore; must start with a letter.
         category:
-          type: string
-          enum: [TAX, CESS, PENALTY, INTEREST, REBATE, ROUNDING, ARREAR, OTHER]
-          default: OTHER
-          description: Tax head category
+          $ref: "#/components/schemas/TaxHeadCategory"
         order: 
           type: integer
           minimum: 1
@@ -1939,10 +2518,7 @@ components:
             Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
             Pattern: uppercase letters, digits, underscore; must start with a letter.
         category:
-          type: string
-          enum: [TAX, CESS, PENALTY, INTEREST, REBATE, ROUNDING, ARREAR, OTHER]
-          default: OTHER
-          description: Tax head category
+          $ref: "#/components/schemas/TaxHeadCategory"
         order: 
           type: integer
           minimum: 1
@@ -1985,10 +2561,7 @@ components:
             Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
             Pattern: uppercase letters, digits, underscore; must start with a letter.
         category:
-          type: string
-          enum: [TAX, CESS, PENALTY, INTEREST, REBATE, ROUNDING, ARREAR, OTHER]
-          default: OTHER
-          description: Tax head category
+          $ref: "#/components/schemas/TaxHeadCategory"
         order: 
           type: integer
           minimum: 1
@@ -2033,6 +2606,103 @@ components:
           example: 1767205800000
           nullable: true
         isActive: { type: boolean }
+
+    # ── Demand ─────────────────────────────────────────────────────────────────
+
+    LineItem:
+      type: object
+      description: Breakdown of an assessed amount within a Demand, mapped to a specific TaxHead (e.g., base charge, penalty, cess).
+      required: 
+        - taxHeadCode
+        - amount
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique ID for internal reference (UUID)
+        demandId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: References Demand
+        taxHeadCode:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
+          description: |
+            Code of the configured Tax Head (same Business Service; active within the period).
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT_BASE
+        amount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          multipleOf: 0.01
+          description: |
+            Assessed amount for this line. Positive values increase payable; negative values represent credits
+            (e.g., rebates). Two-decimal precision enforced.
+          example: 4500
+        collectedAmount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          default: 0
+          multipleOf: 0.01
+          description: |
+            Amount already collected against this line. Must be ≤ amount and, for positive `amount`, must not exceed `amount`.
+            For negative `amount` (credits), `collectionAmount` must be **0 or amount**.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+      x-businessRules:
+        - If amount < 0 then collectionAmount must be 0 or amount.
+        - If amount >= 0 then collectionAmount ≤ amount.
+
+    LineItemCreate:
+      type: object
+      description: Breakdown of an assessed amount within a Demand, mapped to a specific TaxHead (e.g., base charge, penalty, cess).
+      required: 
+        - taxHeadCode
+        - amount
+      properties:
+        taxHeadCode:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
+          description: |
+            Code of the configured Tax Head (same Business Service; active within the period).
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT_BASE
+        amount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          multipleOf: 0.01
+          description: |
+            Assessed amount for this line. Positive values increase payable; negative values represent credits
+            (e.g., rebates). Two-decimal precision enforced.
+          example: 4500
+        collectedAmount:
+          type: number
+          format: double
+          minimum: -1000000000
+          maximum:  1000000000
+          default: 0
+          multipleOf: 0.01
+          description: |
+            Amount already collected against this line. Must be ≤ amount and, for positive `amount`, must not exceed `amount`.
+            For negative `amount` (credits), `collectionAmount` must be **0 or amount**.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
 
     Demand:
       type: object
@@ -2122,18 +2792,7 @@ components:
           items:
             $ref: '#/components/schemas/LineItem'
         status:
-          type: string
-          enum: [DRAFT, ACTIVE, FROZEN, PARTIALLY_PAID, PAID, ROLL_FORWARDED, CANCELLED]
-          default: ACTIVE
-          description: |
-            Demand lifecycle:
-            - **DRAFT**: Created but not yet validated/finalized. Fully editable and not eligible for billing.
-            - **ACTIVE**: Validated and eligible for billing. Minor corrections allowed until frozen (per policy).
-            - **FROZEN**: Locked for bill generation; **no edits** allowed (use adjustments or a new demand).
-            - **PARTIALLY_PAID**: Received multiple payments but total payable amount is not yet fully settled.
-            - **PAID**: Fully settled through payments. Considered Financially closed.
-            - **ROLL_FORWARDED**: Financially closed due to arrear carry-forward. Not editable and not eligible for bill generation.
-            - **CANCELLED**: Voided. Not billable. Used when assessment is withdrawn or superseded.
+          $ref: "#/components/schemas/DemandStatus"
         totalAmount:
           type: number
           format: double
@@ -2168,63 +2827,9 @@ components:
       x-businessRules:
         - periodFrom <= periodTo (date comparison).
         - All lineItems.taxHeadCode must exist & be active for the Business Service and period.
-        - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0.
+        - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0 or amount.
         - Duplicate taxHeadCode in lineItems is not allowed.
         - Demand is editable only in DRAFT/ACTIVE; transitions enforced by service.
-
-    LineItem:
-      type: object
-      description: Breakdown of an assessed amount within a Demand, mapped to a specific TaxHead (e.g., base charge, penalty, cess).
-      required: 
-        - taxHeadCode
-        - amount
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique ID for internal reference (UUID)
-        demandId:
-          type: string
-          format: uuid
-          readOnly: true
-          description: References Demand
-        taxHeadCode:
-          type: string
-          minLength: 2
-          maxLength: 64
-          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
-          description: |
-            Code of the configured Tax Head (same Business Service; active within the period).
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT_BASE
-        amount:
-          type: number
-          format: double
-          minimum: -1000000000
-          maximum:  1000000000
-          multipleOf: 0.01
-          description: |
-            Assessed amount for this line. Positive values increase payable; negative values represent credits
-            (e.g., rebates). Two-decimal precision enforced.
-          example: 4500
-        collectedAmount:
-          type: number
-          format: double
-          minimum: -1000000000
-          maximum:  1000000000
-          default: 0
-          multipleOf: 0.01
-          description: |
-            Amount already collected against this line. Must be ≥ 0 and, for positive `amount`, must not exceed `amount`.
-            For negative `amount` (credits), `collectionAmount` must be **0**.
-        metadata:
-          type: object
-          additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
-      x-businessRules:
-        - If amount < 0 then collectionAmount must be 0.
-        - If amount >= 0 then collectionAmount ≤ amount.
 
     DemandCreate:
       type: object
@@ -2322,50 +2927,9 @@ components:
       x-businessRules:
         - periodFrom <= periodTo (date comparison).
         - All lineItems.taxHeadCode must exist & be active for the Business Service and period.
-        - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0.
+        - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0 or amount.
         - Duplicate taxHeadCode in lineItems is not allowed.
         - Demand is editable only in DRAFT/ACTIVE; transitions enforced by service.
-
-    LineItemCreate:
-      type: object
-      description: Breakdown of an assessed amount within a Demand, mapped to a specific TaxHead (e.g., base charge, penalty, cess).
-      required: 
-        - taxHeadCode
-        - amount
-      properties:
-        taxHeadCode:
-          type: string
-          minLength: 2
-          maxLength: 64
-          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
-          description: |
-            Code of the configured Tax Head (same Business Service; active within the period).
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT_BASE
-        amount:
-          type: number
-          format: double
-          minimum: -1000000000
-          maximum:  1000000000
-          multipleOf: 0.01
-          description: |
-            Assessed amount for this line. Positive values increase payable; negative values represent credits
-            (e.g., rebates). Two-decimal precision enforced.
-          example: 4500
-        collectedAmount:
-          type: number
-          format: double
-          minimum: -1000000000
-          maximum:  1000000000
-          default: 0
-          multipleOf: 0.01
-          description: |
-            Amount already collected against this line. Must be ≥ 0 and, for positive `amount`, must not exceed `amount`.
-            For negative `amount` (credits), `collectionAmount` must be **0**.
-        metadata:
-          type: object
-          additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
 
     DemandUpdate:
       type: object
@@ -2384,7 +2948,7 @@ components:
       x-businessRules:
         - periodFrom <= periodTo (date comparison).
         - All lineItems.taxHeadCode must exist & be active for the Business Service and period.
-        - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0.
+        - For positive line item amounts, collectionAmount ≤ amount; for negative amounts, collectionAmount must be 0 or amount.
         - Duplicate taxHeadCode in lineItems is not allowed.
         - Demand is editable only in DRAFT/ACTIVE; transitions enforced by service.
                      
@@ -2429,6 +2993,15 @@ components:
           enum: [DRAFT, ACTIVE]
           description: Only transitions within editable states are allowed via PATCH
 
+    CancelDemandRequest:
+      type: object
+      description: Used to cancel a demand.
+      properties:
+        reasonCode:
+          type: string
+        note:
+          type: string
+
     BulkResponse:
       type: object
       description: Used for bulk API operations. Contains separate lists for successful and failed items to support partial processing.
@@ -2439,145 +3012,112 @@ components:
         failures:
           type: array
           items:
-            type: object
-            properties:
-              index:
-                type: integer
-                description: Index of the failed item in the request array
-              errors:
-                type: array
-                items: { $ref: '#/components/schemas/Error' }
+            $ref: "#/components/schemas/BulkFailure"
 
-    GenerateBillCriteria:
+    BulkFailure:
       type: object
-      description: Criteria for generating one or more bills from eligible FROZEN?ACTIVE demands under a BusinessService.
-      required:
-        - businessServiceCode
-        - consumerCode
       properties:
-        businessServiceCode:
-          type: string
-          minLength: 2
-          maxLength: 32
-          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
-          description: |
-            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT
-        consumerCode:
-          type: string
-          minLength: 2
-          maxLength: 64
-          description: |
-            Identifier of the underlying entity being billed (e.g., propertyId, connectionNo, licenseNo).
-          example: PB-JLD-P-000123
-        payerId:
-          type: string
-          minLength: 2
-          maxLength: 64
-          description: Individual ID (string/UUID) referencing an Individual registry entry.
-          example: IND-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3
-        payerName:
-          type: string
-          maxLength: 256
-          example: John Doe
-        payerAddress:
-          type: string
-          maxLength: 1024
-        payerMobileNumber:
-          type: string
-          pattern: '^\\+?[0-9]{10,15}$'
-          description: Mobile number with optional '+' prefix. Should be 10 to 15 digits (e.g., +919876543210)
-          example: +919876543210
-        payerEmail:
-          type: string
-          format: email
-          maxLength: 254
-          description: Valid email address (e.g., user@example.com)
+        index:
+          type: integer
+          description: Zero-based index of the failed item in the request array
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Error"
 
-    UpdateBillStatus:
+    # ── Bill ───────────────────────────────────────────────────────────────────
+
+    BillAccountDetail:
       type: object
-      description: Represents a request to change the status of one or more existing bills (e.g., cancel, expire, mark paid).
-      required:
-        - businessServiceCode
-        - consumerCodes
-        - statusToBeUpdated
-        - metadata
+      description: Defines the granular accounting component of a bill, specifying tax head mapping, payable and adjusted amounts, and metadata for audit traceability.
       properties:
-        businessServiceCode:
+        id:
           type: string
-          minLength: 2
-          maxLength: 32
-          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
-          description: |
-            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT
-        consumerCode:
+          format: uuid
+          readOnly: true
+          description: Unique ID for internal reference (UUID)
+        billDetailId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: References Bill Detail
+        lineItemId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: References Line Item
+        taxHeadCode:
           type: string
           minLength: 2
           maxLength: 64
+          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
           description: |
-            Identifier of the underlying entity being billed (e.g., propertyId, connectionNo, licenseNo).
-          example: PB-JLD-P-000123
-        statusToBeUpdated:
-          type: string
-          enum: [ACTIVE, CANCELLED, EXPIRED, PAID, PARTIALLY_PAID, PAYMENT_CANCELLED]
-          description: Current status of the bill
+            Code of the configured Tax Head (same Business Service; active within the period).
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT_BASE
+        order: 
+          type: integer
+          minimum: 1
+        amount:
+          type: number
+          format: double
+          example: 1000
+        adjustedAmount:
+          type: number
+          format: double
+          example: 0
         metadata:
           type: object
           additionalProperties: true
           description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
 
-    BulkBillGenerator:
+    BillDetail:
       type: object
-      description: Represents a request for generating bills in bulk from eleigible FROZEN, ACTIVE & PARTIALLY_PAID demands under a BusinessService.
-      required:
-        - businessServiceCode
+      description: Defines the period-based billing section associated with a demand, containing aggregated amount values and detailed account-level tax entries.
       properties:
-        businessServiceCode:
+        id:
           type: string
-          minLength: 2
-          maxLength: 32
-          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
+          format: uuid
+          readOnly: true
+          description: Unique ID for internal reference (UUID)
+        billId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: References Bill
+        demandId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          example: 10000
+        amountPaid:
+          type: number
+          format: double
+          example: 0
+        periodFrom:
+          type: integer
+          format: int64
           description: |
-            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT
+            Start (inclusive) of the assessed period in Timestamp (epoch milliseconds).
+            Must be **on or before** `periodTo`. Used for proration and due-date policies.
+          example: 1735669800000
+        periodTo:
+          type: integer
+          format: int64
+          description: |
+            End (inclusive) of the assessed period in Timestamp (epoch milliseconds).
+            Must be **on or after** `periodFrom`.
+          example: 1767205799000
+        billAccountDetails:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillAccountDetail'
         metadata:
           type: object
           additionalProperties: true
-          description: Additional context such as requestedBy, reason, traceId
-
-    BulkBillResponse:
-      type: object
-      description: Used for bulk API operations.
-      properties:
-        businessServiceCode:
-          type: string
-          minLength: 2
-          maxLength: 32
-          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
-          description: |
-            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT
-        status:
-          type: string
-          enum: [ACCEPTED, IN_PROGESS, COMPLETED, PARTIALLY_COMPLETED, FAILED]
-          default: ACCEPTED
-        totalJobsCreated:
-          type: integer
-          format: int64
-          example: 42
-        totalConsumersIdentified:
-          type: integer
-          format: int64
-          example: 20500
-        metadata:
-          type: object
-          additionalProperties: true
-          description: Additional context such as requestedBy, reason, traceId
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
 
     Bill:
       type: object
@@ -2647,10 +3187,7 @@ components:
           description: Bill expiry timestamp (epoch milliseconds)
           example: 1767205800000
         status:
-          type: string
-          enum: [ACTIVE, CANCELLED, EXPIRED, PAID, PARTIALLY_PAID, PAYMENT_CANCELLED]
-          description: Current status of the bill
-          default: ACTIVE
+          $ref: "#/components/schemas/BillStatus"
         totalAmount:
           type: number
           format: double
@@ -2671,93 +3208,287 @@ components:
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
-    BillDetail:
+    GenerateBillCriteria:
       type: object
-      description: Defines the period-based billing section associated with a demand, containing aggregated amount values and detailed account-level tax entries.
+      description: Criteria for generating one or more bills from eligible FROZEN?ACTIVE demands under a BusinessService.
+      required:
+        - businessServiceCode
+        - consumerCode
       properties:
-        id:
+        businessServiceCode:
           type: string
-          format: uuid
-          readOnly: true
-          description: Unique ID for internal reference (UUID)
-        billId:
-          type: string
-          format: uuid
-          readOnly: true
-          description: References Bill
-        demandId:
-          type: string
-          format: uuid
-        amount:
-          type: number
-          format: double
-          example: 10000
-        amountPaid:
-          type: number
-          format: double
-          example: 0
-        periodFrom:
-          type: integer
-          format: int64
+          minLength: 2
+          maxLength: 32
+          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
           description: |
-            Start (inclusive) of the assessed period in Timestamp (epoch milliseconds).
-            Must be **on or before** `periodTo`. Used for proration and due-date policies.
-          example: 1735669800000
-        periodTo:
-          type: integer
-          format: int64
+            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT
+        consumerCode:
+          type: string
+          minLength: 2
+          maxLength: 64
           description: |
-            End (inclusive) of the assessed period in Timestamp (epoch milliseconds).
-            Must be **on or after** `periodFrom`.
-          example: 1767205799000
-        billAccountDetails:
-          type: array
-          items:
-            $ref: '#/components/schemas/BillAccountDetail'
+            Identifier of the underlying entity being billed (e.g., propertyId, connectionNo, licenseNo).
+          example: PB-JLD-P-000123
+        payerId:
+          type: string
+          minLength: 2
+          maxLength: 64
+          description: Individual ID (string/UUID) referencing an Individual registry entry.
+          example: IND-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3
+        payerName:
+          type: string
+          maxLength: 256
+          example: John Doe
+        payerAddress:
+          type: string
+          maxLength: 1024
+        payerMobileNumber:
+          type: string
+          pattern: '^\\+?[0-9]{10,15}$'
+          description: Mobile number with optional '+' prefix. Should be 10 to 15 digits (e.g., +919876543210)
+          example: +919876543210
+        payerEmail:
+          type: string
+          format: email
+          maxLength: 254
+          description: Valid email address (e.g., user@example.com)
+
+    UpdateBillStatus:
+      type: object
+      description: Represents a request to change the status of existing bill (e.g., cancel, expire, mark paid).
+      required:
+        - businessServiceCode
+        - consumerCode
+        - statusToBeUpdated
+        - metadata
+      properties:
+        businessServiceCode:
+          type: string
+          minLength: 2
+          maxLength: 32
+          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
+          description: |
+            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT
+        consumerCode:
+          type: string
+          minLength: 2
+          maxLength: 64
+          description: |
+            Identifier of the underlying entity being billed (e.g., propertyId, connectionNo, licenseNo).
+          example: PB-JLD-P-000123
+        statusToBeUpdated:
+          type: string
+          enum: [ACTIVE, CANCELLED, EXPIRED, PAID, PARTIALLY_PAID, PAYMENT_CANCELLED]
+          description: Current status of the bill
         metadata:
           type: object
           additionalProperties: true
           description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
 
-    BillAccountDetail:
+    BulkBillGenerator:
       type: object
-      description: Defines the granular accounting component of a bill, specifying tax head mapping, payable and adjusted amounts, and metadata for audit traceability.
+      description: Represents a request for generating bills in bulk from eleigible FROZEN, ACTIVE & PARTIALLY_PAID demands under a BusinessService.
+      required:
+        - businessServiceCode
+      properties:
+        businessServiceCode:
+          type: string
+          minLength: 2
+          maxLength: 32
+          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
+          description: |
+            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional context such as requestedBy, reason, traceId
+
+    BulkBillResponse:
+      type: object
+      description: Used for bulk API operations.
+      properties:
+        requestId:
+          type: string
+        businessServiceCode:
+          type: string
+          minLength: 2
+          maxLength: 32
+          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
+          description: |
+            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT
+        status:
+          $ref: "#/components/schemas/BulkBillStatus"
+        totalJobsCreated:
+          type: integer
+          format: int64
+          example: 42
+        totalConsumersIdentified:
+          type: integer
+          format: int64
+          example: 20500
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional context such as requestedBy, reason, traceId
+
+    # ── Payment ────────────────────────────────────────────────────────────────
+
+    PaymentDetailCreate:
+      type: object
+      description: Defines how a payment amount is distributed across bills
+      required: 
+        - totalAmountPaid
+        - billId
+      properties:
+        totalAmountPaid:
+          type: number
+          format: double
+          example: 1000
+        manualReceiptNumber:
+          type: string
+          maxLength: 64
+        manualReceiptDate:
+          type: integer
+          format: int64
+        billId:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+
+    PaymentCreate:
+      type: object
+      required: 
+        - totalAmountPaid
+        - paymentMode
+        - paidBy
+        - paymentDetails
+      properties:
+        totalAmountPaid:
+          type: number
+          format: double
+          example: 1000
+        transactionNumber:
+          type: string
+          maxLength: 128
+        transactionDate:
+          type: integer
+          format: int64
+        paymentMode:
+          $ref: "#/components/schemas/PaymentMode"
+        instrumentNumber:
+          type: string
+          maxLength: 128
+        instrumentDate:
+          type: integer
+          format: int64
+        ifscCode:
+          type: string
+          maxLength: 64
+        paidBy:
+          type: string
+          maxLength: 128
+          pattern: '^[a-zA-Z]+(([_\-''`\. ][a-zA-Z ])?[a-zA-Z]*)*$'
+          example: Rajesh Kumar
+        payerId:
+          type: string
+          minLength: 2
+          maxLength: 64
+          description: Individual ID (string/UUID) referencing an Individual registry entry.
+          example: IND-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3
+        payerName:
+          type: string
+          maxLength: 256
+          example: John Doe
+        payerAddress:
+          type: string
+          maxLength: 1024
+        payerMobileNumber:
+          type: string
+          pattern: '^\\+?[0-9]{10,15}$'
+          description: Mobile number with optional '+' prefix. Should be 10 to 15 digits (e.g., +919876543210)
+          example: +919876543210
+        payerEmail:
+          type: string
+          format: email
+          maxLength: 254
+          description: Valid email address (e.g., user@example.com)
+        fileStoreId:
+          type: string
+        paymentDetails:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PaymentDetailCreate"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+
+    PaymentDetail:
+      type: object
+      description: Defines how a payment amount is distributed across bills
+      required:
+        - totalAmountPaid
+        - businessServiceCode
+        - billId
       properties:
         id:
           type: string
           format: uuid
           readOnly: true
           description: Unique ID for internal reference (UUID)
-        billDetailId:
+        paymentId:
           type: string
           format: uuid
           readOnly: true
-          description: References Bill Detail
-        lineItemId:
-          type: string
-          format: uuid
-          readOnly: true
-          description: References Line Item
-        taxHeadCode:
-          type: string
-          minLength: 2
-          maxLength: 64
-          pattern: '^[A-Z][A-Z0-9_]{1,63}$'
-          description: |
-            Code of the configured Tax Head (same Business Service; active within the period).
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT_BASE
-        order: 
-          type: integer
-          minimum: 1
-        amount:
+          description: Reference Payment
+        totalAmountDue:
           type: number
           format: double
           example: 1000
-        adjustedAmount:
+        totalAmountPaid:
           type: number
           format: double
-          example: 0
+          example: 1000
+        manualReceiptNumber:
+          type: string
+          maxLength: 64
+        manualReceiptDate:
+          type: integer
+          format: int64
+        receiptNumber:
+          type: string
+          maxLength: 64
+        receiptDate:
+          type: integer
+          format: int64
+        receiptType:
+          $ref: "#/components/schemas/ReceiptType"
+        businessServiceCode:
+          type: string
+          minLength: 2
+          maxLength: 32
+          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
+          description: |
+            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
+            Pattern: uppercase letters, digits, underscore; must start with a letter.
+          example: PT
+        billId:
+          type: string
+          format: uuid
+        bill:
+          $ref: '#/components/schemas/Bill'
         metadata:
           type: object
           additionalProperties: true
@@ -2791,11 +3522,9 @@ components:
           type: integer
           format: int64
         paymentMode:
-          type: string
-          enum: [CASH, CHEQUE, DD, POSTAL_ORDER, OFFLINE_NEFT, OFFLINE_RTGS, ONLINE, CARD,ONLINE_NEFT, ONLINE_RTGS, UPI, NETBANKING, WALLET]
+          $ref: "#/components/schemas/PaymentMode"
         paymentStatus:
-          type: string
-          enum: [NEW, DEPOSITED, CANCELLED, DISHONOURED, RECONCILED]
+          $ref: "#/components/schemas/PaymentStatus"
         instrumentDate:
           type: integer
           format: int64
@@ -2803,8 +3532,7 @@ components:
           type: string
           maxLength: 128
         instrumentStatus:
-          type: string
-          enum: [APPROVED, APPROVAL_PENDING, TO_BE_SUBMITTED, CANCELLED, DISHONOURED, REMITTED, REJECTED]
+          $ref: "#/components/schemas/InstrumentStatus"
         ifscCode:
           type: string
           maxLength: 64
@@ -2848,65 +3576,3 @@ components:
           description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
-
-    PaymentDetail:
-      type: object
-      description: Defines how a payment amount is distributed across bills
-      required:
-        - totalAmountPaid
-        - businessServiceCode
-        - billId
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique ID for internal reference (UUID)
-        paymentId:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Reference Payment
-        totalAmountDue:
-          type: number
-          format: double
-          example: 1000
-        totalAmountPaid:
-          type: number
-          format: double
-          example: 1000
-        manualReceiptNumber:
-          type: string
-          maxLength: 64
-        manualReceiptDate:
-          type: integer
-          format: int64
-        receiptNumber:
-          type: string
-          maxLength: 64
-        receiptDate:
-          type: integer
-          format: int64
-        receiptType:
-          type: string
-        businessServiceCode:
-          type: string
-          minLength: 2
-          maxLength: 32
-          pattern: '^[A-Z][A-Z0-9_]{1,31}$'
-          description: |
-            Code of the owning Business Service (e.g., PT, TL, WS). Must reference an **active** service.
-            Pattern: uppercase letters, digits, underscore; must start with a letter.
-          example: PT
-        billId:
-          type: string
-        bill:
-          $ref: '#/components/schemas/Bill'
-        metadata:
-          type: object
-          additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
-
-
-
-        

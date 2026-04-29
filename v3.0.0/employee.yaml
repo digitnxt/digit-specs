@@ -1,32 +1,33 @@
 openapi: 3.0.3
 info:
-  title: Account Service API
+  title: Employee Service API
   version: 3.0.0
-  description: "Standardized REST APIs for managing Accounts and Account Configurations\
+  description: "Standardized REST APIs for managing Employees and their Jurisdictions\
     \ within the DIGIT platform.\nThis specification aligns with DIGIT 3.0 common\
     \ standards and includes full compliance with \nplatform header and error standards.\n"
 servers:
-- url: https://api.example.com/account/v3
+- url: https://api.example.com/employee/v3
   description: Production
-- url: https://staging-api.example.com/account/v3
+- url: https://staging-api.example.com/employee/v3
   description: Staging
-- url: http://localhost:8080/account/v3
+- url: http://localhost:8080/employee/v3
   description: Local Development
 security:
 - BearerAuth: []
 tags:
-- name: Account
-  description: Tenant account lifecycle management
-- name: AccountConfig
-  description: Account configuration management
+- name: Employee
+  description: Lifecycle management of staff members
+- name: Jurisdiction
+  description: Managing employee assignments to geographical areas
 paths:
-  /accounts:
+  /employees:
     post:
       tags:
-      - Account
-      summary: Create tenant account
-      operationId: createTenant
-      description: 'Creates a new tenant account directly without OTP verification.
+      - Employee
+      summary: Create employees
+      operationId: createEmployees
+      description: 'Registers one or more new employees. If code is omitted, it will
+        be auto-generated.
 
 
         **Pre-conditions:**
@@ -35,25 +36,25 @@ paths:
 
         - X-Tenant-ID header must be present and valid
 
-        - Request body must contain valid tenant data
+        - Request body must contain valid employee data
 
 
         **Business Rules:**
 
-        - Tenant ID is auto-generated as UUID
+        - Employee ID is auto-generated as UUID
 
-        - Email must be unique across the platform
+        - Code is auto-generated if not provided
 
-        - Account is created in active state
+        - All employees must be valid for entire operation to succeed
+
+        - If any employee fails validation, entire operation is rolled back
 
 
         **Post-conditions:**
 
-        - Tenant account is persisted to database
+        - All employees are persisted to database
 
-        - Keycloak realm is created for the tenant
-
-        - Response includes created tenant with generated ID
+        - Response includes array of created employees with generated IDs
 
         '
       parameters:
@@ -69,11 +70,16 @@ paths:
         required: true
         content:
           application/json:
+            example: []
             schema:
-              $ref: '#/components/schemas/TenantCreateRequest'
+              type: array
+              minItems: 1
+              maxItems: 100
+              items:
+                $ref: '#/components/schemas/EmployeeCreateRequest'
       responses:
         '201':
-          description: Tenant account created successfully
+          description: Employees created successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -94,7 +100,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TenantResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmployeeResponse'
         '400':
           description: Validation error
           content:
@@ -133,10 +141,11 @@ paths:
                 $ref: '#/components/schemas/Error'
     get:
       tags:
-      - Account
-      summary: Search tenant accounts
-      operationId: listTenants
-      description: 'Retrieves a paginated list of tenant accounts with optional filtering.
+      - Employee
+      summary: Search employees
+      operationId: searchEmployees
+      description: 'Retrieves a paginated list of employees for the tenant with optional
+        filtering.
 
 
         **Pre-conditions:**
@@ -159,7 +168,7 @@ paths:
 
         **Post-conditions:**
 
-        - Response includes total count of tenants matching filter
+        - Response includes total count of employees matching filter
 
         - Response includes current page number and size
 
@@ -186,27 +195,27 @@ paths:
       - name: size
         in: query
         required: false
-        description: Number of tenants per page (max 100)
+        description: Number of employees per page (max 100)
         schema:
           type: integer
           minimum: 1
           maximum: 100
           default: 20
+      - name: code
+        in: query
+        required: false
+        description: Filter by employee code
+        schema:
+          type: string
       - name: name
         in: query
         required: false
-        description: Filter by tenant name
-        schema:
-          type: string
-      - name: email
-        in: query
-        required: false
-        description: Filter by tenant email
+        description: Filter by employee name
         schema:
           type: string
       responses:
         '200':
-          description: Tenant accounts retrieved successfully
+          description: Employees retrieved successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -227,7 +236,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TenantListResponse'
+                $ref: '#/components/schemas/EmployeeListResponse'
         '400':
           description: Validation error
           content:
@@ -258,39 +267,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-    delete:
+  /employees/{id}:
+    get:
       tags:
-      - Account
-      summary: Delete account
-      operationId: deleteAccount
-      description: 'Deletes a tenant account and all associated data.
-
-
-        **Pre-conditions:**
-
-        - User must be authenticated with valid bearer token
-
-        - X-Tenant-ID header must be present and valid
-
-
-        **Business Rules:**
-
-        - Deletes tenant realm from Keycloak
-
-        - Deletes all tenant configurations
-
-        - Deletes all tenant data from database
-
-        - Operation is irreversible
-
-
-        **Post-conditions:**
-
-        - Tenant account is permanently deleted
-
-        - All associated data is removed
-
-        '
+      - Employee
+      summary: Get employee by ID
+      operationId: getEmployee
+      description: Retrieves a specific employee by ID
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -300,9 +283,192 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
-          description: Account deleted successfully
+          description: Employee retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    put:
+      tags:
+      - Employee
+      summary: Update employee
+      operationId: updateEmployee
+      description: Updates an existing employee
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeUpdateRequest'
+      responses:
+        '200':
+          description: Employee updated successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+      - Employee
+      summary: Hard delete employee
+      operationId: hardDeleteEmployee
+      description: Permanently deletes an employee record
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Employee deleted successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -327,14 +493,6 @@ paths:
                 properties:
                   deleted:
                     type: boolean
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -342,7 +500,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Account not found
+          description: Employee not found
           content:
             application/json:
               schema:
@@ -363,13 +521,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /accounts/{id}:
-    put:
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    patch:
       tags:
-      - Account
-      summary: Update tenant account
-      operationId: updateTenant
-      description: Updates an existing tenant account
+      - Employee
+      summary: Patch employee
+      operationId: patchEmployee
+      description: Partially updates an employee record
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -382,7 +547,7 @@ paths:
       - name: id
         in: path
         required: true
-        description: Tenant ID (UUID)
+        description: Employee ID (UUID)
         schema:
           type: string
           format: uuid
@@ -391,10 +556,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TenantUpdateRequest'
+              $ref: '#/components/schemas/EmployeePatchRequest'
       responses:
         '200':
-          description: Tenant account updated successfully
+          description: Employee patched successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -415,7 +580,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TenantResponse'
+                $ref: '#/components/schemas/EmployeeResponse'
         '400':
           description: Validation error
           content:
@@ -431,7 +596,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Tenant not found
+          description: Employee not found
           content:
             application/json:
               schema:
@@ -464,48 +629,13 @@ paths:
       required: true
       schema:
         type: string
-  /signup:
+  /employees/{id}/deactivate:
     post:
       tags:
-      - Account
-      summary: Initiate tenant account signup with OTP verification
-      operationId: createSignup
-      description: 'Initiates tenant account creation with OTP-based email verification.
-
-        Calls the OTP service to generate and send an OTP to the provided email.
-
-
-        **Pre-conditions:**
-
-        - Request body must contain valid tenant data
-
-        - Email must be unique across the platform
-
-        - OTP service must be configured for ''signup'' purpose
-
-
-        **Business Rules:**
-
-        - OTP is generated via OTP service and sent to provided email
-
-        - Account is not created until OTP is verified via /v3/signup/verify
-
-        - OTP expires after configured duration (typically 10 minutes)
-
-        - Multiple signup requests are allowed (previous OTP is invalidated)
-
-        - referenceId is a signed JWT that encodes email, purpose, and expiry
-
-
-        **Post-conditions:**
-
-        - OTP is sent to email via Notification service
-
-        - Response includes referenceId (JWT) for verification
-
-        - Signup state is stored temporarily in cache
-
-        '
+      - Employee
+      summary: Deactivate employee
+      operationId: deactivateEmployee
+      description: Deactivates an active employee
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -515,55 +645,16 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
+      - name: id
+        in: path
         required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - name
-              - email
-              properties:
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 256
-                  description: Tenant name (required)
-                email:
-                  type: string
-                  format: email
-                  minLength: 5
-                  maxLength: 256
-                  description: Tenant email address (required)
-                phone:
-                  type: string
-                  minLength: 10
-                  maxLength: 20
-                  description: Tenant phone number
-                address:
-                  type: string
-                  minLength: 5
-                  maxLength: 512
-                  description: Tenant address
-                city:
-                  type: string
-                  minLength: 1
-                  maxLength: 128
-                  description: City
-                state:
-                  type: string
-                  minLength: 1
-                  maxLength: 128
-                  description: State
-                pincode:
-                  type: string
-                  minLength: 5
-                  maxLength: 10
-                  description: Postal code
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
-          description: Signup initiated successfully, OTP sent to email
+          description: Employee deactivated successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -573,28 +664,26 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SignupInitiateResponse'
-        '400':
-          description: Validation error
+                $ref: '#/components/schemas/EmployeeResponse'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '409':
-          description: Email already registered
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employee not found
           content:
             application/json:
               schema:
@@ -621,55 +710,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
+        '400':
+          description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-    parameters: []
-  /signup/verify:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  /employees/{id}/reactivate:
     post:
       tags:
-      - Account
-      summary: Verify signup OTP and create account
-      operationId: verifySignup
-      description: 'Verifies the OTP via OTP service and creates the tenant account.
-
-
-        **Pre-conditions:**
-
-        - OTP must have been generated via /v3/signup endpoint
-
-        - OTP must not have expired
-
-        - referenceId must be valid and not tampered with
-
-        - Email must match the signup request
-
-
-        **Business Rules:**
-
-        - OTP is verified against OTP service
-
-        - Account is created only after successful OTP verification
-
-        - Keycloak realm is created for the tenant
-
-        - OTP is invalidated after successful verification (single-use)
-
-        - referenceId JWT is decoded to extract email and purpose
-
-
-        **Post-conditions:**
-
-        - Tenant account is created and active
-
-        - Keycloak realm is provisioned
-
-        - Response includes created tenant details
-
-        '
+      - Employee
+      summary: Reactivate employee
+      operationId: reactivateEmployee
+      description: Reactivates a deactivated employee
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -679,15 +740,16 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
+      - name: id
+        in: path
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SignupVerifyRequest'
+        description: Employee ID (UUID)
+        schema:
+          type: string
+          format: uuid
       responses:
-        '201':
-          description: Signup verified and account created successfully
+        '200':
+          description: Employee reactivated successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -697,46 +759,32 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TenantResponse'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/EmployeeResponse'
         '401':
-          description: Unauthorized - invalid or tampered referenceId
+          description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '410':
-          description: OTP expired
+        '404':
+          description: Employee not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: Invalid OTP or OTP verification failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '423':
-          description: Locked - too many failed OTP attempts
+          description: Unprocessable entity
           content:
             application/json:
               schema:
@@ -757,90 +805,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-    parameters: []
-  /signup/resend:
-    post:
-      tags:
-      - Account
-      summary: Resend signup OTP
-      operationId: resendSignupOTP
-      description: 'Resends OTP to the email address via OTP service for signup verification.
-
-        Invalidates the previous OTP and generates a fresh one.
-
-
-        **Pre-conditions:**
-
-        - Email must have an active signup request
-
-        - Previous OTP must not have been verified
-
-        - referenceId must be valid and not tampered with
-
-        - Cooldown period must have elapsed since last generate/resend
-
-
-        **Business Rules:**
-
-        - New OTP is generated via OTP service and sent to email
-
-        - Previous OTP is invalidated
-
-        - Rate limiting applies to prevent abuse (maxResendsPerHour)
-
-        - Cooldown window must elapse before resend is allowed
-
-        - New referenceId JWT is returned (old one is invalidated)
-
-
-        **Post-conditions:**
-
-        - New OTP is sent to email
-
-        - Previous OTP is no longer valid
-
-        - New referenceId must be used for verification
-
-        '
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResendOTPRequest'
-      responses:
-        '200':
-          description: OTP resent successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SignupResendResponse'
         '400':
           description: Validation error
           content:
@@ -849,54 +813,19 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized - invalid or tampered referenceId
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Signup request not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '410':
-          description: OTP expired
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '423':
-          description: Locked - identifier in lockout period
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests or cooldown not elapsed
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    parameters: []
-  /config:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  /jurisdictions:
     post:
       tags:
-      - AccountConfig
-      summary: Create account configuration
-      operationId: createTenantConfig
-      description: Creates a new configuration for a tenant account
+      - Jurisdiction
+      summary: Create jurisdiction
+      operationId: createJurisdiction
+      description: Creates a new jurisdiction assignment for an employee
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -911,10 +840,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TenantConfigCreateRequest'
+              $ref: '#/components/schemas/JurisdictionCreateRequest'
       responses:
         '201':
-          description: Configuration created successfully
+          description: Jurisdiction created successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -935,7 +864,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TenantConfigResponse'
+                $ref: '#/components/schemas/JurisdictionResponse'
         '400':
           description: Validation error
           content:
@@ -974,10 +903,10 @@ paths:
                 $ref: '#/components/schemas/Error'
     get:
       tags:
-      - AccountConfig
-      summary: Search account configurations
-      operationId: listTenantConfigs
-      description: Retrieves a paginated list of configurations for a tenant
+      - Jurisdiction
+      summary: Search jurisdictions
+      operationId: searchJurisdictions
+      description: Retrieves a paginated list of jurisdictions
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -990,7 +919,6 @@ paths:
       - name: page
         in: query
         required: false
-        description: Page number (1-indexed)
         schema:
           type: integer
           minimum: 1
@@ -998,21 +926,14 @@ paths:
       - name: size
         in: query
         required: false
-        description: Number of configurations per page (max 100)
         schema:
           type: integer
           minimum: 1
           maximum: 100
           default: 20
-      - name: configKey
-        in: query
-        required: false
-        description: Filter by configuration key
-        schema:
-          type: string
       responses:
         '200':
-          description: Configurations retrieved successfully
+          description: Jurisdictions retrieved successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1033,7 +954,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TenantConfigListResponse'
+                $ref: '#/components/schemas/JurisdictionListResponse'
         '400':
           description: Validation error
           content:
@@ -1065,13 +986,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     parameters: []
-  /config/{id}:
-    put:
+  /jurisdictions/{uuid}:
+    get:
       tags:
-      - AccountConfig
-      summary: Update account configuration
-      operationId: updateTenantConfig
-      description: Updates an existing account configuration
+      - Jurisdiction
+      summary: Get jurisdiction by UUID
+      operationId: getJurisdictionByUUID
+      description: Retrieves a specific jurisdiction by UUID
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1081,22 +1002,16 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: id
+      - name: uuid
         in: path
         required: true
-        description: Configuration ID (UUID)
+        description: Jurisdiction UUID
         schema:
           type: string
           format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TenantConfigUpdateRequest'
       responses:
         '200':
-          description: Configuration updated successfully
+          description: Jurisdiction retrieved successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1117,7 +1032,95 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TenantConfigResponse'
+                $ref: '#/components/schemas/JurisdictionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Jurisdiction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    put:
+      tags:
+      - Jurisdiction
+      summary: Replace jurisdiction
+      operationId: replaceJurisdiction
+      description: Replaces an existing jurisdiction
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: uuid
+        in: path
+        required: true
+        description: Jurisdiction UUID
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JurisdictionUpdateRequest'
+      responses:
+        '200':
+          description: Jurisdiction replaced successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JurisdictionResponse'
         '400':
           description: Validation error
           content:
@@ -1133,7 +1136,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Configuration not found
+          description: Jurisdiction not found
           content:
             application/json:
               schema:
@@ -1161,7 +1164,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     parameters:
-    - name: id
+    - name: uuid
       in: path
       required: true
       schema:
@@ -1209,185 +1212,165 @@ components:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
     AuditDetail:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
-    TenantCreateRequest:
+    EmployeeCreateRequest:
       type: object
       required:
-      - name
-      - email
+      - employeeType
+      - department
+      - designation
       properties:
-        name:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Employee code (auto-generated if not provided)
+        userId:
           type: string
           minLength: 1
           maxLength: 256
-          description: Tenant name (required)
-        email:
+          description: User ID reference
+        individualId:
           type: string
-          format: email
-          minLength: 5
+          minLength: 1
           maxLength: 256
-          description: Tenant email address (required)
+          description: Individual ID reference
+        status:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Employee status
+        employeeType:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Type of employee (required)
+        dateOfAppointment:
+          type: string
+          format: date-time
+          description: Date of appointment
+        department:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Department name (required)
+        designation:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Job designation (required)
+        isActive:
+          type: boolean
+          default: true
+          description: Whether employee is active
+    EmployeeUpdateRequest:
+      type: object
+      properties:
+        employeeStatus:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Employee status
+        employeeType:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Type of employee
         phone:
           type: string
           minLength: 10
           maxLength: 20
-          description: Tenant phone number
-        address:
-          type: string
-          minLength: 5
-          maxLength: 512
-          description: Tenant address
-        city:
-          type: string
-          minLength: 1
-          maxLength: 128
-          description: City
-        state:
-          type: string
-          minLength: 1
-          maxLength: 128
-          description: State
-        pincode:
-          type: string
-          minLength: 5
-          maxLength: 10
-          description: Postal code
-    SignupVerifyRequest:
-      type: object
-      required:
-      - referenceId
-      - otp
-      - purpose
-      properties:
-        referenceId:
-          type: string
-          minLength: 10
-          maxLength: 2048
-          description: 'The signed JWT returned by /v3/signup endpoint.
-
-            Encodes email, purpose, and expiry. Do not parse or modify.
-
-            '
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        otp:
-          type: string
-          minLength: 4
-          maxLength: 8
-          pattern: ^[0-9]{4,8}$
-          description: The numeric OTP received via email (typically 6 digits)
-          example: '482910'
-        purpose:
-          type: string
-          enum:
-          - signup
-          description: The purpose for which OTP was generated (must be 'signup')
-          example: signup
-    ResendOTPRequest:
-      type: object
-      required:
-      - referenceId
-      properties:
-        referenceId:
-          type: string
-          minLength: 10
-          maxLength: 2048
-          description: 'The signed JWT returned by previous /v3/signup or /v3/signup/resend
-            call.
-
-            Used to decode email and purpose for resend.
-
-            '
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-    TenantUpdateRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 256
-          description: Tenant name
-        email:
+          description: Phone number
+        emailId:
           type: string
           format: email
           minLength: 5
           maxLength: 256
-          description: Tenant email address
+          description: Email address
+        isActive:
+          type: boolean
+          description: Active status
+    EmployeePatchRequest:
+      type: object
+      description: Partial update request for employee - all fields are optional
+      properties:
+        employeeStatus:
+          type: string
+          minLength: 1
+          maxLength: 64
+        employeeType:
+          type: string
+          minLength: 1
+          maxLength: 128
         phone:
           type: string
           minLength: 10
           maxLength: 20
-          description: Tenant phone number
-        address:
+        emailId:
           type: string
+          format: email
           minLength: 5
-          maxLength: 512
-          description: Tenant address
-        city:
-          type: string
-          minLength: 1
-          maxLength: 128
-          description: City
-        state:
-          type: string
-          minLength: 1
-          maxLength: 128
-          description: State
-        pincode:
-          type: string
-          minLength: 5
-          maxLength: 10
-          description: Postal code
-    TenantResponse:
+          maxLength: 256
+        isActive:
+          type: boolean
+    EmployeeResponse:
       type: object
       required:
       - id
-      - name
-      - email
+      - isActive
       properties:
         id:
           type: string
           format: uuid
           readOnly: true
           description: System-generated unique identifier
-        name:
+        code:
           type: string
-          description: Tenant name
-        email:
+          description: Employee code
+        userId:
           type: string
-          format: email
-          description: Tenant email address
-        phone:
+          description: User ID reference
+        individualId:
           type: string
-          description: Tenant phone number
-        address:
+          description: Individual ID reference
+        status:
           type: string
-          description: Tenant address
-        city:
+          description: Employee status
+        employeeType:
           type: string
-          description: City
-        state:
+          description: Type of employee
+        dateOfAppointment:
           type: string
-          description: State
-        pincode:
+          format: date-time
+          description: Date of appointment
+        department:
           type: string
-          description: Postal code
+          description: Department
+        designation:
+          type: string
+          description: Designation
         isActive:
           type: boolean
           description: Active status
+        jurisdictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/JurisdictionResponse'
+          description: Associated jurisdictions
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
-    TenantListResponse:
+    EmployeeListResponse:
       type: object
       required:
-      - tenants
+      - employees
       - totalCount
       - page
       - size
       - hasMore
       properties:
-        tenants:
+        employees:
           type: array
           items:
-            $ref: '#/components/schemas/TenantResponse'
+            $ref: '#/components/schemas/EmployeeResponse'
         totalCount:
           type: integer
           minimum: 0
@@ -1400,138 +1383,86 @@ components:
           maximum: 100
         hasMore:
           type: boolean
-    SignupInitiateResponse:
+    JurisdictionCreateRequest:
       type: object
       required:
-      - referenceId
-      - expiresIn
+      - employeeId
+      - boundaryRelation
       properties:
-        referenceId:
-          type: string
-          description: 'Signed JWT encoding email, purpose, and expiry.
-
-            Submit this on /v3/signup/verify and /v3/signup/resend.
-
-            Do not parse or modify it.
-
-            '
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        expiresIn:
-          type: integer
-          description: Seconds until this OTP expires
-          example: 600
-        cooldownSeconds:
-          type: integer
-          description: Minimum seconds to wait before calling /v3/signup/resend
-          example: 60
-    SignupResendResponse:
-      type: object
-      required:
-      - referenceId
-      - expiresIn
-      properties:
-        referenceId:
-          type: string
-          description: "New signed JWT for the freshly issued OTP.\nReplaces the previous\
-            \ referenceId \u2014 the old one is now invalid.\nSubmit this new token\
-            \ on /v3/signup/verify or /v3/signup/resend.\n"
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...(new)
-        expiresIn:
-          type: integer
-          description: Seconds until the new OTP expires
-          example: 600
-        cooldownSeconds:
-          type: integer
-          description: Minimum seconds to wait before calling /v3/signup/resend again
-          example: 60
-    TenantConfigCreateRequest:
-      type: object
-      required:
-      - tenantId
-      - configKey
-      - configValue
-      properties:
-        tenantId:
+        employeeId:
           type: string
           format: uuid
-          description: Tenant ID (required)
-        configKey:
-          type: string
-          minLength: 1
-          maxLength: 256
-          description: Configuration key (required)
-        configValue:
-          type: string
-          minLength: 1
-          maxLength: 2048
-          description: Configuration value (required)
-        description:
-          type: string
-          minLength: 1
-          maxLength: 512
-          description: Configuration description
-    TenantConfigUpdateRequest:
+          description: Employee ID (required)
+        boundaryRelation:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: Array of boundary relations (required)
+        isActive:
+          type: boolean
+          description: Active status
+    JurisdictionUpdateRequest:
       type: object
       properties:
-        configKey:
+        employeeId:
           type: string
-          minLength: 1
-          maxLength: 256
-          description: Configuration key
-        configValue:
-          type: string
-          minLength: 1
-          maxLength: 2048
-          description: Configuration value
-        description:
-          type: string
-          minLength: 1
-          maxLength: 512
-          description: Configuration description
-    TenantConfigResponse:
+          format: uuid
+          description: Employee ID
+        boundaryRelation:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: Array of boundary relations
+        isActive:
+          type: boolean
+          description: Active status
+    JurisdictionResponse:
       type: object
       required:
       - id
+      - employeeId
+      - boundaryRelation
+      - isActive
       - tenantId
-      - configKey
-      - configValue
       properties:
         id:
           type: string
           format: uuid
           readOnly: true
-          description: System-generated unique identifier
-        tenantId:
+          description: Jurisdiction ID
+        employeeId:
           type: string
           format: uuid
-          description: Tenant ID
-        configKey:
-          type: string
-          description: Configuration key
-        configValue:
-          type: string
-          description: Configuration value
-        description:
-          type: string
-          description: Configuration description
+          description: Employee ID
+        boundaryRelation:
+          type: array
+          items:
+            type: string
+          description: Array of boundary relations
         isActive:
           type: boolean
           description: Active status
+        tenantId:
+          type: string
+          readOnly: true
+          description: Tenant ID
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
-    TenantConfigListResponse:
+    JurisdictionListResponse:
       type: object
       required:
-      - configs
+      - jurisdictions
       - totalCount
       - page
       - size
       - hasMore
       properties:
-        configs:
+        jurisdictions:
           type: array
           items:
-            $ref: '#/components/schemas/TenantConfigResponse'
+            $ref: '#/components/schemas/JurisdictionResponse'
         totalCount:
           type: integer
           minimum: 0
