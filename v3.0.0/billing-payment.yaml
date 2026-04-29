@@ -42,6 +42,7 @@ paths:
   /business-services:
     post:
       summary: Create one or more business services
+      description: Creates one or more business service configurations that define billable services and their collection behavior, defaults, and payment rules.
       operationId: createBusinessServices
       tags: [BusinessService]
       parameters:
@@ -110,6 +111,7 @@ paths:
 
     get:
       summary: Search business services by filters
+      description: Retrieves a list of business services filtered by code, active status, or effectiveness date with pagination support.
       operationId: searchBusinessServices
       tags: [BusinessService]
       parameters:
@@ -183,6 +185,7 @@ paths:
   /business-services/{code}:
     get:
       summary: Get a business service by code
+      description: Retrieves a single business service configuration by its unique code identifier.
       operationId: getBusinessServiceByCode
       tags: [BusinessService]
       parameters:
@@ -244,6 +247,7 @@ paths:
 
     put:
       summary: Replace a business service by code
+      description: Performs a full replacement of an existing business service configuration identified by its code.
       operationId: updateBusinessService
       tags: [BusinessService]
       parameters:
@@ -317,6 +321,7 @@ paths:
 
     patch:
       summary: Partially update a business service by code
+      description: Updates specific fields of an existing business service without replacing the entire configuration.
       operationId: patchBusinessService
       tags: [BusinessService]
       parameters:
@@ -384,6 +389,7 @@ paths:
 
     delete:
       summary: Soft delete (deactivate) a business service by code
+      description: Deactivates a business service by setting its active status to false, preventing further use while preserving historical data.
       operationId: deleteBusinessService
       tags: [BusinessService]
       parameters:
@@ -452,6 +458,7 @@ paths:
   /tax-heads:
     post:
       summary: Create one or more new tax head
+      description: Creates one or more tax head configurations that define charge components like base tax, penalty, rebate, or cess for a business service.
       operationId: createTaxHead
       tags: [TaxHead]
       parameters:
@@ -520,6 +527,7 @@ paths:
 
     get:
       summary: Search tax heads by filters
+      description: Retrieves a list of tax heads filtered by code, category, active status, or linked business service with pagination support.
       operationId: searchTaxHeads
       tags: [TaxHead]
       parameters:
@@ -597,6 +605,7 @@ paths:
   /tax-heads/{code}:
     get:
       summary: Get a tax head by code
+      description: Retrieves a single tax head configuration by its unique code identifier.
       operationId: getTaxHeadByCode
       tags: [TaxHead]
       parameters:
@@ -658,6 +667,7 @@ paths:
 
     put:
       summary: Replace a tax head by code
+      description: Performs a full replacement of an existing tax head configuration identified by its code.
       operationId: updateTaxHead
       tags: [TaxHead]
       parameters:
@@ -731,6 +741,7 @@ paths:
 
     patch:
       summary: Partially update a tax head by code
+      description: Updates specific fields of an existing tax head without replacing the entire configuration.
       operationId: patchTaxHead
       tags: [TaxHead]
       parameters:
@@ -797,6 +808,7 @@ paths:
 
     delete:
       summary: Soft delete (deactivate) a tax head
+      description: Deactivates a tax head by setting its active status to false, preventing further use while preserving historical data.
       operationId: deleteTaxHead
       tags: [TaxHead]
       parameters:
@@ -864,6 +876,7 @@ paths:
   /demands:
     post:
       summary: Create demands (bulk)
+      description: Creates one or more demand records representing calculated liabilities for consumers, including line items mapped to tax heads.
       operationId: createDemands
       tags: [Demand]
       parameters:
@@ -947,11 +960,9 @@ paths:
 
     put:
       summary: Update/replace demands (bulk)
+      description: Performs bulk full replacement of existing demands that are in editable states (DRAFT or ACTIVE), requiring the demand ID for each item.
       operationId: updateDemands
       tags: [Demand]
-      description: |
-        Bulk full-replace for Demands. Each object **must include `id`** and be in an editable state (`DRAFT` or `ACTIVE`).
-        Consider requiring `If-Match` ETag per item (future iteration) for optimistic concurrency.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1038,6 +1049,7 @@ paths:
 
     get:
       summary: Search demands by filters
+      description: Retrieves a list of demands filtered by business service, consumer code, status, or creation date range with pagination support.
       operationId: searchDemands
       tags: [Demand]
       parameters:
@@ -1120,6 +1132,7 @@ paths:
   /demands/{id}:
     get:
       summary: Get a demand by ID
+      description: Retrieves a single demand record by its unique identifier, including all line items and current status.
       operationId: getDemandByID
       tags: [Demand]
       parameters:
@@ -1180,11 +1193,9 @@ paths:
 
     patch:
       summary: Partially update a demand by ID
+      description: Updates specific fields of an editable demand (DRAFT or ACTIVE status) such as amounts, line items, or payer information before bill generation.
       operationId: patchDemandByID
       tags: [Demand]
-      description: |
-        Allowed only if demand is `DRAFT` or `ACTIVE` and not frozen/billed/cancelled.
-        Typical use: fix amounts, add/remove items, update payer/meta before bill issuance.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1262,10 +1273,9 @@ paths:
   /demands/{id}/freeze:
     post:
       summary: Freeze a demand by ID (prevent further edits)
+      description: Transitions an ACTIVE demand to FROZEN status, locking it from further edits and preparing it for bill generation.
       operationId: freezeDemandByID
       tags: [Demand]
-      description: |
-        Transitions `ACTIVE` → `FROZEN`. Prevents further PATCH. Typically called before bill generation.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1331,11 +1341,9 @@ paths:
   /demands/{id}/cancel:
     post:
       summary: Cancel a demand by ID
+      description: Cancels a demand due to incorrect assessment or other reasons, with validation to prevent cancellation of billed or partially collected demands.
       operationId: cancelDemandByID
       tags: [Demand]
-      description: |
-        Cancels a demand (e.g., wrong assessment). If already billed/partially collected, the system may
-        require adjustments instead, returning `422` with guidance.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1414,6 +1422,7 @@ paths:
   /bills/generate:
     post:
       summary: Generate a bill
+      description: Generates a bill from eligible ACTIVE or FROZEN demands for a specific consumer and business service, including payer details and line items.
       operationId: generateBill
       tags: [Bill]
       parameters:
@@ -1478,6 +1487,7 @@ paths:
   /bills:
     get:
       summary: Search bills by filters
+      description: Retrieves a list of bills filtered by business service, consumer codes, bill numbers, status, or payer contact information with pagination support.
       operationId: searchBills
       tags: [Bill]
       parameters:
@@ -1575,6 +1585,7 @@ paths:
   /bills/cancel:
     post:
       summary: Cancel a bill
+      description: Cancels an existing bill by updating its status, typically used when a bill needs to be voided or superseded.
       operationId: cancelBill
       tags: [Bill]
       parameters:
@@ -1639,6 +1650,7 @@ paths:
   /bills/bulk-generate:
     post:
       summary: Generate bills in bulk
+      description: Initiates bulk bill generation for all eligible demands under a business service, processing asynchronously and returning a request tracking ID.
       operationId: bulkGenerateBill
       tags: [Bill]
       parameters:
@@ -1687,6 +1699,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests — generation rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1699,6 +1722,7 @@ paths:
   /payments:
     post:
       summary: Create a new payment
+      description: Records a new payment transaction against one or more bills, including payment mode, instrument details, and payer information.
       operationId: createPayment
       tags: [Payment]
       parameters:
@@ -1753,6 +1777,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests — generation rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1762,6 +1797,7 @@ paths:
 
     get:
       summary: Search payments by filters
+      description: Retrieves a list of payments filtered by payment IDs, bill IDs, receipt numbers, consumer codes, statuses, or date range with pagination support.
       operationId: searchPayments
       tags: [Payment]
       parameters:
@@ -1875,6 +1911,7 @@ paths:
   /payments/{id}:
     get:
       summary: Get payment by ID
+      description: Retrieves a single payment record by its unique identifier, including all payment details, instrument information, and associated bills.
       operationId: getPaymentByID
       tags: [Payment]
       parameters:
@@ -1937,7 +1974,7 @@ paths:
     post:
       tags: [Payment]
       summary: Validate payment (dry run)
-      description: Validates a payment request without persisting. Checks bill status, amounts, duplicates, and instrument rules.
+      description: Performs a dry-run validation of a payment request without persisting data, checking bill status, amounts, duplicates, and instrument rules.
       operationId: validatePayment
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'

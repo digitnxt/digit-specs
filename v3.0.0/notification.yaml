@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: Notification Service API
-  version: 1.0.0
+  version: 3.0.0
   description: |
     Multi-tenant notification service for sending emails and SMS using versioned templates.
     
@@ -35,12 +35,10 @@ paths:
 
   /template:
     post:
-      tags:
-        - Template Management
       summary: Create a notification template
-      description: |
-        Creates a new notification template under the calling tenant.
+      description: Creates a new notification template under the calling tenant.
       operationId: createNotificationTemplate
+      tags: [Template Management]
       parameters: 
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -101,12 +99,10 @@ paths:
                 $ref: '#/components/schemas/Error'
 
     put:
-      tags:
-        - Template Management
       summary: Update a notification template
-      description: |
-        Updates the existing template.
+      description: Updates the existing template.
       operationId: updateNotificationTemplate
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -173,12 +169,10 @@ paths:
                 $ref: '#/components/schemas/Error'
 
     get:
-      tags:
-        - Template Management
       summary: Search notification templates
-      description: |
-        Returns the templates for the given search filters under the calling tenant.
+      description: Returns the templates for the given search filters under the calling tenant.
       operationId: searchNotificationTemplates
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -250,12 +244,10 @@ paths:
                 $ref: '#/components/schemas/Error'
 
     delete:
-      tags:
-        - Template Management
       summary: Delete a notification template
-      description: |
-        Deletes the template under the calling tenant.
+      description: Deletes the template under the calling tenant.
       operationId: deleteNotificationTemplate
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -326,12 +318,10 @@ paths:
 
   /template/preview:
     post:
-      tags:
-        - Template Management
       summary: Preview a notification template
-      description: |
-        Renders a template with a given payload without sending a notification.
+      description: Renders a template with a given payload without sending a notification.
       operationId: previewNotificationTemplate
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -401,12 +391,10 @@ paths:
 
   /email/send:
     post:
-      tags:
-        - Notification
       summary: Send an email notification
-      description: |
-        Sends an email to one or more recipients using a registered template.
+      description: Sends an email to one or more recipients using a registered template.
       operationId: sendEmail
+      tags: [Notification]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -481,12 +469,10 @@ paths:
 
   /sms/send:
     post:
-      tags:
-        - Notification
       summary: Send a SMS notification
-      description: |
-        Sends an SMS to one or more mobile numbers using a registered template.
+      description: Sends an SMS to one or more mobile numbers using a registered template.
       operationId: sendSMS
+      tags: [Notification]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'

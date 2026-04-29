@@ -1,4 +1,5 @@
 openapi: 3.0.3
+
 info:
   title: ID Generator Service API
   version: 3.0.0
@@ -11,10 +12,10 @@ info:
     All endpoints require X-Tenant-ID header for tenant scoping.
     
 servers:
-  - url: http://localhost:8080/idgen/v3
-    description: Local development server
   - url: https://api.example.com/idgen/v3
     description: Production server
+  - url: https://staging-api.example.com/idgen/v3
+    description: Staging server
 
 security:
   - BearerAuth: []
@@ -22,6 +23,7 @@ security:
 tags:
   - name: Template Management
     description: Operations for managing ID generation templates
+
   - name: ID Generation
     description: Operations for generating IDs from templates
 
@@ -35,13 +37,10 @@ paths:
 
   /template:
     post:
-      tags:
-        - Template Management
       summary: Create a new ID Gen template
-      description: |
-        Registers a new ID Gen template with configuration and initializes its sequence.
-        Creates version v1 of the template.
+      description: Registers a new ID Gen template with configuration and initializes its sequence. Creates version v1 of the template.
       operationId: createIDGenTemplate
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -102,13 +101,10 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     put:
-      tags:
-        - Template Management
       summary: Update an existing template
-      description: |
-        Creates a new immutable version of an existing template's configuration.
-        Increments the version number (e.g., v1 -> v2).
+      description: Creates a new immutable version of an existing template's configuration. Increments the version number (e.g., v1 -> v2).
       operationId: updateIDGenTemplate
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -175,8 +171,6 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     get:
-      tags:
-        - Template Management
       summary: Search templates
       description: |
         Search for templates by various criteria.
@@ -187,6 +181,7 @@ paths:
         - If ids are provided: returns those specific template rows
         - If version is provided: templateCode is required
       operationId: searchIDGenTemplates
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -252,8 +247,6 @@ paths:
                 $ref: '#/components/schemas/Error'
     
     delete:
-      tags:
-        - Template Management
       summary: Delete a template version
       description: |
         Delete a specific version of a template.
@@ -263,6 +256,7 @@ paths:
         - Deleting the latest version when other versions exist: only the latest row is removed
         - Deleting the only version: template, scope resets, sequence lookup, and Postgres sequence are fully cleaned up
       operationId: deleteIDGenTemplate
+      tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -336,13 +330,10 @@ paths:
 
   /generate:
     post:
-      tags:
-        - ID Generation
       summary: Generate an ID from a template
-      description: |
-        Generates a unique ID from a registered template using optional variables.
-        Uses the latest version of the template for the given tenant.
+      description: Generates a unique ID from a registered template using optional variables. Uses the latest version of the template for the given tenant.
       operationId: generateIDGenID
+      tags: [ID Generation]      
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'

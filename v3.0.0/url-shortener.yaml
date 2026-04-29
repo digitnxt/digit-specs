@@ -5,10 +5,8 @@ info:
   version: 3.0.0
   description: |
     Shortens long URLs into compact short keys and redirects users to the original URL.
-
     Supports optional validity windows (validFrom / validTill) and an optional Redis or
     in-memory cache layer for fast redirects.
-
     Shorten endpoint requires X-Tenant-ID and X-Client-ID headers.
 
 servers:
@@ -34,12 +32,12 @@ paths:
 
   /shortener:
     post:
-      tags: [URL Shortener]
       summary: Shorten URL
       description: |
         Creates a short key for the given URL. Returns the full short URL using the
         configured HOST_NAME. Optionally accepts a validity window.
       operationId: shortenURL
+      tags: [URL Shortener]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -108,7 +106,6 @@ paths:
 
   /{key}:
     get:
-      tags: [URL Shortener]
       summary: Redirect to original URL
       description: |
         Resolves the short key and issues a 307 Temporary Redirect to the original URL.
@@ -116,6 +113,7 @@ paths:
         Note: this route is registered directly on the server root, not under the
         /url-shortener context path.
       operationId: redirectURL
+      tags: [URL Shortener]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -253,10 +251,10 @@ components:
   schemas:
 
     # ── Common refs ─────────────────────────────────────────────────────────────
-
+    
     Error:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
-
+      
     AuditDetail:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
 
