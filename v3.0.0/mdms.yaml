@@ -1,4 +1,4 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
   title: Master Data Management Service (MDMS v2)
   description: 'APIs for managing master data schemas and data for DIGIT platform.
@@ -8,22 +8,19 @@ info:
     '
   version: 3.0.0
 servers:
-- url: https://unified-dev.digit.org/mdms-v2
-- url: https://staging-api.example.com/mdms/v3
-  description: Staging server
+- url: /mdms/v3
 security:
 - BearerAuth: []
 tags:
 - name: Schema Definition
   description: Operations for managing schema definitions
-- name: Master Data V2
+- name: Master Data
   description: REST-compliant operations for managing master data
-- name: MDMS Legacy
-  description: Legacy MDMS v1 compatibility endpoints
 paths:
-  /v1/schema:
+  /schema:
     post:
       summary: Create a new schema definition
+      description: Creates a new schema definition for validating master data records. The schema must be a valid JSON Schema v7 definition.
       tags:
       - Schema Definition
       operationId: createSchema
@@ -81,15 +78,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs POST on /v1/schema.
     get:
       summary: Search schema definitions
+      description: Retrieves schema definitions based on filter criteria. Returns all schemas if no filters are provided.
       tags:
       - Schema Definition
       operationId: searchSchemas
@@ -145,18 +155,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs GET on /v1/schema.
-  /v2:
+  /data:
     post:
       summary: Create new master data records
+      description: Creates new master data records. Data is validated against the corresponding schema definition before creation.
       tags:
-      - Master Data V2
+      - Master Data
       operationId: createMasterData
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
@@ -212,17 +235,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs POST on /v2.
     put:
       summary: Update existing master data records
+      description: Updates existing master data records. Data is validated against the corresponding schema definition before update.
       tags:
-      - Master Data V2
+      - Master Data
       operationId: updateMasterData
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
@@ -284,17 +320,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs PUT on /v2.
     get:
       summary: Search master data records
+      description: Searches master data records based on filter criteria. Supports pagination and filtering by schema code, identifiers, and active status.
       tags:
-      - Master Data V2
+      - Master Data
       operationId: searchMasterData
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
@@ -383,231 +432,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /v2.
-  /v1/mdms:
-    get:
-      summary: Search master data using GET with query parameters (v1)
-      tags:
-      - MDMS Legacy
-      operationId: searchMasterDataV1
-      description: REST-compliant GET endpoint for searching master data by module
-        and master name
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - in: query
-        name: uniqueIdentifier
-        schema:
-          type: string
-        description: Unique identifier to filter master data
-      - in: query
-        name: moduleName
-        schema:
-          type: array
-          items:
-            type: string
-        description: Module names to search
-        style: form
-        explode: true
-      - in: query
-        name: masterName
-        schema:
-          type: array
-          items:
-            type: string
-        description: Master names to search
-        style: form
-        explode: true
-      - in: query
-        name: masterFilter
-        schema:
-          type: array
-          items:
-            type: string
-        description: JsonPath filters for each master
-        style: form
-        explode: true
-      responses:
-        '200':
-          description: Master data retrieved successfully
+        '429':
+          description: Too many requests - rate limit exceeded
           headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MdmsResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /v1/_search:
-    post:
-      tags:
-      - MDMS Legacy
-      summary: Legacy v1 search endpoint for backward compatibility
-      operationId: searchMasterDataLegacyV1
-      description: Get list of masters for a particular module and tenantId (v1 compatibility)
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        description: Details of module and master which need to be searched using
-          MDMS
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MdmsCriteriaReq'
-        required: true
-      responses:
-        '200':
-          description: Data searched successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MdmsResponse'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /v2/_search:
-    post:
-      tags:
-      - MDMS Legacy
-      summary: Legacy v2 search endpoint (POST-based search)
-      operationId: searchMasterDataLegacyV2
-      description: Search master data using POST request with criteria
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        description: Search criteria for master data
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MdmsCriteriaReqV2'
-        required: true
-      responses:
-        '200':
-          description: Data searched successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MdmsResponseV2'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
           content:
             application/json:
               schema:
@@ -621,50 +454,52 @@ paths:
 components:
   securitySchemes:
     BearerAuth:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/securitySchemes/BearerAuth
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
   parameters:
     RequestIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
     ClientSecret:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
     IdempotencyKey:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/IdempotencyKey
+      name: X-Idempotency-Key
+      in: header
+      required: false
+      description: Unique key to ensure idempotent operations for POST/PUT requests. Prevents duplicate processing of the same request.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 64
+        example: idem-12345-abcd
   headers:
     X-Response-Time:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
   schemas:
-    Error:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
-    AuditDetail:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail
-    Document:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Document
     SchemaDefinition:
       type: object
       description: Schema definition for master data validation
@@ -772,66 +607,10 @@ components:
             users
       required:
       - action
-    MdmsCriteria:
-      type: object
-      description: Legacy v1 search criteria
-      properties:
-        tenantId:
-          type: string
-          maxLength: 100
-          minLength: 1
-          description: Unique id for a tenant
-        uniqueIdentifier:
-          type: string
-          maxLength: 64
-          minLength: 1
-          description: Unique identifier to filter master data
-        ids:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-          description: Database entity IDs to search master data
-        moduleDetails:
-          type: array
-          items:
-            $ref: '#/components/schemas/ModuleDetail'
-    ModuleDetail:
-      type: object
-      required:
-      - masterDetails
-      - moduleName
-      properties:
-        moduleName:
-          type: string
-          maxLength: 100
-          minLength: 1
-          description: Name of the module for which masters are required
-        masterDetails:
-          type: array
-          items:
-            $ref: '#/components/schemas/MasterDetail'
-    MasterDetail:
-      type: object
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          maxLength: 100
-          minLength: 1
-          description: Master name
-        filter:
-          type: string
-          maxLength: 500
-          minLength: 1
-          description: JsonPath predicate to get filtered data for a master
     SchemaDefinitionRequest:
       type: object
       description: Request wrapper for schema definition
       properties:
-        RequestInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo
         SchemaDefinition:
           $ref: '#/components/schemas/SchemaDefinition'
       required:
@@ -840,8 +619,6 @@ components:
       type: object
       description: Response wrapper for schema definitions
       properties:
-        ResponseInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo
         SchemaDefinitions:
           type: array
           items:
@@ -862,16 +639,12 @@ components:
     SchemaDefSearchRequest:
       type: object
       properties:
-        RequestInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml#/definitions/RequestInfo
         SchemaDefCriteria:
           $ref: '#/components/schemas/SchemaDefCriteria'
     MdmsRequest:
       type: object
       description: Request wrapper for master data operations
       properties:
-        RequestInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/egov-services/master/docs/common/contracts/v1-0-0.yml#/definitions/RequestInfo
         Mdms:
           type: array
           description: Array of master data records
@@ -922,43 +695,23 @@ components:
           type: integer
           format: int32
           description: Number of records to be fetched in search response
-    MdmsCriteriaReq:
-      type: object
-      description: Legacy v1 search request wrapper
-      properties:
-        RequestInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo
-        MdmsCriteria:
-          $ref: '#/components/schemas/MdmsCriteria'
     MdmsCriteriaReqV2:
       type: object
       description: V2 search request wrapper
       properties:
-        RequestInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/RequestInfo
         MdmsCriteria:
           $ref: '#/components/schemas/MdmsCriteriaV2'
-    MdmsResponse:
-      type: object
-      description: Legacy v1 search response
-      properties:
-        ResponseInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo
-        MdmsRes:
-          type: object
-          additionalProperties: true
-          description: Map of Map where keys represent moduleName and masterName
-          example:
-            Property:
-              PropertyType: []
-              Usage: []
     MdmsResponseV2:
       type: object
       description: V2 response wrapper for master data
       properties:
-        ResponseInfo:
-          $ref: https://raw.githubusercontent.com/egovernments/DIGIT-Specs/service-contracts/Common%20Services/common-contract.yaml#/components/schemas/ResponseInfo
         mdms:
           type: array
           items:
             $ref: '#/components/schemas/Mdms'
+    Error:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
+    AuditDetail:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
+    Document:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Document

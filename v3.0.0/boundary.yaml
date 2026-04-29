@@ -1,4 +1,4 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
   title: Boundary Service
   description: Boundary service APIs - to create, search and update boundaries along
@@ -10,6 +10,7 @@ info:
   version: 3.0.0
 servers:
 - url: /boundary/v3
+  description: Relative path for all environments
 security:
 - BearerAuth: []
 paths:
@@ -93,6 +94,12 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -108,6 +115,7 @@ paths:
 
         '
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -159,6 +167,12 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -190,6 +204,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -234,6 +249,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Boundary not found.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
           content:
             '*/*':
               schema:
@@ -308,6 +329,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -366,11 +393,15 @@ paths:
           content:
             '*/*':
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/Error'
         '401':
           description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
           content:
             '*/*':
               schema:
@@ -436,11 +467,15 @@ paths:
           content:
             '*/*':
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/Error'
         '401':
           description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
           content:
             '*/*':
               schema:
@@ -476,6 +511,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -524,6 +560,12 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -549,6 +591,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -587,6 +630,12 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
           content:
             '*/*':
               schema:
@@ -708,6 +757,12 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -739,6 +794,7 @@ paths:
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -787,6 +843,12 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -796,44 +858,44 @@ paths:
 components:
   securitySchemes:
     BearerAuth:
-      $ref: https://raw.githubusercontent.com/egovernments/DIGIT-3.0/master/common-3.0.0.yaml#/components/securitySchemes/BearerAuth
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
   parameters:
     RequestIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/RequestIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/CorrelationIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/UserAgentHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TenantIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ForwardedForHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
     ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientId
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
     ClientSecret:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/ClientSecret
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/parameters/TimeStamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
   headers:
     X-Response-Time:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Time
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Response-Timestamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Request-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Correlation-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Tenant-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Remaining
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/headers/X-Rate-Limit-Reset
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
   schemas:
     Error:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/Error
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
     Geometry:
       type: object
       properties:
@@ -877,7 +939,7 @@ components:
         auditDetails:
           $ref: '#/components/schemas/AuditDetails'
     AuditDetails:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit3/refs/heads/master/docs/services/common/Common-3.0.0.yaml#/components/schemas/AuditDetail
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
     EnrichedBoundary:
       type: object
       properties:
