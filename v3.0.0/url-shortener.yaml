@@ -184,7 +184,7 @@ paths:
     get:
       summary: Get URL configs
       description: |
-        Returns a list of URL configurations filtered by ids under the calling tenant.
+        Returns the URL Shortener configuration for the calling tenant.
       operationId: getURLConfigs
       tags: [Config]
       parameters:
