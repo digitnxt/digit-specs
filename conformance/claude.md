@@ -1,4 +1,4 @@
-# Claude Instructions: Generate OpenAPI Conformance Test Suite
+# Claude instructions: generate OpenAPI conformance test suite
 
 ## Objective
 
@@ -12,6 +12,7 @@ The test suite must:
 - Verify status codes and headers (including gateway-injected headers)
 - Include negative and edge case testing
 - Be runnable in CI/CD pipelines
+- Embed a **complete, copy-paste-ready cURL command** inside `conformance.html` for every failed test
 
 ---
 
@@ -27,196 +28,109 @@ You will be given:
 
 ---
 
-## Core Principles
+## Core principles
 
-1. **OpenAPI is the single source of truth**
-   - Do NOT hardcode endpoints or schemas outside the spec
-   - All tests must be derived from the spec
-
-2. **Do not manually enumerate endpoints**
-   - Automatically iterate over all paths and operations via Schemathesis
-
-3. **Environment independence**
-   - Base URL must be a required CLI argument — never hardcoded, never from `.env`, never with a default fallback
-   - Omitting `--base-url` must cause immediate failure with a clear error
-
-4. **Deterministic + generative testing**
-   - Use both:
-     - Examples from the spec (if provided)
-     - Generated inputs via Schemathesis (for edge cases and fuzzing)
-
-5. **No mocking**
-   - Tests must hit the real running service — never mock responses
-
-6. **Spec is immutable**
-   - If a test fails, the service is wrong — never adjust tests to match broken behavior
+1. **OpenAPI is the single source of truth** — do not hardcode endpoints or schemas outside the spec
+2. **Do not manually enumerate endpoints** — iterate automatically via Schemathesis
+3. **Environment independence** — base URL is always a required CLI argument
+4. **Deterministic + generative testing** — use spec examples AND Schemathesis-generated inputs
+5. **No mocking** — tests must hit the real running service
+6. **Spec is immutable** — if a test fails, fix the service, not the test
+7. **cURL on failure** — every failed test must capture the exact HTTP request and render it as a complete cURL command inside `conformance.html`
 
 ---
 
-## Tech Stack
+## Tech stack
 
 | Tool | Role |
 |---|---|
-| **Python 3.11+** | Primary language |
-| **Schemathesis** | Auto-generates contract tests from OpenAPI spec (property-based) |
-| **pytest** | Test runner and reporting |
-| **requests** | HTTP client for explicit assertion tests |
-| **jsonschema** | Response schema validation |
-| **pydantic** | Data model validation for response payloads |
-| **pytest-html** | HTML report generation |
+| Python 3.11+ | Primary language |
+| Schemathesis | Auto-generates contract tests from OpenAPI spec |
+| pytest | Test runner and reporting |
+| requests | HTTP client for explicit assertion tests |
+| jsonschema | Response schema validation |
+| pydantic | Data model validation |
+| pytest-html | HTML report generation |
 
-Install dependencies:
-```bash
+```
 pip install schemathesis pytest requests jsonschema pydantic pytest-html
 ```
 
-Alternative tooling (acceptable if explicitly requested):
-- Dredd
-- Postman/Newman
-
 ---
 
-## CLI Arguments
-
-All runtime configuration is passed as CLI arguments to `pytest`. Nothing is read from environment variables or config files.
-
-| Argument | Required | Description |
-|---|---|---|
-| `--base-url` | **Yes** | Base URL of the service (e.g. `http://localhost:8080`) |
-| `--api-token` | No | Bearer token for authenticated endpoints |
-| `--gateway` | No | Gateway profile: `kong`, `aws`, or `custom`. Omit if no gateway |
-
-### Registration in `conftest.py`
-
-```python
-def pytest_addoption(parser):
-    parser.addoption(
-        "--base-url",
-        action="store",
-        required=True,              # Hard fail if omitted — no default allowed
-        help="Base URL of the service under test"
-    )
-    parser.addoption(
-        "--api-token",
-        action="store",
-        default="",
-        help="Bearer token for authenticated endpoints"
-    )
-    parser.addoption(
-        "--gateway",
-        action="store",
-        default=None,
-        choices=["kong", "aws", "custom"],
-        help="Gateway profile for header validation. Omit if accessing service directly."
-    )
-```
-
-### Example invocations
-
-```bash
-cd services/user-service
-
-# Minimal — no auth, no gateway
-pytest tests/ -v --base-url=http://localhost:8080
-
-# With auth
-pytest tests/ -v --base-url=http://localhost:8080 --api-token=your-token
-
-# Behind Kong gateway
-pytest tests/ -v --base-url=http://api.prod.internal --api-token=your-token --gateway=kong
-
-# Against staging, generate HTML report
-pytest tests/ -v --base-url=http://user-service.staging.internal --gateway=aws --html=reports/conformance.html
-
-# Omitting --base-url fails immediately — intentional
-pytest tests/ -v    # ERROR: --base-url is required
-```
-
----
-
-## Expected Output Structure
-
-Generate exactly this file layout for each microservice. Do not deviate from naming or placement.
+## Expected output structure
 
 ```
 services/
-└── <service-name>/
-    ├── schema.yaml                          # OpenAPI 3.0 spec (provided as input)
-    ├── conftest.py                          # CLI args + all shared fixtures
-    ├── pytest.ini                           # Test discovery config
+└── /
+    ├── schema.yaml
+    ├── conftest.py
+    ├── pytest.ini
+    ├── generate_summary_table.py
     ├── tests/
     │   ├── __init__.py
-    │   ├── test_schema_conformance.py       # Layer 1: Schemathesis auto-generated
-    │   ├── test_response_contracts.py       # Layer 2: Explicit field/type assertions
-    │   ├── test_error_contracts.py          # Layer 3: 4xx/5xx error schema validation
-    │   ├── test_stateful_flows.py           # Layer 4: Multi-step workflow tests
+    │   ├── test_schema_conformance.py
+    │   ├── test_response_contracts.py
+    │   ├── test_error_contracts.py
+    │   ├── test_stateful_flows.py
     │   └── helpers/
     │       ├── __init__.py
-    │       ├── validators.py                # assert_gateway_headers() and other helpers
-    │       └── factories.py                 # Request payload builders
-    └── reports/                             # Generated reports — gitignore this folder
+    │       ├── validators.py
+    │       ├── factories.py
+    │       └── curl_builder.py        ← NEW: builds cURL strings from requests
+    └── reports/
+        ├── conformance.html           ← pytest-html report with cURL per failure
+        └── test_summary_table.md      ← auto-generated by generate_summary_table.py
 ```
 
-> **Rule:** Never place test files outside the service folder. No cross-service imports. One `conftest.py` per service, never at the repo root.
+> `reports/` must be gitignored. Never commit generated artifacts.
 
 ---
 
-## `conftest.py` — Full Implementation
+## CLI arguments
 
-Generate this file exactly as shown. All fixtures are session-scoped.
+| Argument | Required | Description |
+|---|---|---|
+| `--base-url` | Yes | Base URL of the service |
+| `--api-token` | No | Bearer token for authenticated endpoints |
+| `--gateway` | No | Gateway profile: `kong`, `aws`, or `custom` |
+
+---
+
+## `conftest.py` — full implementation
 
 ```python
-# services/<service-name>/conftest.py
+# services//conftest.py
 import pytest
 import schemathesis
-
-# --- Gateway header profiles ---
-# Add header specs per gateway type.
-# required=True  → assert header is present in every response
-# required=False → assert type only if header happens to be present
-# type           → int (must be numeric string) or str
-# Do NOT assert the actual values of rate limit headers — only presence and type.
+from tests.helpers.curl_builder import build_curl
 
 GATEWAY_HEADER_PROFILES = {
     "kong": {
-        "X-RateLimit-Limit-Minute":        {"required": True,  "type": int},
-        "X-RateLimit-Remaining-Minute":    {"required": True,  "type": int},
-        "X-Kong-Request-Id":               {"required": True,  "type": str},
-        "X-Kong-Upstream-Latency":         {"required": False, "type": int},
-        "X-Kong-Proxy-Latency":            {"required": False, "type": int},
+        "X-RateLimit-Limit-Minute":     {"required": True,  "type": int},
+        "X-RateLimit-Remaining-Minute": {"required": True,  "type": int},
+        "X-Kong-Request-Id":            {"required": True,  "type": str},
+        "X-Kong-Upstream-Latency":      {"required": False, "type": int},
+        "X-Kong-Proxy-Latency":         {"required": False, "type": int},
     },
     "aws": {
-        "x-amzn-RequestId":                {"required": True,  "type": str},
-        "x-amzn-Remapped-Content-Length":  {"required": False, "type": int},
-        "x-amz-apigw-id":                  {"required": True,  "type": str},
-        "X-Cache":                         {"required": False, "type": str},
+        "x-amzn-RequestId":               {"required": True,  "type": str},
+        "x-amzn-Remapped-Content-Length": {"required": False, "type": int},
+        "x-amz-apigw-id":                 {"required": True,  "type": str},
+        "X-Cache":                        {"required": False, "type": str},
     },
-    "custom": {
-        # Extend with your own gateway headers here
-    },
+    "custom": {},
 }
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--base-url",
-        action="store",
-        required=True,
-        help="Base URL of the service under test (e.g. http://localhost:8080)"
-    )
-    parser.addoption(
-        "--api-token",
-        action="store",
-        default="",
-        help="Bearer token for authenticated endpoints"
-    )
-    parser.addoption(
-        "--gateway",
-        action="store",
-        default=None,
-        choices=["kong", "aws", "custom"],
-        help="Gateway profile for header validation. Omit if accessing service directly."
-    )
+    parser.addoption("--base-url", action="store", required=True,
+                     help="Base URL of the service under test")
+    parser.addoption("--api-token", action="store", default="",
+                     help="Bearer token for authenticated endpoints")
+    parser.addoption("--gateway", action="store", default=None,
+                     choices=["kong", "aws", "custom"],
+                     help="Gateway profile for header validation.")
 
 
 @pytest.fixture(scope="session")
@@ -232,10 +146,6 @@ def auth_headers(request):
 
 @pytest.fixture(scope="session")
 def gateway_headers_spec(request):
-    """
-    Returns the header spec dict for the active gateway profile,
-    or an empty dict if --gateway is not provided (no-op mode).
-    """
     gateway = request.config.getoption("--gateway")
     return GATEWAY_HEADER_PROFILES.get(gateway, {})
 
@@ -243,229 +153,235 @@ def gateway_headers_spec(request):
 @pytest.fixture(scope="session")
 def swagger_schema(base_url):
     return schemathesis.from_file("schema.yaml", base_url=base_url)
-```
-
----
-
-## `pytest.ini` — Per Service
-
-```ini
-# services/<service-name>/pytest.ini
-[pytest]
-testpaths = tests
-addopts = -v
-```
-
----
-
-## `helpers/validators.py` — Reusable Assertions
-
-```python
-# services/<service-name>/tests/helpers/validators.py
-import jsonschema
 
 
-def assert_gateway_headers(response, gateway_headers_spec):
-    """
-    Validates gateway-injected headers against the active gateway profile.
-    If no gateway profile is active (empty spec), this is a no-op.
+# ---------------------------------------------------------------------------
+# cURL injection into pytest-html report
+# ---------------------------------------------------------------------------
+# How it works:
+#   1. Each test that makes an HTTP call stores the prepared request object
+#      on `request.node._curl_request` (a requests.PreparedRequest).
+#   2. The pytest_runtest_makereport hook fires after every test phase.
+#   3. On failure, it calls build_curl() and injects the result as an
+#      EXTRAS block into the HTML report — rendered in a 
+ block so
+#      the engineer can copy-paste and replay instantly.
 
-    Rules:
-    - required=True  → header must be present in the response
-    - required=False → only validated if present
-    - type=int       → value must be a numeric string
-    - type=str       → value must be a non-empty string
-    - NEVER assert the actual numeric value of rate limit headers
-    """
-    if not gateway_headers_spec:
-        return  # No gateway configured — skip silently
+def pytest_runtest_makereport(item, call):
+    """Attach cURL command to the HTML report for every failed test."""
+    from pytest_html import extras as html_extras
 
-    for header, spec in gateway_headers_spec.items():
-        present = header in response.headers
+    outcome = yield
+    report = outcome.get_result()
 
-        if spec["required"]:
-            assert present, (
-                f"Expected gateway header '{header}' is missing from response. "
-                f"Is the service running behind the correct gateway?"
-            )
-
-        if present:
-            value = response.headers[header]
-            if spec["type"] == int:
-                assert value.isdigit(), (
-                    f"Gateway header '{header}' should be a numeric string, got: '{value}'"
+    if report.when == "call" and report.failed:
+        prepared_req = getattr(item, "_curl_request", None)
+        if prepared_req is not None:
+            curl_cmd = build_curl(prepared_req)
+            report.extras = getattr(report, "extras", [])
+            report.extras.append(
+                html_extras.html(
+                    f'
+'
+                    f'Replay with cURL'
+                    f'
+'
+                    f'{curl_cmd}'
+                    f'
+'
                 )
-            elif spec["type"] == str:
-                assert isinstance(value, str) and len(value) > 0, (
-                    f"Gateway header '{header}' should be a non-empty string, got: '{value}'"
-                )
-
-
-def assert_error_schema(body, error_schema):
-    """Validates a response body against the declared error schema."""
-    jsonschema.validate(instance=body, schema=error_schema)
-
-
-def assert_required_fields(body, fields):
-    """Asserts all listed field names are present in response body."""
-    for field in fields:
-        assert field in body, f"Required field '{field}' missing from response body"
-
-
-def assert_field_types(body, type_map):
-    """
-    Asserts field types. type_map = {"fieldName": expected_python_type}
-    Example: {"id": str, "age": int, "active": bool}
-    """
-    for field, expected_type in type_map.items():
-        if field in body:
-            assert isinstance(body[field], expected_type), (
-                f"Field '{field}' expected type {expected_type.__name__}, "
-                f"got {type(body[field]).__name__}: {body[field]!r}"
-            )
-
-
-def assert_enum_values(body, enum_map):
-    """
-    Asserts field values are within declared enum sets.
-    enum_map = {"status": {"active", "inactive", "pending"}}
-    """
-    for field, allowed_values in enum_map.items():
-        if field in body:
-            assert body[field] in allowed_values, (
-                f"Field '{field}' value '{body[field]}' not in allowed values: {allowed_values}"
             )
 ```
 
 ---
 
-## `helpers/factories.py` — Payload Builders
+## `helpers/curl_builder.py` — NEW FILE
+
+This helper converts a `requests.PreparedRequest` (or a plain dict describing
+the request) into a complete, ready-to-run cURL command string.
 
 ```python
-# services/<service-name>/tests/helpers/factories.py
+# services//tests/helpers/curl_builder.py
+"""
+Converts an HTTP request into a complete cURL command string.
 
-def make_valid_payload(**overrides):
-    """
-    Returns a minimal valid request payload for the primary resource.
-    Override individual fields by passing keyword arguments.
-    Populate defaults based on the OpenAPI spec's required fields and examples.
-    """
-    base = {
-        # Replace with actual required fields from the spec
-        "name": "Test Resource",
-        "email": "test@example.com",
-    }
-    return {**base, **overrides}
+Supports:
+  - requests.PreparedRequest  (from the `requests` library)
+  - requests.Request          (pre-prepared)
+  - Plain dict with keys: method, url, headers, body (fallback)
 
+Usage in a test:
+    import requests
+    from tests.helpers.curl_builder import build_curl, attach_curl
 
-def make_invalid_payload(strategy="missing_required"):
-    """
-    Returns an intentionally invalid payload for negative testing.
-    Strategies:
-      - "missing_required" : empty body {}
-      - "wrong_type"       : field values with incorrect types
-      - "invalid_enum"     : enum field set to an undeclared value
-    """
-    strategies = {
-        "missing_required": {},
-        "wrong_type":       {"name": 12345, "email": False},
-        "invalid_enum":     {"status": "not-a-valid-status"},
-    }
-    return strategies.get(strategy, {})
-```
+    def test_something(request, base_url, auth_headers):
+        req = requests.Request(
+            "POST",
+            f"{base_url}/users",
+            headers=auth_headers,
+            json={"name": "Alice"},
+        )
+        prepared = req.prepare()
+        attach_curl(request.node, prepared)   # stores for conftest hook
 
----
+        session = requests.Session()
+        response = session.send(prepared)
+        assert response.status_code == 201
+"""
 
-## Test Categories
+import json
+import shlex
+from typing import Union
 
-### Layer 1 — Schema Conformance (Schemathesis) `test_schema_conformance.py`
-
-Auto-generates test cases for every endpoint + method in the spec. Always generate this layer in full.
-
-```python
-# services/<service-name>/tests/test_schema_conformance.py
-import schemathesis
-from schemathesis import Case
-
-schema = schemathesis.from_file("../schema.yaml")
-
-
-@schema.parametrize()
-def test_all_endpoints_conform(case: Case, base_url, auth_headers, gateway_headers_spec):
-    """
-    Runs for every path + method in the spec.
-    Validates: response schema, status codes, Content-Type header.
-    Also validates gateway headers if --gateway is specified.
-    """
-    from tests.helpers.validators import assert_gateway_headers
-
-    response = case.call(base_url=base_url, headers=auth_headers)
-    case.validate_response(response)
-    assert_gateway_headers(response, gateway_headers_spec)
-```
-
----
-
-### Layer 2 — Explicit Response Contract Tests `test_response_contracts.py`
-
-Manually written assertions for critical endpoints. Derive field names, types, and enum values directly from the OpenAPI spec — do not invent them.
-
-```python
-# services/<service-name>/tests/test_response_contracts.py
-import pytest
 import requests
+
+
+# Headers that are always noise — omit from cURL output
+_SKIP_HEADERS = {
+    "content-length",
+    "transfer-encoding",
+    "connection",
+    "accept-encoding",
+    "user-agent",
+}
+
+
+def build_curl(
+    req: Union[requests.PreparedRequest, requests.Request, dict],
+    *,
+    indent: bool = True,
+) -> str:
+    """
+    Build a complete cURL command from an HTTP request.
+
+    Args:
+        req:    A PreparedRequest, Request, or plain dict.
+        indent: If True, use line-continuation backslashes for readability.
+
+    Returns:
+        A string like:
+            curl -X POST \\
+              'https://api.example.com/users' \\
+              -H 'Authorization: Bearer abc' \\
+              -H 'Content-Type: application/json' \\
+              --data-raw '{"name": "Alice"}'
+    """
+    if isinstance(req, requests.Request):
+        req = req.prepare()
+
+    if isinstance(req, requests.PreparedRequest):
+        method  = (req.method or "GET").upper()
+        url     = req.url or ""
+        headers = dict(req.headers or {})
+        body    = req.body
+    elif isinstance(req, dict):
+        method  = req.get("method", "GET").upper()
+        url     = req.get("url", "")
+        headers = req.get("headers", {})
+        body    = req.get("body")
+    else:
+        raise TypeError(f"Unsupported request type: {type(req)}")
+
+    parts = [f"curl -X {method}"]
+    sep = " \\\n  " if indent else " "
+
+    # URL — always single-quoted so special chars survive the shell
+    parts.append(f"{sep}{shlex.quote(url)}")
+
+    # Headers — skip noise headers, preserve order
+    for key, value in headers.items():
+        if key.lower() in _SKIP_HEADERS:
+            continue
+        parts.append(f"{sep}-H {shlex.quote(f'{key}: {value}')}")
+
+    # Body
+    if body:
+        if isinstance(body, bytes):
+            try:
+                body = body.decode("utf-8")
+            except UnicodeDecodeError:
+                body = body.hex()
+
+        # Pretty-print JSON bodies so they're readable in the report
+        content_type = headers.get("Content-Type", headers.get("content-type", ""))
+        if "application/json" in content_type:
+            try:
+                body = json.dumps(json.loads(body), indent=2)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        parts.append(f"{sep}--data-raw {shlex.quote(body)}")
+
+    return "".join(parts)
+
+
+def attach_curl(node, req: Union[requests.PreparedRequest, requests.Request, dict]) -> None:
+    """
+    Store a request on the pytest node so conftest.pytest_runtest_makereport
+    can pick it up and inject the cURL into the HTML report on failure.
+
+    Call this immediately after preparing the request, before sending it.
+
+    Example:
+        prepared = req.prepare()
+        attach_curl(request.node, prepared)
+        response = session.send(prepared)
+    """
+    node._curl_request = req
+```
+
+---
+
+## How to use `attach_curl` in each test layer
+
+### Layer 2 — explicit response contracts
+
+```python
+# test_response_contracts.py
+import requests as req_lib
+from tests.helpers.curl_builder import attach_curl
 from tests.helpers.validators import (
-    assert_gateway_headers,
-    assert_required_fields,
-    assert_field_types,
-    assert_enum_values,
+    assert_gateway_headers, assert_required_fields,
+    assert_field_types, assert_enum_values,
 )
 
 
 class TestGetResourceContract:
-    def test_success_response_shape(self, base_url, auth_headers, gateway_headers_spec):
-        response = requests.get(f"{base_url}/<path>/<valid-id>", headers=auth_headers)
+    def test_success_response_shape(self, request, base_url, auth_headers, gateway_headers_spec):
+        r = req_lib.Request("GET", f"{base_url}//", headers=auth_headers)
+        prepared = r.prepare()
+        attach_curl(request.node, prepared)          # attach before sending
+
+        response = req_lib.Session().send(prepared)
 
         assert response.status_code == 200
         assert "application/json" in response.headers.get("Content-Type", "")
-
         body = response.json()
-
-        # Derive these from the spec's `required` field list
         assert_required_fields(body, ["id", "name", "createdAt"])
-
-        # Derive from the spec's `type` declarations
         assert_field_types(body, {"id": str, "name": str})
-
-        # Derive from the spec's `enum` declarations
         assert_enum_values(body, {"status": {"active", "inactive", "pending"}})
-
-        # Gateway headers — no-op if --gateway not set
         assert_gateway_headers(response, gateway_headers_spec)
 
-    def test_not_found_returns_404(self, base_url, auth_headers, gateway_headers_spec):
-        response = requests.get(f"{base_url}/<path>/nonexistent-id", headers=auth_headers)
+    def test_not_found_returns_404(self, request, base_url, auth_headers, gateway_headers_spec):
+        r = req_lib.Request("GET", f"{base_url}//nonexistent-id", headers=auth_headers)
+        prepared = r.prepare()
+        attach_curl(request.node, prepared)
 
+        response = req_lib.Session().send(prepared)
         assert response.status_code == 404
-        body = response.json()
-        assert_required_fields(body, ["error", "message"])
+        assert_required_fields(response.json(), ["error", "message"])
         assert_gateway_headers(response, gateway_headers_spec)
 ```
 
----
-
-### Layer 3 — Negative / Error Contract Tests `test_error_contracts.py`
-
-Test all invalid input scenarios. Derive the expected error schema from the spec's error response definitions.
+### Layer 3 — negative / error contracts
 
 ```python
-# services/<service-name>/tests/test_error_contracts.py
-import pytest
-import requests
+# test_error_contracts.py
+import requests as req_lib
+from tests.helpers.curl_builder import attach_curl
 from tests.helpers.validators import assert_error_schema, assert_gateway_headers
 from tests.helpers.factories import make_invalid_payload
 
-# Derive this schema from the spec's declared error response body
 ERROR_SCHEMA = {
     "type": "object",
     "required": ["error", "message"],
@@ -479,173 +395,365 @@ ERROR_SCHEMA = {
 
 
 class TestNegativeContracts:
-    def test_missing_required_fields_returns_422(self, base_url, gateway_headers_spec):
-        response = requests.post(
-            f"{base_url}/<path>",
-            json=make_invalid_payload("missing_required")
-        )
-        assert response.status_code == 422
-        assert_error_schema(response.json(), ERROR_SCHEMA)
-        assert_gateway_headers(response, gateway_headers_spec)
+    def _send(self, node, method, url, headers=None, json_body=None):
+        """Helper: prepare, attach cURL, send."""
+        r = req_lib.Request(method, url, headers=headers, json=json_body)
+        prepared = r.prepare()
+        attach_curl(node, prepared)
+        return req_lib.Session().send(prepared)
 
-    def test_wrong_field_types_returns_422(self, base_url, gateway_headers_spec):
-        response = requests.post(
-            f"{base_url}/<path>",
-            json=make_invalid_payload("wrong_type")
-        )
-        assert response.status_code == 422
-        assert_error_schema(response.json(), ERROR_SCHEMA)
-        assert_gateway_headers(response, gateway_headers_spec)
+    def test_missing_required_fields_returns_422(self, request, base_url, gateway_headers_spec):
+        resp = self._send(request.node, "POST", f"{base_url}/",
+                          json_body=make_invalid_payload("missing_required"))
+        assert resp.status_code == 422
+        assert_error_schema(resp.json(), ERROR_SCHEMA)
+        assert_gateway_headers(resp, gateway_headers_spec)
 
-    def test_invalid_enum_value_returns_422(self, base_url, gateway_headers_spec):
-        response = requests.post(
-            f"{base_url}/<path>",
-            json=make_invalid_payload("invalid_enum")
-        )
-        assert response.status_code == 422
-        assert_error_schema(response.json(), ERROR_SCHEMA)
-        assert_gateway_headers(response, gateway_headers_spec)
+    def test_wrong_field_types_returns_422(self, request, base_url, gateway_headers_spec):
+        resp = self._send(request.node, "POST", f"{base_url}/",
+                          json_body=make_invalid_payload("wrong_type"))
+        assert resp.status_code == 422
+        assert_error_schema(resp.json(), ERROR_SCHEMA)
+        assert_gateway_headers(resp, gateway_headers_spec)
 
-    def test_missing_auth_returns_401(self, base_url, gateway_headers_spec):
-        response = requests.get(f"{base_url}/<protected-path>")
-        assert response.status_code == 401
-        assert_error_schema(response.json(), ERROR_SCHEMA)
-        assert_gateway_headers(response, gateway_headers_spec)
+    def test_invalid_enum_value_returns_422(self, request, base_url, gateway_headers_spec):
+        resp = self._send(request.node, "POST", f"{base_url}/",
+                          json_body=make_invalid_payload("invalid_enum"))
+        assert resp.status_code == 422
+        assert_error_schema(resp.json(), ERROR_SCHEMA)
+        assert_gateway_headers(resp, gateway_headers_spec)
 
-    def test_invalid_token_returns_401(self, base_url, gateway_headers_spec):
-        response = requests.get(
-            f"{base_url}/<protected-path>",
-            headers={"Authorization": "Bearer invalid-token"}
-        )
-        assert response.status_code == 401
-        assert_error_schema(response.json(), ERROR_SCHEMA)
-        assert_gateway_headers(response, gateway_headers_spec)
+    def test_missing_auth_returns_401(self, request, base_url, gateway_headers_spec):
+        resp = self._send(request.node, "GET", f"{base_url}/")
+        assert resp.status_code == 401
+        assert_error_schema(resp.json(), ERROR_SCHEMA)
+        assert_gateway_headers(resp, gateway_headers_spec)
 
-    def test_path_param_invalid_format(self, base_url, auth_headers, gateway_headers_spec):
-        # Test with an invalid format for the path parameter (e.g. non-UUID where UUID expected)
-        response = requests.get(f"{base_url}/<path>/!!!invalid!!!", headers=auth_headers)
-        assert response.status_code in (400, 404, 422)
-        assert_gateway_headers(response, gateway_headers_spec)
+    def test_invalid_token_returns_401(self, request, base_url, gateway_headers_spec):
+        resp = self._send(request.node, "GET", f"{base_url}/",
+                          headers={"Authorization": "Bearer invalid-token"})
+        assert resp.status_code == 401
+        assert_error_schema(resp.json(), ERROR_SCHEMA)
+        assert_gateway_headers(resp, gateway_headers_spec)
+
+    def test_path_param_invalid_format(self, request, base_url, auth_headers, gateway_headers_spec):
+        resp = self._send(request.node, "GET", f"{base_url}//!!!invalid!!!",
+                          headers=auth_headers)
+        assert resp.status_code in (400, 404, 422)
+        assert_gateway_headers(resp, gateway_headers_spec)
 ```
 
----
-
-### Layer 4 — Stateful Flow Tests `test_stateful_flows.py`
-
-Test chained API calls that reflect real lifecycle workflows. Always clean up resources created during the test.
+### Layer 4 — stateful flows
 
 ```python
-# services/<service-name>/tests/test_stateful_flows.py
-import pytest
-import requests
+# test_stateful_flows.py
+import requests as req_lib
+from tests.helpers.curl_builder import attach_curl
 from tests.helpers.factories import make_valid_payload
 from tests.helpers.validators import assert_gateway_headers
 
 
+def _send(node, method, url, headers=None, json_body=None):
+    r = req_lib.Request(method, url, headers=headers, json=json_body)
+    prepared = r.prepare()
+    attach_curl(node, prepared)      # always the LAST request — overrides previous
+    return req_lib.Session().send(prepared)
+
+
 class TestResourceLifecycle:
-    def test_create_read_update_delete(self, base_url, auth_headers, gateway_headers_spec):
+    def test_create_read_update_delete(self, request, base_url, auth_headers, gateway_headers_spec):
         resource_id = None
         try:
-            # 1. CREATE
-            create_resp = requests.post(
-                f"{base_url}/<path>",
-                json=make_valid_payload(),
-                headers=auth_headers
-            )
-            assert create_resp.status_code == 201
-            assert_gateway_headers(create_resp, gateway_headers_spec)
-            resource_id = create_resp.json()["id"]
+            create = _send(request.node, "POST", f"{base_url}/",
+                           headers=auth_headers, json_body=make_valid_payload())
+            assert create.status_code == 201
+            assert_gateway_headers(create, gateway_headers_spec)
+            resource_id = create.json()["id"]
 
-            # 2. READ — must exist immediately after creation
-            get_resp = requests.get(f"{base_url}/<path>/{resource_id}", headers=auth_headers)
-            assert get_resp.status_code == 200
-            assert get_resp.json()["id"] == resource_id
-            assert_gateway_headers(get_resp, gateway_headers_spec)
+            get = _send(request.node, "GET", f"{base_url}//{resource_id}",
+                        headers=auth_headers)
+            assert get.status_code == 200
+            assert get.json()["id"] == resource_id
+            assert_gateway_headers(get, gateway_headers_spec)
 
-            # 3. UPDATE — PUT or PATCH per spec
-            update_resp = requests.patch(
-                f"{base_url}/<path>/{resource_id}",
-                json={"name": "Updated Name"},
-                headers=auth_headers
-            )
-            assert update_resp.status_code in (200, 204)
-            assert_gateway_headers(update_resp, gateway_headers_spec)
+            patch = _send(request.node, "PATCH", f"{base_url}//{resource_id}",
+                          headers=auth_headers, json_body={"name": "Updated Name"})
+            assert patch.status_code in (200, 204)
+            assert_gateway_headers(patch, gateway_headers_spec)
 
-            # 4. DELETE
-            del_resp = requests.delete(f"{base_url}/<path>/{resource_id}", headers=auth_headers)
-            assert del_resp.status_code == 204
-            assert_gateway_headers(del_resp, gateway_headers_spec)
-            resource_id = None  # Mark as cleaned up
+            delete = _send(request.node, "DELETE", f"{base_url}//{resource_id}",
+                           headers=auth_headers)
+            assert delete.status_code == 204
+            assert_gateway_headers(delete, gateway_headers_spec)
+            resource_id = None
 
-            # 5. CONFIRM DELETION — must return 404
-            after_resp = requests.get(f"{base_url}/<path>/nonexistent-id", headers=auth_headers)
-            assert after_resp.status_code == 404
+            after = _send(request.node, "GET", f"{base_url}//nonexistent-id",
+                          headers=auth_headers)
+            assert after.status_code == 404
 
         finally:
-            # Safety net cleanup — runs even if an assertion fails mid-test
             if resource_id:
-                requests.delete(f"{base_url}/<path>/{resource_id}", headers=auth_headers)
+                req_lib.delete(f"{base_url}//{resource_id}", headers=auth_headers)
+```
+
+### Layer 1 — Schemathesis (cURL auto-captured)
+
+```python
+# test_schema_conformance.py
+import schemathesis
+from schemathesis import Case
+from tests.helpers.curl_builder import build_curl
+from tests.helpers.validators import assert_gateway_headers
+
+schema = schemathesis.from_file("../schema.yaml")
+
+
+@schema.parametrize()
+def test_all_endpoints_conform(case: Case, request, base_url, auth_headers, gateway_headers_spec):
+    response = case.call(base_url=base_url, headers=auth_headers)
+
+    # Schemathesis uses `requests` internally — grab the PreparedRequest
+    # from the response object and attach it so conftest can render cURL on failure
+    if hasattr(response, "request") and response.request is not None:
+        request.node._curl_request = response.request
+
+    case.validate_response(response)
+    assert_gateway_headers(response, gateway_headers_spec)
 ```
 
 ---
 
-## Assertion Checklist
+## What the cURL block looks like in `conformance.html`
 
-Apply all of the following to every response test:
+For a failed POST with a JSON body, the report will render:
+
+```
+Replay with cURL
+
+curl -X POST \
+  'https://api.staging.internal/users' \
+  -H 'Authorization: Bearer eyJhbGci...' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  --data-raw '{
+  "name": 12345,
+  "email": false
+}'
+```
+
+Rules for the rendered cURL:
+- Always includes the full URL with scheme and path
+- Includes every request header except noise headers (`Content-Length`, `Transfer-Encoding`,
+  `Connection`, `Accept-Encoding`, `User-Agent`)
+- JSON bodies are pretty-printed (2-space indent) for readability
+- Binary bodies are hex-encoded
+- URL and header values are shell-quoted via `shlex.quote` — safe to paste directly
+- The block is rendered in a dark `
+` inside the pytest-html extras section,
+  directly beneath the failure traceback for that test
+- Only appears on failed tests — passing tests produce no cURL output
+
+---
+
+## `helpers/validators.py`
+
+```python
+import jsonschema
+
+
+def assert_gateway_headers(response, gateway_headers_spec):
+    if not gateway_headers_spec:
+        return
+    for header, spec in gateway_headers_spec.items():
+        present = header in response.headers
+        if spec["required"]:
+            assert present, f"Expected gateway header '{header}' is missing."
+        if present:
+            value = response.headers[header]
+            if spec["type"] == int:
+                assert value.isdigit(), f"Header '{header}' should be numeric, got: '{value}'"
+            elif spec["type"] == str:
+                assert isinstance(value, str) and len(value) > 0, \
+                    f"Header '{header}' should be a non-empty string, got: '{value}'"
+
+
+def assert_error_schema(body, error_schema):
+    jsonschema.validate(instance=body, schema=error_schema)
+
+
+def assert_required_fields(body, fields):
+    for field in fields:
+        assert field in body, f"Required field '{field}' missing from response body"
+
+
+def assert_field_types(body, type_map):
+    for field, expected_type in type_map.items():
+        if field in body:
+            assert isinstance(body[field], expected_type), (
+                f"Field '{field}' expected {expected_type.__name__}, "
+                f"got {type(body[field]).__name__}: {body[field]!r}"
+            )
+
+
+def assert_enum_values(body, enum_map):
+    for field, allowed_values in enum_map.items():
+        if field in body:
+            assert body[field] in allowed_values, (
+                f"Field '{field}' value '{body[field]}' not in allowed: {allowed_values}"
+            )
+```
+
+---
+
+## `helpers/factories.py`
+
+```python
+def make_valid_payload(**overrides):
+    base = {"name": "Test Resource", "email": "test@example.com"}
+    return {**base, **overrides}
+
+
+def make_invalid_payload(strategy="missing_required"):
+    strategies = {
+        "missing_required": {},
+        "wrong_type":       {"name": 12345, "email": False},
+        "invalid_enum":     {"status": "not-a-valid-status"},
+    }
+    return strategies.get(strategy, {})
+```
+
+---
+
+## `pytest.ini`
+
+```ini
+[pytest]
+testpaths = tests
+addopts = -v
+```
+
+---
+
+## Summary table — API requests vs. errors
+
+After generating all four test layers, generate `generate_summary_table.py` at the service root
+and produce `reports/test_summary_table.md`.
+
+### `generate_summary_table.py`
+
+```python
+"""
+Auto-generates reports/test_summary_table.md from schema.yaml.
+Run: python generate_summary_table.py
+"""
+import yaml, os
+
+AUTH_ERRORS = [
+    ("Missing auth token",  "401", "`error`, `message`", "Layer 3"),
+    ("Invalid auth token",  "401", "`error`, `message`", "Layer 3"),
+]
+MUTATION_ERRORS = [
+    ("Missing required fields", "422", "`error`, `message`, `details`", "Layer 3"),
+    ("Wrong field types",        "422", "`error`, `message`, `details`", "Layer 3"),
+    ("Invalid enum value",       "422", "`error`, `message`, `details`", "Layer 3"),
+]
+PATH_PARAM_ERROR = ("Resource not found", "404", "`error`, `message`", "Layer 3")
+
+
+def layer_for_status(status):
+    return "Layer 2" if int(status) < 300 else "Layer 3"
+
+
+def rows_for_operation(method, path, operation):
+    rows = []
+    for status, resp_obj in sorted(operation.get("responses", {}).items()):
+        code = str(status)
+        desc = resp_obj.get("description", "")
+        if code.startswith("2"):
+            rows.append((f"`{method.upper()}`", path, code, desc or "Success",
+                         "—", "—", layer_for_status(code)))
+        else:
+            content = resp_obj.get("content", {})
+            schema_fields = "—"
+            if content:
+                schema = next(iter(content.values()), {}).get("schema", {})
+                required = schema.get("required", [])
+                if required:
+                    schema_fields = ", ".join(f"`{f}`" for f in required)
+            rows.append((f"`{method.upper()}`", path, "—", desc or f"Error {code}",
+                         f"`{code}`", schema_fields, layer_for_status(code)))
+
+    if "{" in path and not any(r[4] == "`404`" for r in rows):
+        rows.append((f"`{method.upper()}`", path, "—", *PATH_PARAM_ERROR))
+
+    if method.upper() in ("POST", "PUT", "PATCH"):
+        for err in MUTATION_ERRORS:
+            if not any(r[3] == err[0] for r in rows):
+                rows.append((f"`{method.upper()}`", path, "—", *err))
+
+    if operation.get("security"):
+        for err in AUTH_ERRORS:
+            if not any(r[3] == err[0] for r in rows):
+                rows.append((f"`{method.upper()}`", path, "—", *err))
+
+    return rows
+
+
+def generate_table(schema_path="schema.yaml",
+                   output_path="reports/test_summary_table.md"):
+    with open(schema_path) as f:
+        spec = yaml.safe_load(f)
+
+    headers = ["Method", "Endpoint", "Happy path status", "Error scenario",
+               "Error status", "Error schema fields", "Test layer"]
+    sep = [":------", ":-------", ":----------------:", ":-------------",
+           ":-----------:", ":------------------", ":----------:"]
+
+    all_rows = []
+    for path, path_item in spec.get("paths", {}).items():
+        for method, operation in path_item.items():
+            if method in ("get","post","put","patch","delete","head","options"):
+                all_rows.extend(rows_for_operation(method, path, operation))
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w") as f:
+        f.write("# API request vs. error summary\n\n")
+        f.write("| " + " | ".join(headers) + " |\n")
+        f.write("| " + " | ".join(sep) + " |\n")
+        for row in all_rows:
+            f.write("| " + " | ".join(str(c) for c in row) + " |\n")
+
+    print(f"Written: {output_path} ({len(all_rows)} rows)")
+
+
+if __name__ == "__main__":
+    generate_table()
+```
+
+---
+
+## Assertion checklist
 
 | Concern | Rule |
 |---|---|
-| **Status code** | Must match the spec's declared code for the scenario |
-| **Content-Type** | Must match spec declaration — typically `application/json` |
-| **Required fields** | Every field marked `required` in the spec must be present |
-| **Data types** | Exact match — no coercion. Strings are not integers. |
-| **Enum values** | Only values declared in the spec's `enum` list are valid |
-| **Nullable fields** | `null` is only valid where spec declares `nullable: true` |
-| **Date/time formats** | Must be ISO 8601 where `format: date-time` is declared |
-| **Pagination shape** | `page`, `pageSize`, `total` must be present on paginated endpoints |
-| **Gateway headers** | Presence + type only — never assert rate limit numeric values |
-| **Error schema** | All 4xx/5xx bodies must conform to the spec's error schema |
+| Status code | Must match the spec's declared code for the scenario |
+| Content-Type | Must match spec declaration — typically `application/json` |
+| Required fields | Every field marked `required` in the spec must be present |
+| Data types | Exact match — no coercion |
+| Enum values | Only values declared in the spec's `enum` list are valid |
+| Nullable fields | `null` only valid where `nullable: true` is declared |
+| Date/time formats | ISO 8601 where `format: date-time` is declared |
+| Pagination shape | `page`, `pageSize`, `total` on paginated endpoints |
+| Gateway headers | Presence + type only — never assert rate limit numeric values |
+| Error schema | All 4xx/5xx bodies must conform to the spec's error schema |
+| cURL on failure | Every failed test must produce a complete cURL in conformance.html |
 
 ---
 
-## Gateway Header Validation
-
-Gateway headers are injected by the infrastructure layer, not the service. They must be tested conditionally based on the `--gateway` CLI argument.
-
-### Rules
-
-- **Assert presence and type only** — never assert the numeric value of rate limit headers (e.g. do not assert `X-RateLimit-Limit-Minute == 100`). Limit values are configuration, not contract.
-- **`required: True` headers** must appear in every response when that gateway profile is active
-- **`required: False` headers** are validated only if present in the response
-- **No gateway (`--gateway` omitted)** → `assert_gateway_headers()` is a silent no-op. No test changes needed.
-- To add a new gateway, add a new key to `GATEWAY_HEADER_PROFILES` in `conftest.py` — no other files need changes.
-
-### Gateway profiles (defined in `conftest.py`)
-
-| Gateway | Key Headers |
-|---|---|
-| `kong` | `X-RateLimit-Limit-Minute`, `X-RateLimit-Remaining-Minute`, `X-Kong-Request-Id` |
-| `aws` | `x-amzn-RequestId`, `x-amz-apigw-id` |
-| `custom` | Define in `GATEWAY_HEADER_PROFILES["custom"]` |
-
----
-
-## Adding a New Microservice
-
-1. Create `services/<new-service>/`
-2. Place the OpenAPI spec at `services/<new-service>/schema.yaml`
-3. Copy `conftest.py` and `pytest.ini` verbatim — they are service-agnostic
-4. Generate all four test layers under `services/<new-service>/tests/`
-5. Populate `helpers/factories.py` with required fields from the spec
-6. Run: `cd services/<new-service> && pytest tests/ -v --base-url=http://<host>`
-
----
-
-## CI Integration — One Job Per Service
+## CI integration — one job per service
 
 ```yaml
-# .github/workflows/conformance.yml
-name: Conformance Tests
+name: Conformance tests
 on: [push, pull_request]
 
 jobs:
@@ -667,48 +775,37 @@ jobs:
             --base-url=http://localhost:8080 \
             --api-token=${{ secrets.API_TOKEN }} \
             --gateway=kong \
-            --html=reports/conformance.html
+            --html=reports/conformance.html \
+            --self-contained-html
+      - working-directory: services/user-service
+        run: python generate_summary_table.py
       - uses: actions/upload-artifact@v3
         with:
           name: user-service-report
-          path: services/user-service/reports/
-
-  order-service:
-    runs-on: ubuntu-latest
-    services:
-      order-service:
-        image: your-org/order-service:latest
-        ports: ["8081:8081"]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - run: pip install schemathesis pytest requests jsonschema pydantic pytest-html
-      - working-directory: services/order-service
-        run: |
-          pytest tests/ \
-            --base-url=http://localhost:8081 \
-            --api-token=${{ secrets.API_TOKEN }} \
-            --gateway=aws \
-            --html=reports/conformance.html
-      - uses: actions/upload-artifact@v3
-        with:
-          name: order-service-report
-          path: services/order-service/reports/
+          path: |
+            services/user-service/reports/conformance.html
+            services/user-service/reports/test_summary_table.md
 ```
+
+> `--self-contained-html` bundles all CSS/JS into the single HTML file so it renders
+> correctly when downloaded from the CI artifact store without a web server.
 
 ---
 
-## Key Rules
+## Key rules
 
-1. **`--base-url` is always a CLI argument** — never hardcoded, never from `.env`, never with a default
-2. **`--base-url` omitted = immediate failure** — `required=True` in `pytest_addoption` is non-negotiable
-3. **`--gateway` omitted = silent no-op** — gateway assertions are skipped, no code changes needed
-4. **Never assert rate limit values** — assert presence and type of gateway headers only
-5. **One service folder, one test suite** — no cross-service imports or shared test files
-6. **One assertion concern per test function** — do not mix schema, type, and business logic in one test
-7. **Always clean up stateful tests** — use `try/finally` to delete created resources even on failure
-8. **Use `scope="session"` for all fixtures** — resolve URL, token, gateway, and schema once per run
-9. **Do not mock the service** — conformance tests must hit the real running service
-10. **Treat the spec as immutable** — if a test fails, fix the service, not the test
+1. `--base-url` is always a CLI argument — never hardcoded, never from `.env`
+2. `--base-url` omitted = immediate failure — `required=True` is non-negotiable
+3. `--gateway` omitted = silent no-op — gateway assertions skipped automatically
+4. Never assert rate limit numeric values — presence and type only
+5. One service folder, one test suite — no cross-service imports
+6. One assertion concern per test function
+7. Always clean up stateful tests with `try/finally`
+8. Use `scope="session"` for all fixtures
+9. Do not mock the service — hit the real running service
+10. Treat the spec as immutable — fix the service, not the test
+11. Call `attach_curl(request.node, prepared)` before every `session.send()` call
+12. The cURL block appears only on failed tests — zero noise on passing tests
+13. Use `--self-contained-html` in CI so the report is portable as a single file
+14. Always generate `reports/test_summary_table.md` by running `generate_summary_table.py`
+15. Add `reports/` to `.gitignore`
