@@ -407,7 +407,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/BoundaryTypeHierarchyResponse'
+                $ref: '#/components/schemas/BoundaryHierarchyResponse'
         '400':
           description: Invalid input.
           content:
@@ -487,7 +487,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/BoundaryTypeHierarchyResponse'
+                $ref: '#/components/schemas/BoundaryHierarchyResponse'
         '400':
           description: Invalid input.
           content:
@@ -570,7 +570,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/BoundaryTypeHierarchyResponse'
+                $ref: '#/components/schemas/BoundaryHierarchyResponse'
         '400':
           description: Invalid input.
           content:
@@ -1055,7 +1055,7 @@ components:
     BoundaryRelationshipRequest:
       type: object
       properties:
-        boundaryRelationship:
+        relationship:
           $ref: '#/components/schemas/BoundaryRelation'
     BoundaryRelationshipResponse:
       type: object
@@ -1088,7 +1088,7 @@ components:
           type: boolean
           description: attribute that defines if the given boundary hierarchy is active
             or not
-    BoundaryTypeHierarchyResponse:
+    BoundaryHierarchyResponse:
       type: object
       properties:
         hierarchy:
@@ -1116,7 +1116,7 @@ components:
     BoundaryHierarchyRequest:
       type: object
       properties:
-        boundaryHierarchy:
+        hierarchy:
           $ref: '#/components/schemas/BoundaryHierarchyDefinition'
     BoundaryRequest:
       type: object

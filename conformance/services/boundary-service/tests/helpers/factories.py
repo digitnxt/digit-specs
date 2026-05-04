@@ -30,7 +30,7 @@ def make_hierarchy_definition(hierarchy_type=None, boundary_types=None):
         {"boundaryType": "VILLAGE",   "parentBoundaryType": "BLOCK",     "active": True},
     ]
     return {
-        "boundaryHierarchy": {
+        "hierarchy": {
             "hierarchyType": ht,
             "boundaryHierarchy": bh,
         }
@@ -40,16 +40,16 @@ def make_hierarchy_definition(hierarchy_type=None, boundary_types=None):
 def make_boundary_relation(code, hierarchy_type, boundary_type, parent=None, **overrides):
     """Valid BoundaryRelationshipRequest body. Required: code, hierarchyType, boundaryType."""
     rel = {
-        "boundaryRelationship": {
+        "relationship": {
             "code": code,
             "hierarchyType": hierarchy_type,
             "boundaryType": boundary_type,
         }
     }
     if parent:
-        rel["boundaryRelationship"]["parent"] = parent
+        rel["relationship"]["parent"] = parent
     for k, v in overrides.items():
-        rel["boundaryRelationship"][k] = v
+        rel["relationship"][k] = v
     return rel
 
 
@@ -68,7 +68,7 @@ def make_invalid_boundary_request(strategy="missing_required"):
 def make_invalid_hierarchy_request(strategy="missing_required"):
     strategies = {
         "missing_required": {},
-        "empty_body":       {"boundaryHierarchy": {}},
+        "empty_body":       {"hierarchy": {}},
     }
     return strategies.get(strategy, {})
 
@@ -76,7 +76,7 @@ def make_invalid_hierarchy_request(strategy="missing_required"):
 def make_invalid_relation_request(strategy="missing_required"):
     strategies = {
         "missing_required":        {},
-        "missing_hierarchy_type":  {"boundaryRelationship": {"code": "X", "boundaryType": "DISTRICT"}},
-        "missing_boundary_type":   {"boundaryRelationship": {"code": "X", "hierarchyType": "ADMIN"}},
+        "missing_hierarchy_type":  {"relationship": {"code": "X", "boundaryType": "DISTRICT"}},
+        "missing_boundary_type":   {"relationship": {"code": "X", "hierarchyType": "ADMIN"}},
     }
     return strategies.get(strategy, {})

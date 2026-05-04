@@ -2,6 +2,7 @@ import pathlib
 import threading
 import pytest
 import schemathesis
+from tests.helpers.curl_builder import build_curl
 
 _SCHEMA_PATH = pathlib.Path(__file__).parent / "schema.yaml"
 
@@ -87,6 +88,34 @@ def _http_capture(request):
     _req.Session.send = _patched
     yield
     _req.Session.send = _original
+
+
+# ── cURL injection into pytest-html report ────────────────────────────────────
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Attach cURL command to the HTML report for every failed test."""
+    outcome = yield
+    report = outcome.get_result()
+    if report.when == "call" and report.failed:
+        prepared_req = getattr(item, "_curl_request", None)
+        if prepared_req is not None:
+            try:
+                from pytest_html import extras as html_extras
+                curl_cmd = build_curl(prepared_req)
+                report.extras = getattr(report, "extras", [])
+                report.extras.append(
+                    html_extras.html(
+                        '<div style="margin-top:8px">'
+                        '<strong>Replay with cURL</strong>'
+                        '<pre style="background:#1e1e1e;color:#d4d4d4;padding:12px;'
+                        'border-radius:4px;overflow-x:auto;font-size:12px;margin-top:4px">'
+                        f'{curl_cmd}'
+                        '</pre></div>'
+                    )
+                )
+            except Exception:
+                pass
 
 
 # ── Collect FAILED tests only ──────────────────────────────────────────────────
