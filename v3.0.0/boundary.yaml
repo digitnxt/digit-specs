@@ -33,8 +33,10 @@ paths:
         required: true
         schema:
           type: array
+          minItems: 1
           items:
             type: string
+            minLength: 1
             format: varchar
       - name: limit
         in: query
@@ -977,6 +979,7 @@ components:
           description: read-only db entity uuid.
         code:
           type: string
+          minLength: 1
           description: code of the boundary.
         geometry:
           $ref: '#/components/schemas/Geometry'
@@ -1022,13 +1025,16 @@ components:
           description: read-only db entity uuid.
         code:
           type: string
+          minLength: 1
           description: Code of the boundary.
         hierarchyType:
           type: string
+          minLength: 1
           description: Code of the hierarchy type for which boundary relationship
             is being created.
         boundaryType:
           type: string
+          minLength: 1
           description: Boundary type from master data.
         parent:
           type: string
@@ -1054,6 +1060,9 @@ components:
           description: Root boundaries in the hierarchy
     BoundaryRelationshipRequest:
       type: object
+      required:
+      - relationship
+      additionalProperties: false
       properties:
         relationship:
           $ref: '#/components/schemas/BoundaryRelation'
@@ -1079,6 +1088,7 @@ components:
           description: UUID
         boundaryType:
           type: string
+          minLength: 1
           description: boundary type code.
         parentBoundaryType:
           type: string
@@ -1103,6 +1113,7 @@ components:
           description: UUID of the hierarchy definition
         hierarchyType:
           type: string
+          minLength: 1
           description: Hierarchy type from master data
         boundaryHierarchy:
           type: array
@@ -1115,6 +1126,9 @@ components:
           $ref: '#/components/schemas/AuditDetail'
     BoundaryHierarchyRequest:
       type: object
+      required:
+      - hierarchy
+      additionalProperties: false
       properties:
         hierarchy:
           $ref: '#/components/schemas/BoundaryHierarchyDefinition'
@@ -1122,6 +1136,7 @@ components:
       type: object
       required:
       - boundary
+      additionalProperties: false
       properties:
         boundary:
           type: array
@@ -1139,9 +1154,11 @@ components:
       type: object
       required:
       - fileStoreIds
+      additionalProperties: false
       properties:
         fileStoreIds:
           type: array
+          minItems: 1
           items:
             type: string
           description: List of file store IDs for the shapefile components (.shp,
