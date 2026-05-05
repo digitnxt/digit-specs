@@ -37,6 +37,7 @@ paths:
           items:
             type: string
             minLength: 1
+            maxLength: 64
             format: varchar
       - name: limit
         in: query
@@ -980,6 +981,7 @@ components:
         code:
           type: string
           minLength: 1
+          maxLength: 64
           description: code of the boundary.
         geometry:
           $ref: '#/components/schemas/Geometry'
@@ -1026,15 +1028,18 @@ components:
         code:
           type: string
           minLength: 1
+          maxLength: 64
           description: Code of the boundary.
         hierarchyType:
           type: string
           minLength: 1
+          maxLength: 64
           description: Code of the hierarchy type for which boundary relationship
             is being created.
         boundaryType:
           type: string
           minLength: 1
+          maxLength: 64
           description: Boundary type from master data.
         parent:
           type: string
@@ -1089,6 +1094,7 @@ components:
         boundaryType:
           type: string
           minLength: 1
+          maxLength: 64
           description: boundary type code.
         parentBoundaryType:
           type: string
@@ -1114,6 +1120,7 @@ components:
         hierarchyType:
           type: string
           minLength: 1
+          maxLength: 64
           description: Hierarchy type from master data
         boundaryHierarchy:
           type: array
