@@ -208,6 +208,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
@@ -536,6 +537,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
@@ -836,6 +838,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
