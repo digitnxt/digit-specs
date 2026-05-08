@@ -30,7 +30,7 @@ tags:
   description: "Operations for managing metadata of document types used across various\
     \ services. \nIncludes creation, update, retrieval, and soft deletion.\n"
 paths:
-  /document-categories:
+  /files/document-categories:
     post:
       summary: Create a new document type
       operationId: createDocumentCategory
@@ -88,13 +88,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -105,8 +109,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /document-categories.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs POST on /files/document-categories.
     get:
       summary: Search document types by filters
       operationId: searchDocumentCategory
@@ -175,13 +181,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -192,10 +202,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /document-categories.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs GET on /files/document-categories.
     parameters: []
-  /document-categories/{docCode}:
+  /files/document-categories/{docCode}:
     get:
       summary: Get a document type by docCode
       operationId: getDocumentCategoryByCode
@@ -245,7 +257,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -259,13 +273,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -276,8 +294,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /document-categories/{docCode}.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs GET on /files/document-categories/{docCode}.
     put:
       summary: Update a document type
       operationId: updateDocumentCategory
@@ -341,19 +361,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -364,8 +390,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs PUT on /document-categories/{docCode}.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs PUT on /files/document-categories/{docCode}.
     delete:
       summary: Delete or deactivate a document type
       operationId: deleteDocumentCategory
@@ -427,19 +455,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -450,15 +484,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs DELETE on /document-categories/{docCode}.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs DELETE on /files/document-categories/{docCode}.
     parameters:
     - name: docCode
       in: path
       required: true
       schema:
         type: string
-  /upload:
+  /files/upload:
     post:
       summary: Upload file directly
       operationId: directUpload
@@ -488,9 +524,6 @@ paths:
                     type: string
                     format: binary
                   description: One or more files to upload
-                tenantId:
-                  type: string
-                  description: Tenant identifier
                 module:
                   type: string
                   description: Module name for document category validation
@@ -537,13 +570,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -554,10 +591,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: "Performs POST on /upload. This endpoint uses a verb-based path (/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: "Performs POST on /files/upload. This endpoint uses a verb-based path (/files/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
     parameters: []
-  /metadata:
+  /files/metadata:
     post:
       summary: Get file metadata by fileStoreId
       operationId: getMetadata
@@ -572,12 +611,6 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
       - name: fileStoreId
         in: query
         required: true
@@ -621,13 +654,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -638,10 +675,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /metadata.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs POST on /files/metadata.
     parameters: []
-  /tag:
+  /files/tag:
     post:
       summary: Get files by tag
       operationId: getFilesByTag
@@ -656,12 +695,6 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
       - name: tag
         in: query
         required: true
@@ -705,13 +738,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -722,10 +759,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /tag.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs POST on /files/tag.
     parameters: []
-  /upload-url:
+  /files/upload-url:
     post:
       summary: Generate signed URL for file upload
       operationId: generateUploadUrl
@@ -783,13 +822,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -800,10 +843,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /upload-url.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs POST on /files/upload-url.
     parameters: []
-  /confirm-upload:
+  /files/confirm-upload:
     post:
       summary: Confirm file upload using fileStoreId
       operationId: confirmUpload
@@ -861,13 +906,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -878,10 +927,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: "Performs POST on /confirm-upload. This endpoint uses a verb-based path (/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: "Performs POST on /files/confirm-upload. This endpoint uses a verb-based path (/files/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
     parameters: []
-  /download-urls:
+  /files/download-urls:
     get:
       summary: Generate signed download URLs for given fileStoreIds
       operationId: getDownloadUrls
@@ -896,12 +947,6 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
       - name: fileStoreIds
         in: query
         required: true
@@ -945,13 +990,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -962,10 +1011,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /download-urls.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs GET on /files/download-urls.
     parameters: []
-  /{fileStoreId}:
+  /files/{fileStoreId}:
     get:
       summary: Download file by fileStoreId (for direct download only)
       operationId: downloadFile
@@ -984,12 +1035,6 @@ paths:
         in: path
         required: true
         description: Unique identifier of the file to download
-        schema:
-          type: string
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
         schema:
           type: string
       responses:
@@ -1046,13 +1091,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -1063,8 +1112,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /{fileStoreId}.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs GET on /files/{fileStoreId}.
     parameters:
     - name: fileStoreId
       in: path
