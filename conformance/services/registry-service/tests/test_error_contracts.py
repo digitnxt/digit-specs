@@ -162,8 +162,9 @@ class TestRegistryDataNegativeContracts:
         _send(request.node, "POST", f"{base_url}/schema",
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
+            missing_id = "00000000-0000-0000-0000-000000000001"
             response = _send(request.node, "DELETE",
-                             f"{base_url}/schema/{code}/data/nonexistent-id-xyz",
+                             f"{base_url}/schema/{code}/data/{missing_id}",
                              headers=auth_headers)
             assert response.status_code in (404, 200, 202)
             assert_gateway_headers(response, gateway_headers_spec)
