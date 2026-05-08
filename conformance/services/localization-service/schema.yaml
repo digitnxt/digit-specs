@@ -1,0 +1,706 @@
+openapi: 3.0.3
+info:
+  title: Localization Service API
+  description: A Go-based service for managing and retrieving localization messages
+    for applications.
+  version: 3.0.0
+servers:
+- url: https://api.example.com/localization/v3
+  description: Production server
+- url: https://staging-api.example.com/localization/v3
+  description: Staging server
+components:
+  headers:
+    X-Response-Time:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
+    X-Response-Timestamp:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
+    X-Request-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
+    X-Correlation-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
+    X-Tenant-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
+    X-Rate-Limit:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
+    X-Rate-Limit-Remaining:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
+    X-Rate-Limit-Reset:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
+    Retry-After:
+      description: Seconds to wait before retrying.
+      schema:
+        type: integer
+        minimum: 1
+  parameters:
+    RequestIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
+    CorrelationIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
+    UserAgentHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
+    TenantIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+    ForwardedForHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
+    ClientId:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
+    ClientSecret:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
+    TimeStamp:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
+  schemas:
+    Message:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Unique identifier of the record
+        module:
+          type: string
+          description: Tag associated with the message (used for grouping)
+        locale:
+          description: The language code for which the message is added
+          type: string
+        code:
+          description: The code of the message
+          type: string
+        message:
+          type: string
+          description: The text to display
+    UpdateMessage:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Unique identifier of the record
+        code:
+          description: The code of the message
+          type: string
+        message:
+          type: string
+    CreateMessagesRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    UpsertMessagesRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    UpdateMessagesRequest:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Unique identifier of the record
+        locale:
+          description: The language code for which the message is added
+          type: string
+        module:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateMessage'
+    FindMissingMessagesRequest:
+      type: object
+      properties:
+        locales:
+          type: array
+          description: The language code for which the message is added
+          items:
+            type: string
+    CreateMessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    UpsertMessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    UpdateMessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    DeleteMessagesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+    SearchMessagesResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    FindMissingMessagesResponse:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+      example:
+        en_IN:
+        - WELCOME_MESSAGE
+        - LOGOUT_BUTTON
+        fr_FR:
+        - WELCOME_MESSAGE
+    CacheBustResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        success:
+          type: boolean
+    Error:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
+  securitySchemes:
+    BearerAuth:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
+tags:
+- name: Messages
+  description: Core endpoints for managing localization messages.
+- name: Cache
+  description: Endpoints for cache management.
+paths:
+  /messages:
+    get:
+      tags:
+      - Messages
+      summary: Search for localization messages
+      description: Searches for localization messages using URL query parameters.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: A list of found messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchMessagesResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: searchMessages
+    post:
+      tags:
+      - Messages
+      summary: Create new localization messages
+      description: Creates one or more new localization messages.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        description: Request body to create messages
+        required: true
+        content:
+          application/json:
+            example: {}
+            schema:
+              $ref: '#/components/schemas/CreateMessagesRequest'
+      responses:
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Messages created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMessagesResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: createMessages
+    put:
+      tags:
+      - Messages
+      summary: Update existing localization messages
+      description: Updates one or more existing localization messages for a specific
+        tenant, module, and locale.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        description: Request body to update messages
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMessagesRequest'
+      responses:
+        '200':
+          description: Messages updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateMessagesResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: updateMessages
+    delete:
+      tags:
+      - Messages
+      summary: Delete localization messages
+      description: Deletes one or more localization messages based on their identifiers.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Messages deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteMessagesResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: deleteMessages
+  /messages/_upsert:
+    put:
+      tags:
+      - Messages
+      summary: Create or update localization messages
+      description: Creates or updates one or more localization messages. If a message
+        with the same unique identifiers already exists, it will be updated; otherwise,
+        a new one will be created.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        description: Request body to upsert messages
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertMessagesRequest'
+      responses:
+        '200':
+          description: Messages upserted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertMessagesResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: upsertMessages
+  /messages/_missing:
+    post:
+      tags:
+      - Messages
+      summary: Find missing localization codes for a tenant in the given locales
+      description: Finds all message codes that are missing for one or more locales
+        within a tenant. The API first determines the intersection of all keys defined
+        in the tenant (across all locales), and then identifies which of these keys
+        are missing in each specified locale. If the request body is empty, it checks
+        all locales in the tenant; otherwise, it checks only the provided locales.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        description: An optional list of locales to check. If omitted, all locales
+          for the tenant are checked.
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindMissingMessagesRequest'
+      responses:
+        '200':
+          description: A map of locales to their list of missing codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindMissingMessagesResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '404':
+          description: Not Found - Tenant has no messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: findMissingMessages
+  /cache/_bust:
+    delete:
+      tags:
+      - Cache
+      summary: Clear the Redis cache
+      description: Invalidates and clears the entire Redis cache for the search API.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Cache cleared successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheBustResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: bustCache
+security:
+- BearerAuth: []
