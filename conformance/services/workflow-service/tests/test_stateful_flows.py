@@ -1,5 +1,6 @@
 import pytest
 import requests as req_lib
+import uuid
 from tests.helpers.curl_builder import attach_curl
 from tests.helpers.factories import (
     make_process_payload,
@@ -26,6 +27,10 @@ def _cleanup(url, headers):
         pass
 
 
+def _uniq(prefix):
+    return f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+
+
 class TestProcessLifecycle:
     def test_create_read_update_delete_process(self, request, base_url, auth_headers, gateway_headers_spec):
         process_id = None
@@ -33,7 +38,7 @@ class TestProcessLifecycle:
             # 1. CREATE
             r = _send(request.node, "POST", f"{base_url}/process",
                       headers=auth_headers,
-                      json_body=make_process_payload(name="Lifecycle Process", code="LIFECYCLE-001"))
+                      json_body=make_process_payload(name="Lifecycle Process", code=_uniq("LIFECYCLE")))
             assert r.status_code == 201, f"Create failed: {r.text}"
             assert_gateway_headers(r, gateway_headers_spec)
             process_id = r.json()["id"]
@@ -82,7 +87,7 @@ class TestProcessDefinitionBuildFlow:
             # 1. Create process
             r = _send(request.node, "POST", f"{base_url}/process",
                       headers=auth_headers,
-                      json_body=make_process_payload(name="Full Flow Process", code="FULL-FLOW-001"))
+                      json_body=make_process_payload(name="Full Flow Process", code=_uniq("FULL-FLOW")))
             assert r.status_code == 201, f"Process create failed: {r.text}"
             process_id = r.json()["id"]
 
@@ -143,7 +148,7 @@ class TestStateLifecycle:
         process_id = state_id = None
         try:
             r = _send(request.node, "POST", f"{base_url}/process",
-                      headers=auth_headers, json_body=make_process_payload(code="STATE-LC-001"))
+                      headers=auth_headers, json_body=make_process_payload(code=_uniq("STATE-LC")))
             assert r.status_code == 201
             process_id = r.json()["id"]
 
@@ -185,9 +190,10 @@ class TestStateLifecycle:
 class TestActionLifecycle:
     def test_create_read_update_delete_action(self, request, base_url, auth_headers, gateway_headers_spec):
         process_id = state_id = action_id = None
+        next_state_id = None
         try:
             r = _send(request.node, "POST", f"{base_url}/process",
-                      headers=auth_headers, json_body=make_process_payload(code="ACTION-LC-001"))
+                      headers=auth_headers, json_body=make_process_payload(code=_uniq("ACTION-LC")))
             assert r.status_code == 201
             process_id = r.json()["id"]
 
@@ -196,6 +202,12 @@ class TestActionLifecycle:
                       json_body=make_state_payload(code="PENDING", name="Pending"))
             assert r.status_code == 201
             state_id = r.json()["id"]
+
+            r = _send(request.node, "POST", f"{base_url}/process/{process_id}/state",
+                      headers=auth_headers,
+                      json_body=make_state_payload(code="APPROVED", name="Approved"))
+            assert r.status_code == 201
+            next_state_id = r.json()["id"]
 
             # 1. CREATE
             r = _send(request.node, "POST", f"{base_url}/state/{state_id}/action",
@@ -229,18 +241,26 @@ class TestActionLifecycle:
                 _cleanup(f"{base_url}/action/{action_id}", auth_headers)
             if state_id:
                 _cleanup(f"{base_url}/state/{state_id}", auth_headers)
+            if next_state_id:
+                _cleanup(f"{base_url}/state/{next_state_id}", auth_headers)
             if process_id:
                 _cleanup(f"{base_url}/process/{process_id}", auth_headers)
 
 
 class TestEscalationConfigLifecycle:
     def test_create_read_update_delete_escalation(self, request, base_url, auth_headers, gateway_headers_spec):
-        process_id = escalation_id = None
+        process_id = escalation_id = state_id = None
         try:
             r = _send(request.node, "POST", f"{base_url}/process",
-                      headers=auth_headers, json_body=make_process_payload(code="ESC-LC-001"))
+                      headers=auth_headers, json_body=make_process_payload(code=_uniq("ESC-LC")))
             assert r.status_code == 201
             process_id = r.json()["id"]
+
+            r = _send(request.node, "POST", f"{base_url}/process/{process_id}/state",
+                      headers=auth_headers,
+                      json_body=make_state_payload(code="SUBMITTED", name="Submitted", isInitial=True))
+            assert r.status_code == 201
+            state_id = r.json()["id"]
 
             # 1. CREATE
             r = _send(request.node, "POST", f"{base_url}/process/{process_id}/escalation",
@@ -275,6 +295,8 @@ class TestEscalationConfigLifecycle:
         finally:
             if escalation_id:
                 _cleanup(f"{base_url}/escalation/{escalation_id}", auth_headers)
+            if state_id:
+                _cleanup(f"{base_url}/state/{state_id}", auth_headers)
             if process_id:
                 _cleanup(f"{base_url}/process/{process_id}", auth_headers)
 
@@ -285,7 +307,7 @@ class TestTransitionFlow:
         entity_id = "conformance-entity-001"
         try:
             r = _send(request.node, "POST", f"{base_url}/process",
-                      headers=auth_headers, json_body=make_process_payload(code="TRANS-FLOW-001"))
+                      headers=auth_headers, json_body=make_process_payload(code=_uniq("TRANS-FLOW")))
             if r.status_code != 201:
                 pytest.skip("Cannot create process for transition flow test")
             process_id = r.json()["id"]
