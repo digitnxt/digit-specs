@@ -96,7 +96,9 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -107,13 +109,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     post:
       tags:
       - Boundary Entities
@@ -174,7 +180,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - Duplicate boundary code exists.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -185,13 +201,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /boundaries/{id}:
     put:
       tags:
@@ -260,13 +280,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Boundary not found.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -276,95 +300,18 @@ paths:
               description: Seconds to wait before retrying.
           content:
             '*/*':
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error.
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/Error'
-  /shapefile/boundary:
-    post:
-      tags:
-      - Shapefile
-      summary: Create boundaries from shapefile
-      operationId: createBoundariesFromShapefile
-      description: 'Creates boundaries in the system using shapefile data. Takes a
-        list of file store IDs representing uploaded shapefiles along with code field
-        configuration.
-
-        '
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ShapefileBoundaryCreateRequest'
-      responses:
-        '200':
-          description: Boundaries created successfully.
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShapefileBoundaryCreateResponse'
-        '400':
-          description: Invalid request payload.
-          content:
-            application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid authentication token.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /hierarchy:
     post:
       tags:
@@ -417,13 +364,25 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate hierarchy type for tenant.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -434,13 +393,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     get:
       tags:
       - Hierarchy Definition
@@ -497,13 +460,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Missing or invalid authentication token.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -514,13 +481,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /hierarchy/{id}:
     put:
       tags:
@@ -589,13 +560,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Hierarchy not found.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -606,13 +581,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /relationship:
     post:
       tags:
@@ -674,7 +653,25 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found - Referenced hierarchy type or boundary does not exist.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate relationship code for tenant and hierarchy type.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -685,13 +682,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     get:
       tags:
       - Boundary Relationships
@@ -804,7 +805,9 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -815,13 +818,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /relationship/{id}:
     put:
       tags:
@@ -890,13 +897,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Relationship not found.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -907,13 +918,17 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     BearerAuth:
@@ -1090,6 +1105,8 @@ components:
             $ref: '#/components/schemas/HierarchyRelation'
     BoundaryTypeHierarchy:
       type: object
+      required:
+        - boundaryType
       properties:
         id:
           type: string
@@ -1116,6 +1133,9 @@ components:
             $ref: '#/components/schemas/BoundaryHierarchyDefinition'
     BoundaryHierarchyDefinition:
       type: object
+      required:
+        - hierarchyType
+        - boundaryHierarchy
       properties:
         id:
           type: string
@@ -1127,6 +1147,7 @@ components:
           description: Hierarchy type from master data
         boundaryHierarchy:
           type: array
+          minItems: 1
           items:
             $ref: '#/components/schemas/BoundaryTypeHierarchy'
         requestId:
@@ -1160,28 +1181,3 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Boundary'
-    ShapefileBoundaryCreateRequest:
-      type: object
-      required:
-      - fileStoreIds
-      additionalProperties: false
-      properties:
-        fileStoreIds:
-          type: array
-          minItems: 1
-          items:
-            type: string
-          description: List of file store IDs for the shapefile components (.shp,
-            .shx, .dbf, .prj)
-        uniqueCodeField:
-          type: string
-          description: Field name in the shapefile to use as the unique boundary code
-    ShapefileBoundaryCreateResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: Boundaries created successfully
-        count:
-          type: integer
-          example: 10

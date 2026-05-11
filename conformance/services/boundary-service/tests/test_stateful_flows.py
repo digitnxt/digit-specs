@@ -128,10 +128,17 @@ class TestRelationshipCreateAndSearch:
         code = make_boundary_code()
         hierarchy_type = f"ADMIN-{make_boundary_code()}"
 
+        # 1. CREATE HIERARCHY
         _send(request.node, "POST", f"{base_url}/hierarchy",
               headers=auth_headers,
               json_body=make_hierarchy_definition(hierarchy_type=hierarchy_type))
 
+        # 2. CREATE BOUNDARY ENTITY (REQUIRED BEFORE RELATIONSHIP!)
+        _send(request.node, "POST", f"{base_url}/boundaries",
+              headers=auth_headers,
+              json_body=make_boundary_request(codes=[code]))
+
+        # 3. CREATE RELATIONSHIP
         r = _send(request.node, "POST", f"{base_url}/relationship",
                   headers=auth_headers,
                   json_body=make_boundary_relation(code=code, hierarchy_type=hierarchy_type,
@@ -140,6 +147,7 @@ class TestRelationshipCreateAndSearch:
         assert_gateway_headers(r, gateway_headers_spec)
         assert_required_fields(r.json(), ["relationship"])
 
+        # 4. SEARCH RELATIONSHIP
         r = _send(request.node, "GET", f"{base_url}/relationship",
                   headers=auth_headers,
                   params={"hierarchyType": hierarchy_type, "codes": code})
@@ -152,6 +160,7 @@ class TestRelationshipCreateAndSearch:
         parent_code = make_boundary_code()
         child_code  = make_boundary_code()
 
+        # 1. CREATE HIERARCHY
         _send(request.node, "POST", f"{base_url}/hierarchy",
               headers=auth_headers,
               json_body=make_hierarchy_definition(
@@ -162,6 +171,12 @@ class TestRelationshipCreateAndSearch:
                   ],
               ))
 
+        # 2. CREATE BOUNDARY ENTITIES (BOTH PARENT AND CHILD!)
+        _send(request.node, "POST", f"{base_url}/boundaries",
+              headers=auth_headers,
+              json_body=make_boundary_request(codes=[parent_code, child_code]))
+
+        # 3. CREATE PARENT RELATIONSHIP
         r = _send(request.node, "POST", f"{base_url}/relationship",
                   headers=auth_headers,
                   json_body=make_boundary_relation(code=parent_code,
@@ -169,6 +184,7 @@ class TestRelationshipCreateAndSearch:
                                                    boundary_type="DISTRICT"))
         assert r.status_code == 201, f"Parent create failed: {r.text}"
 
+        # 4. CREATE CHILD RELATIONSHIP
         r = _send(request.node, "POST", f"{base_url}/relationship",
                   headers=auth_headers,
                   json_body=make_boundary_relation(code=child_code,
@@ -184,6 +200,17 @@ class TestRelationshipCreateAndSearch:
         code = make_boundary_code()
         hierarchy_type = f"ADMIN-{make_boundary_code()}"
 
+        # 1. CREATE HIERARCHY
+        _send(request.node, "POST", f"{base_url}/hierarchy",
+              headers=auth_headers,
+              json_body=make_hierarchy_definition(hierarchy_type=hierarchy_type))
+
+        # 2. CREATE BOUNDARY ENTITY (REQUIRED BEFORE RELATIONSHIP!)
+        _send(request.node, "POST", f"{base_url}/boundaries",
+              headers=auth_headers,
+              json_body=make_boundary_request(codes=[code]))
+
+        # 3. CREATE RELATIONSHIP
         r = _send(request.node, "POST", f"{base_url}/relationship",
                   headers=auth_headers,
                   json_body=make_boundary_relation(code=code, hierarchy_type=hierarchy_type,
@@ -197,6 +224,7 @@ class TestRelationshipCreateAndSearch:
         if not relationship_id:
             pytest.skip("Service did not return relationship id — cannot test update")
 
+        # 4. UPDATE RELATIONSHIP
         r = _send(request.node, "PUT", f"{base_url}/relationship/{relationship_id}",
                   headers=auth_headers,
                   json_body={"code": code, "hierarchyType": hierarchy_type,

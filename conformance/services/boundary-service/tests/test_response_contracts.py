@@ -209,6 +209,18 @@ class TestRelationshipCreateContract:
     def test_create_relationship_returns_201(self, request, base_url, auth_headers, gateway_headers_spec):
         code = make_boundary_code()
         hierarchy_type = f"ADMIN-{make_boundary_code()}"
+        
+        # 1. CREATE HIERARCHY
+        _send(request.node, "POST", f"{base_url}/hierarchy",
+              headers=auth_headers,
+              json_body=make_hierarchy_definition(hierarchy_type=hierarchy_type))
+        
+        # 2. CREATE BOUNDARY ENTITY (REQUIRED BEFORE RELATIONSHIP!)
+        _send(request.node, "POST", f"{base_url}/boundaries",
+              headers=auth_headers,
+              json_body=make_boundary_request(codes=[code]))
+        
+        # 3. CREATE RELATIONSHIP
         response = _send(request.node, "POST", f"{base_url}/relationship",
                          headers=auth_headers,
                          json_body=make_boundary_relation(code=code,
@@ -227,6 +239,18 @@ class TestRelationshipCreateContract:
     ):
         code = make_boundary_code()
         hierarchy_type = f"ADMIN-{make_boundary_code()}"
+        
+        # 1. CREATE HIERARCHY
+        _send(request.node, "POST", f"{base_url}/hierarchy",
+              headers=auth_headers,
+              json_body=make_hierarchy_definition(hierarchy_type=hierarchy_type))
+        
+        # 2. CREATE BOUNDARY ENTITY (REQUIRED BEFORE RELATIONSHIP!)
+        _send(request.node, "POST", f"{base_url}/boundaries",
+              headers=auth_headers,
+              json_body=make_boundary_request(codes=[code]))
+        
+        # 3. CREATE RELATIONSHIP
         response = _send(request.node, "POST", f"{base_url}/relationship",
                          headers=auth_headers,
                          json_body=make_boundary_relation(code=code,
