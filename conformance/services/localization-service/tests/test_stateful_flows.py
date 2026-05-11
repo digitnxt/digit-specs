@@ -114,7 +114,7 @@ class TestMessageLifecycle:
 
         # First upsert — create
         first_text = f"First upsert text {make_msg_code()}"
-        r = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        r = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                   headers=auth_headers,
                   json_body={"messages": [make_message(module=module, locale="en_IN",
                                                         code=code, message=first_text)]})
@@ -123,7 +123,7 @@ class TestMessageLifecycle:
 
         # Second upsert — update same code
         updated_text = f"Second upsert text {make_msg_code()}"
-        r = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        r = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                   headers=auth_headers,
                   json_body={"messages": [make_message(module=module, locale="en_IN",
                                                         code=code, message=updated_text)]})
@@ -156,7 +156,7 @@ class TestFindMissingFlow:
         assert r.status_code == 201, f"Create failed: {r.text}"
 
         # FIND MISSING in hi_IN — the codes from en_IN should appear as missing
-        r = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        r = _send(request.node, "POST", f"{base_url}/messages/missing",
                   headers=auth_headers,
                   json_body=make_find_missing_request(locales=["hi_IN"]))
         assert r.status_code in (200, 404), f"Unexpected: {r.text}"
@@ -167,7 +167,7 @@ class TestFindMissingFlow:
     def test_find_missing_empty_body_checks_all_locales(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        r = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        r = _send(request.node, "POST", f"{base_url}/messages/missing",
                   headers=auth_headers, json_body={})
         assert r.status_code in (200, 404), f"Unexpected: {r.text}"
         if r.status_code == 200:
@@ -188,16 +188,17 @@ class TestFindMissingFlow:
         assert r.status_code == 201, f"Create failed: {r.text}"
 
         # FIND MISSING — for these two locales, this code should NOT be missing
-        r = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        r = _send(request.node, "POST", f"{base_url}/messages/missing",
                   headers=auth_headers,
                   json_body=make_find_missing_request(locales=locales))
         assert r.status_code in (200, 404)
         if r.status_code == 200:
             body = r.json()
             for locale in locales:
-                missing_codes = body.get(locale, [])
-                assert code not in missing_codes, \
-                    f"Code '{code}' should not be missing in locale '{locale}'"
+                for module_map in body.values():
+                    missing_codes = module_map.get(locale, [])
+                    assert code not in missing_codes, \
+                        f"Code '{code}' should not be missing in locale '{locale}'"
 
 
 class TestCacheBustFlow:
@@ -214,7 +215,7 @@ class TestCacheBustFlow:
         assert r.status_code == 201, f"Create failed: {r.text}"
 
         # BUST CACHE
-        r = _send(request.node, "DELETE", f"{base_url}/cache/_bust",
+        r = _send(request.node, "DELETE", f"{base_url}/cache",
                   headers=auth_headers)
         assert r.status_code == 200, f"Cache bust failed: {r.text}"
         assert_gateway_headers(r, gateway_headers_spec)
@@ -235,7 +236,7 @@ class TestCacheBustFlow:
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
         for _ in range(2):
-            r = _send(request.node, "DELETE", f"{base_url}/cache/_bust",
+            r = _send(request.node, "DELETE", f"{base_url}/cache",
                       headers=auth_headers)
             assert r.status_code == 200, f"Cache bust failed: {r.text}"
             assert r.json()["success"] is True

@@ -58,15 +58,20 @@ def assert_messages_response(body, key="messages"):
 
 
 def assert_find_missing_response(body):
-    """FindMissingMessagesResponse is a map of locale -> list of string codes."""
+    """FindMissingMessagesResponse is a map of module -> locale -> list of string codes."""
     assert isinstance(body, dict), "FindMissingMessagesResponse must be an object"
-    for locale, codes in body.items():
-        assert isinstance(locale, str), f"Locale key must be a string, got {type(locale).__name__}"
-        assert isinstance(codes, list), \
-            f"Missing codes for locale '{locale}' must be a list"
-        for code in codes:
-            assert isinstance(code, str), \
-                f"Each missing code must be a string, got {type(code).__name__}: {code!r}"
+    for module, locale_map in body.items():
+        assert isinstance(module, str), f"Module key must be a string, got {type(module).__name__}"
+        assert isinstance(locale_map, dict), \
+            f"Value for module '{module}' must be an object (locale map), got {type(locale_map).__name__}"
+        for locale, codes in locale_map.items():
+            assert isinstance(locale, str), \
+                f"Locale key under module '{module}' must be a string, got {type(locale).__name__}"
+            assert isinstance(codes, list), \
+                f"Missing codes for module '{module}', locale '{locale}' must be a list"
+            for code in codes:
+                assert isinstance(code, str), \
+                    f"Each missing code must be a string, got {type(code).__name__}: {code!r}"
 
 
 def assert_delete_response(body):

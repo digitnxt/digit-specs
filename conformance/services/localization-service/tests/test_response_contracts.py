@@ -227,7 +227,7 @@ class TestUpsertMessagesContract:
     def test_upsert_returns_200_with_messages(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        response = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                          headers=auth_headers, json_body=make_upsert_request())
         assert response.status_code == 200
         assert_service_response_headers(response)
@@ -239,7 +239,7 @@ class TestUpsertMessagesContract:
     ):
         module = make_module()
         code = make_msg_code()
-        response = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        response = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                          headers=auth_headers,
                          json_body=make_upsert_request(module=module, codes=[code]))
         assert response.status_code == 200
@@ -257,7 +257,7 @@ class TestUpsertMessagesContract:
 
         updated_msg = make_message(module=module, locale="en_IN", code=code,
                                    message="Upsert-updated text")
-        response = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        response = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                          headers=auth_headers, json_body={"messages": [updated_msg]})
         assert response.status_code == 200
         assert_messages_response(response.json())
@@ -267,8 +267,16 @@ class TestDeleteMessagesContract:
     def test_delete_returns_200_with_success_boolean(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
+        create_r = _send(request.node, "POST", f"{base_url}/messages",
+                         headers=auth_headers, json_body=make_create_request())
+        if create_r.status_code != 201:
+            pytest.skip("Create failed — cannot test delete")
+        msg_uuid = create_r.json()["messages"][0].get("uuid")
+        if not msg_uuid:
+            pytest.skip("No uuid returned — cannot test delete")
+
         response = _send(request.node, "DELETE", f"{base_url}/messages",
-                         headers=auth_headers)
+                         headers=auth_headers, params={"uuid": msg_uuid})
         assert response.status_code == 200
         assert_service_response_headers(response)
         assert_gateway_headers(response, gateway_headers_spec)
@@ -277,8 +285,16 @@ class TestDeleteMessagesContract:
     def test_delete_success_field_is_boolean(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
+        create_r = _send(request.node, "POST", f"{base_url}/messages",
+                         headers=auth_headers, json_body=make_create_request())
+        if create_r.status_code != 201:
+            pytest.skip("Create failed — cannot test delete")
+        msg_uuid = create_r.json()["messages"][0].get("uuid")
+        if not msg_uuid:
+            pytest.skip("No uuid returned — cannot test delete")
+
         response = _send(request.node, "DELETE", f"{base_url}/messages",
-                         headers=auth_headers)
+                         headers=auth_headers, params={"uuid": msg_uuid})
         assert response.status_code == 200
         assert isinstance(response.json()["success"], bool)
 
@@ -287,7 +303,7 @@ class TestFindMissingMessagesContract:
     def test_find_missing_returns_200_with_map(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        response = _send(request.node, "POST", f"{base_url}/messages/missing",
                          headers=auth_headers, json_body=make_find_missing_request())
         assert response.status_code in (200, 404)
         assert_gateway_headers(response, gateway_headers_spec)
@@ -298,7 +314,7 @@ class TestFindMissingMessagesContract:
     def test_find_missing_with_specific_locales(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        response = _send(request.node, "POST", f"{base_url}/messages/missing",
                          headers=auth_headers,
                          json_body=make_find_missing_request(locales=["en_IN", "hi_IN"]))
         assert response.status_code in (200, 404)
@@ -306,30 +322,34 @@ class TestFindMissingMessagesContract:
         if response.status_code == 200:
             body = response.json()
             assert_find_missing_response(body)
-            for locale in body.keys():
-                assert locale in ["en_IN", "hi_IN"], \
-                    f"Response locale '{locale}' was not in requested locales"
+            for module, locale_map in body.items():
+                for locale in locale_map.keys():
+                    assert locale in ["en_IN", "hi_IN"], \
+                        f"Response locale '{locale}' in module '{module}' was not in requested locales"
 
     def test_find_missing_response_values_are_string_arrays(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        response = _send(request.node, "POST", f"{base_url}/messages/missing",
                          headers=auth_headers, json_body={})
         if response.status_code != 200:
             pytest.skip("No messages in tenant — 404 expected")
         body = response.json()
-        for locale, codes in body.items():
-            assert isinstance(codes, list)
-            for code in codes:
-                assert isinstance(code, str), \
-                    f"Missing code for locale '{locale}' must be a string"
+        for module, locale_map in body.items():
+            assert isinstance(locale_map, dict), \
+                f"Value for module '{module}' must be an object"
+            for locale, codes in locale_map.items():
+                assert isinstance(codes, list)
+                for code in codes:
+                    assert isinstance(code, str), \
+                        f"Missing code for module '{module}', locale '{locale}' must be a string"
 
 
 class TestCacheBustContract:
     def test_cache_bust_returns_200(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "DELETE", f"{base_url}/cache/_bust",
+        response = _send(request.node, "DELETE", f"{base_url}/cache",
                          headers=auth_headers)
         assert response.status_code == 200
         assert_service_response_headers(response)
@@ -339,7 +359,7 @@ class TestCacheBustContract:
     def test_cache_bust_success_is_true(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "DELETE", f"{base_url}/cache/_bust",
+        response = _send(request.node, "DELETE", f"{base_url}/cache",
                          headers=auth_headers)
         assert response.status_code == 200
         assert response.json().get("success") is True

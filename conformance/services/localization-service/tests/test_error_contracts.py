@@ -130,7 +130,7 @@ class TestUpsertMessagesNegativeContracts:
     def test_upsert_empty_messages_returns_400(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        response = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                          headers=auth_headers, json_body={"messages": []})
         assert response.status_code == 400
         assert_gateway_headers(response, gateway_headers_spec)
@@ -138,7 +138,7 @@ class TestUpsertMessagesNegativeContracts:
     def test_upsert_missing_messages_key_returns_400(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        response = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                          headers=auth_headers, json_body={})
         assert response.status_code == 400
         assert_gateway_headers(response, gateway_headers_spec)
@@ -146,7 +146,7 @@ class TestUpsertMessagesNegativeContracts:
     def test_upsert_missing_auth_returns_401(
         self, request, base_url, gateway_headers_spec
     ):
-        response = _send(request.node, "PUT", f"{base_url}/messages/_upsert",
+        response = _send(request.node, "PUT", f"{base_url}/messages/upsert",
                          json_body=make_upsert_request())
         assert response.status_code == 401
         assert_gateway_headers(response, gateway_headers_spec)
@@ -175,6 +175,14 @@ class TestDeleteMessagesNegativeContracts:
     ):
         response = _send(request.node, "DELETE", f"{base_url}/messages")
         assert response.status_code == 401
+
+    def test_delete_missing_uuid_returns_400(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        response = _send(request.node, "DELETE", f"{base_url}/messages",
+                         headers=auth_headers)
+        assert response.status_code == 400
+        assert_gateway_headers(response, gateway_headers_spec)
         assert_gateway_headers(response, gateway_headers_spec)
 
 
@@ -182,7 +190,7 @@ class TestFindMissingNegativeContracts:
     def test_find_missing_missing_auth_returns_401(
         self, request, base_url, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        response = _send(request.node, "POST", f"{base_url}/messages/missing",
                          json_body={})
         assert response.status_code == 401
         assert_gateway_headers(response, gateway_headers_spec)
@@ -190,7 +198,7 @@ class TestFindMissingNegativeContracts:
     def test_find_missing_invalid_locales_type_returns_400(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/messages/_missing",
+        response = _send(request.node, "POST", f"{base_url}/messages/missing",
                          headers=auth_headers,
                          json_body={"locales": "en_IN"})
         assert response.status_code == 400
@@ -201,7 +209,7 @@ class TestCacheBustNegativeContracts:
     def test_cache_bust_missing_auth_returns_401(
         self, request, base_url, gateway_headers_spec
     ):
-        response = _send(request.node, "DELETE", f"{base_url}/cache/_bust")
+        response = _send(request.node, "DELETE", f"{base_url}/cache")
         assert response.status_code == 401
         assert_gateway_headers(response, gateway_headers_spec)
 
@@ -209,6 +217,6 @@ class TestCacheBustNegativeContracts:
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
         bad = {**auth_headers, "Authorization": "Bearer invalid-token-xyz"}
-        response = _send(request.node, "DELETE", f"{base_url}/cache/_bust", headers=bad)
+        response = _send(request.node, "DELETE", f"{base_url}/cache", headers=bad)
         assert response.status_code == 401
         assert_gateway_headers(response, gateway_headers_spec)
