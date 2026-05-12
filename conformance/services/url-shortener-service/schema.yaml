@@ -46,6 +46,7 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -90,19 +91,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
           description: Conflict. Use PUT to update
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     
     put:
       summary: Update URL config
@@ -117,6 +124,7 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -161,25 +169,33 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Not Found, Use POST to create.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
           description: Conflict — immutable field change attempted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     
     get:
       summary: Get URL configs
@@ -191,6 +207,7 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -224,14 +241,26 @@ paths:
           description: Unauthorized — missing or invalid bearer token.
           content:
             application/json:
+             schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found.
+          content:
+            application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+             schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     
     delete:
       summary: Delete URL config
@@ -245,6 +274,7 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -283,19 +313,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Not Found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ── SHORTEN ────────────────────────────────────────────────────────────────
 
@@ -311,6 +347,7 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -352,7 +389,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too Many Requests — generation rate limit exceeded.
           headers:
@@ -363,13 +402,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ── REDIRECT ──────────────────────────────────────────────────────────────────
 
@@ -386,6 +429,7 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -428,7 +472,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Not Found
           content:
@@ -445,13 +491,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
@@ -474,6 +524,8 @@ components:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
+    UserIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/conformance/v3.0.0/common.yaml#/components/parameters/UserIdHeader'
     TenantIdHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
