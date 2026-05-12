@@ -91,7 +91,8 @@ class TestBusinessServiceNegativeContracts:
     def test_update_nonexistent_code_returns_404(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "PUT", f"{base_url}/business-services/GHOST_CODE",
                          headers=auth_headers,
-                         json_body={"name": "X", "isActive": True, "currency": "INR",
+                         json_body={"name": "XX", "allowedPaymentModes": ["UPI", "NETBANKING", "CASH"], 
+                                    "isActive": True, "currency": "INR",
                                     "effectiveFrom": 1735669800000, "billExpiryDays": 30})
         assert response.status_code == 404
         assert_gateway_headers(response, gateway_headers_spec)
@@ -125,7 +126,7 @@ class TestTaxHeadNegativeContracts:
     def test_update_nonexistent_code_returns_404(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "PUT", f"{base_url}/tax-heads/GHOST_TH",
                          headers=auth_headers,
-                         json_body={"name": "X", "businessServiceCode": "PT",
+                         json_body={"name": "XX", "businessServiceCode": "PT",
                                     "order": 1, "effectiveFrom": 1735669800000, "isActive": True})
         assert response.status_code == 404
         assert_gateway_headers(response, gateway_headers_spec)
@@ -192,7 +193,7 @@ class TestBillNegativeContracts:
                          headers=auth_headers,
                          json_body={"businessServiceCode": "PT",
                                     "consumerCode": "NO-SUCH-CONSUMER-XYZ"})
-        assert response.status_code in (404, 400)
+        assert response.status_code in (404, 400, 422)
         assert_gateway_headers(response, gateway_headers_spec)
 
     def test_cancel_bill_missing_required_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):

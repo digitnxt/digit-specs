@@ -40,6 +40,7 @@ def make_bs_update(code, **overrides):
     base = {
         "name":           "Updated Conformance Service",
         "isActive":       True,
+        "allowedPaymentModes": ["CASH", "ONLINE"],
         "currency":       "INR",
         "effectiveFrom":  _START,
         "billExpiryDays": 60,

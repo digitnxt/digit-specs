@@ -92,7 +92,7 @@ class TestBusinessServiceCreateContract:
 
     def test_get_nonexistent_code_returns_404(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "GET",
-                         f"{base_url}/business-services/DOES-NOT-EXIST-XYZ",
+                         f"{base_url}/business-services/XYZ",
                          headers=auth_headers)
         assert response.status_code == 404
         assert_json_content_type(response)
