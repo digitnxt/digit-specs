@@ -58,7 +58,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UrlConfig'
+              $ref: '#/components/schemas/UrlConfigRequest'
             example:
               shortKeyLength: 4
               maxShortKeyRetries: 10
@@ -136,7 +136,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UrlConfig'
+              $ref: '#/components/schemas/UrlConfigRequest'
             example:
               shortKeyLength: 4
               maxShortKeyRetries: 10
@@ -359,7 +359,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ShortenRequest"
+              $ref: "#/components/schemas/UrlShortenRequest"
       responses:
         "201":
           description: URL shortened successfully
@@ -375,7 +375,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ShortenResponse"
+                $ref: "#/components/schemas/UrlShortenResponse"
         '400':
           description: Bad request.
           content:
@@ -582,7 +582,7 @@ components:
 
     UrlConfig:
       type: object
-      required: [shortKeyLength, ]
+      required: [shortKeyLength]
       properties:
         id:
           type: string
@@ -601,13 +601,32 @@ components:
           description: Maximum count of short key retries
           minimum: 1
           maximum: 50
+          default: 10
           example: 10
-        auditDetails:
+        auditDetail:
           $ref: '#/components/schemas/AuditDetail'
+
+    UrlConfigRequest:
+      type: object
+      required: [shortKeyLength]
+      properties:
+        shortKeyLength:
+          type: integer
+          description: Character length of auto-generated short key
+          minimum: 4
+          maximum: 12
+          example: 4
+        maxShortKeyRetries:
+          type: integer
+          description: Maximum count of short key retries
+          minimum: 1
+          maximum: 50
+          default: 10
+          example: 10
 
     # ── URL Shortener Request / Response Schemas ─────────────────────────────────
 
-    ShortenRequest:
+    UrlShortenRequest:
       type: object
       required: [url]
       properties:
@@ -621,24 +640,53 @@ components:
           type: integer
           format: int64
           minimum: 0
-          default: 0
-          description: Epoch milliseconds — when the short URL becomes valid (0 = immediately)
+          maximum: 9007199254740991
+          description: |
+            Epoch milliseconds (UTC) when the short URL becomes active.
+            Omit to activate immediately. Must be less than validTill if both are provided.
         validTill:
           type: integer
           format: int64
           minimum: 0
-          default: 0
-          description: Epoch milliseconds — when the short URL expires (0 = never)
+          maximum: 9007199254740991
+          description: |
+            Epoch milliseconds (UTC) when the short URL expires.
+            Omit for no expiry. Must be greater than validFrom and greater than the
+            current server time at creation, or the request will be rejected with 400.
 
-    ShortenResponse:
+    UrlShortenResponse:
       type: object
       required: [shortUrl]
       properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier for this shortened URL record.
+          example: "550e8400-e29b-41d4-a716-446655440000"
         shortUrl:
           type: string
           format: uri
           readOnly: true
           description: The full short URL including the configured hostname
           example: http://localhost:8080/aB3x
+        validFrom:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          nullable: true
+          description: |
+            Epoch milliseconds (UTC) when the short URL becomes active.
+            Absent if no activation delay was specified.
+        validTill:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          nullable: true
+          description: |
+            Epoch milliseconds (UTC) when the short URL expires.
+            Absent if no expiry was specified.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
