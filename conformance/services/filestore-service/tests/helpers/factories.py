@@ -22,7 +22,7 @@ def make_document_category(doc_code=None, **overrides):
     """Valid DocumentCategory payload. Required: type, code, allowedFormats, maxSize, isSensitive."""
     code = doc_code or make_doc_code()
     base = {
-        "type": "identity",
+        "type": f"type-{_uid()}",
         "code": code,
         "allowedFormats": ["pdf", "jpg", "png"],
         "maxSize": "5MB",

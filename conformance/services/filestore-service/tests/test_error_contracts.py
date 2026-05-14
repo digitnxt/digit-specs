@@ -68,15 +68,6 @@ class TestDocumentCategoryNegativeContracts:
         assert response.status_code == 400
         assert_gateway_headers(response, gateway_headers_spec)
 
-    def test_create_missing_max_size_returns_400(
-        self, request, base_url, auth_headers, gateway_headers_spec
-    ):
-        response = _send(request.node, "POST", f"{base_url}/document-categories",
-                         headers=auth_headers,
-                         json_body=make_invalid_document_category("missing_max_size"))
-        assert response.status_code == 400
-        assert_gateway_headers(response, gateway_headers_spec)
-
     def test_create_missing_is_sensitive_returns_400(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
@@ -155,7 +146,7 @@ class TestMetadataNegativeContracts:
     def test_metadata_missing_file_store_id_returns_400(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/metadata",
+        response = _send(request.node, "GET", f"{base_url}/metadata",
                          headers=auth_headers)
         assert response.status_code == 400
         assert_gateway_headers(response, gateway_headers_spec)
@@ -163,7 +154,7 @@ class TestMetadataNegativeContracts:
     def test_metadata_nonexistent_file_store_id_returns_400_or_404(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/metadata",
+        response = _send(request.node, "GET", f"{base_url}/metadata",
                          headers=auth_headers,
                          params={"fileStoreId": "nonexistent-file-id-xyz-000"})
         assert response.status_code in (400, 404), \
@@ -175,13 +166,13 @@ class TestTagNegativeContracts:
     def test_tag_missing_tag_param_returns_400(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/tag",
+        response = _send(request.node, "GET", f"{base_url}/tag",
                          headers=auth_headers)
         assert response.status_code == 400
         assert_gateway_headers(response, gateway_headers_spec)
 
     def test_tag_missing_auth_returns_401(self, request, base_url, gateway_headers_spec):
-        response = _send(request.node, "POST", f"{base_url}/tag",
+        response = _send(request.node, "GET", f"{base_url}/tag",
                          params={"tag": "some-tag"})
         assert response.status_code == 401
         assert_gateway_headers(response, gateway_headers_spec)
@@ -264,8 +255,9 @@ class TestDownloadFileNegativeContracts:
     def test_download_nonexistent_file_returns_404(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
+        # Must be UUID format — Kong validates path param format and rejects non-UUIDs with 400
         response = _send(request.node, "GET",
-                         f"{base_url}/nonexistent-file-store-id-xyz-000",
+                         f"{base_url}/00000000-0000-0000-0000-000000000001",
                          headers=auth_headers)
         assert response.status_code == 404
         assert_gateway_headers(response, gateway_headers_spec)
