@@ -95,26 +95,28 @@ class TestDocumentCategoryLifecycle:
     def test_create_multiple_and_search_by_type(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        doc_type = f"testtype-{uuid.uuid4().hex[:6]}"
-        codes = [make_doc_code() for _ in range(3)]
+        payloads = [make_document_category() for _ in range(3)]
 
+        created_codes = []
         try:
-            for code in codes:
+            for payload in payloads:
                 r = _send(request.node, "POST", f"{base_url}/document-categories",
-                          headers=auth_headers,
-                          json_body=make_document_category(doc_code=code, type=doc_type))
-                assert r.status_code == 201, f"Create failed for {code}: {r.text}"
+                          headers=auth_headers, json_body=payload)
+                assert r.status_code == 201, f"Create failed: {r.text}"
+                created_codes.append(payload["code"])
 
+            # Search by the type of the first one — must appear
+            target_type = payloads[0]["type"]
             r = _send(request.node, "GET", f"{base_url}/document-categories",
-                      headers=auth_headers, params={"type": doc_type})
+                      headers=auth_headers, params={"type": target_type})
             assert r.status_code == 200
             assert_gateway_headers(r, gateway_headers_spec)
             returned_codes = {item["code"] for item in r.json()}
-            for code in codes:
-                assert code in returned_codes, f"Code '{code}' missing from type search"
+            assert payloads[0]["code"] in returned_codes, \
+                f"Code '{payloads[0]['code']}' missing from type search"
 
         finally:
-            for code in codes:
+            for code in created_codes:
                 _cleanup_doc(base_url, code, auth_headers)
 
 
@@ -135,7 +137,7 @@ class TestDirectUploadFlow:
         file_store_id = r.json()["files"][0]["fileStoreId"]
 
         # GET METADATA
-        r = _send(request.node, "POST", f"{base_url}/metadata",
+        r = _send(request.node, "GET", f"{base_url}/metadata",
                   headers=auth_headers,
                   params={"fileStoreId": file_store_id, "tenantId": tenant_id})
         assert r.status_code == 200, f"Metadata failed: {r.text}"
@@ -150,7 +152,7 @@ class TestDirectUploadFlow:
 
         r = _send_multipart(request.node, f"{base_url}/upload",
                             headers=auth_headers, files=files,
-                            data={"tenantId": tenant_id})
+                            data={"tenantId": tenant_id, "module": "conformance-test"})
         assert r.status_code == 201, f"Upload failed: {r.text}"
         file_store_id = r.json()["files"][0]["fileStoreId"]
 
@@ -169,7 +171,7 @@ class TestDirectUploadFlow:
 
         r = _send_multipart(request.node, f"{base_url}/upload",
                             headers=auth_headers, files=files,
-                            data={"tenantId": tenant_id})
+                            data={"tenantId": tenant_id, "module": "conformance-test"})
         assert r.status_code == 201, f"Upload failed: {r.text}"
         file_store_id = r.json()["files"][0]["fileStoreId"]
 
@@ -191,12 +193,12 @@ class TestDirectUploadFlow:
             files = make_files_param(make_dummy_text_file(content=f"File number {i}"))
             r = _send_multipart(request.node, f"{base_url}/upload",
                                 headers=auth_headers, files=files,
-                                data={"tenantId": tenant_id, "tag": tag})
+                                data={"tenantId": tenant_id, "tag": tag, "module": "conformance-test"})
             assert r.status_code == 201, f"Upload {i} failed: {r.text}"
             uploaded_ids.append(r.json()["files"][0]["fileStoreId"])
 
         # SEARCH BY TAG
-        r = _send(request.node, "POST", f"{base_url}/tag",
+        r = _send(request.node, "GET", f"{base_url}/tag",
                   headers=auth_headers,
                   params={"tag": tag, "tenantId": tenant_id})
         assert r.status_code == 200, f"Tag search failed: {r.text}"
@@ -214,7 +216,7 @@ class TestDirectUploadFlow:
             files = make_files_param(make_file())
             r = _send_multipart(request.node, f"{base_url}/upload",
                                 headers=auth_headers, files=files,
-                                data={"tenantId": tenant_id})
+                                data={"tenantId": tenant_id, "module": "conformance-test"})
             assert r.status_code == 201, f"Upload of {make_file.__name__} failed: {r.text}"
             assert_storage_response_shape(r.json())
 

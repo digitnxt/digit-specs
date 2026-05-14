@@ -243,7 +243,7 @@ class TestDirectUploadContract:
         files = make_files_param(make_dummy_text_file())
         response = _send_multipart(request.node, f"{base_url}/upload",
                                    headers=auth_headers, files=files,
-                                   data={"tenantId": tenant_id})
+                                   data={"tenantId": tenant_id, "module": "conformance-test"})
         assert response.status_code == 201
         returned_files = response.json()["files"]
         assert len(returned_files) >= 1
@@ -255,7 +255,7 @@ class TestDirectUploadContract:
         files = make_files_param(make_dummy_text_file())
         response = _send_multipart(request.node, f"{base_url}/upload",
                                    headers=auth_headers, files=files,
-                                   data={"tenantId": tenant_id})
+                                   data={"tenantId": tenant_id, "module": "conformance-test"})
         assert response.status_code == 201
         for f in response.json()["files"]:
             if "tenantId" in f:
@@ -269,12 +269,12 @@ class TestMetadataContract:
         files = make_files_param(make_dummy_text_file())
         upload_r = _send_multipart(request.node, f"{base_url}/upload",
                                    headers=auth_headers, files=files,
-                                   data={"tenantId": tenant_id})
+                                   data={"tenantId": tenant_id, "module": "conformance-test"})
         if upload_r.status_code != 201:
             pytest.skip("Upload failed — cannot test metadata")
         file_store_id = upload_r.json()["files"][0]["fileStoreId"]
 
-        response = _send(request.node, "POST", f"{base_url}/metadata",
+        response = _send(request.node, "GET", f"{base_url}/metadata",
                          headers=auth_headers,
                          params={"fileStoreId": file_store_id, "tenantId": tenant_id})
         assert response.status_code == 200
@@ -288,12 +288,12 @@ class TestMetadataContract:
         files = make_files_param(make_dummy_text_file())
         upload_r = _send_multipart(request.node, f"{base_url}/upload",
                                    headers=auth_headers, files=files,
-                                   data={"tenantId": tenant_id})
+                                   data={"tenantId": tenant_id, "module": "conformance-test"})
         if upload_r.status_code != 201:
             pytest.skip("Upload failed")
         file_store_id = upload_r.json()["files"][0]["fileStoreId"]
 
-        response = _send(request.node, "POST", f"{base_url}/metadata",
+        response = _send(request.node, "GET", f"{base_url}/metadata",
                          headers=auth_headers,
                          params={"fileStoreId": file_store_id})
         if response.status_code != 200:
@@ -309,9 +309,9 @@ class TestTagContract:
         files = make_files_param(make_dummy_text_file())
         _send_multipart(request.node, f"{base_url}/upload",
                         headers=auth_headers, files=files,
-                        data={"tenantId": tenant_id, "tag": tag})
+                        data={"tenantId": tenant_id, "tag": tag, "module": "conformance-test"})
 
-        response = _send(request.node, "POST", f"{base_url}/tag",
+        response = _send(request.node, "GET", f"{base_url}/tag",
                          headers=auth_headers,
                          params={"tag": tag, "tenantId": tenant_id})
         assert response.status_code == 200
@@ -328,9 +328,9 @@ class TestTagContract:
         files = make_files_param(make_dummy_text_file())
         _send_multipart(request.node, f"{base_url}/upload",
                         headers=auth_headers, files=files,
-                        data={"tenantId": tenant_id, "tag": tag})
+                        data={"tenantId": tenant_id, "tag": tag, "module": "conformance-test"})
 
-        response = _send(request.node, "POST", f"{base_url}/tag",
+        response = _send(request.node, "GET", f"{base_url}/tag",
                          headers=auth_headers, params={"tag": tag})
         if response.status_code != 200:
             pytest.skip("Tag search returned non-200")
@@ -367,7 +367,7 @@ class TestDownloadUrlsContract:
         files = make_files_param(make_dummy_text_file())
         upload_r = _send_multipart(request.node, f"{base_url}/upload",
                                    headers=auth_headers, files=files,
-                                   data={"tenantId": tenant_id})
+                                   data={"tenantId": tenant_id, "module": "conformance-test"})
         if upload_r.status_code != 201:
             pytest.skip("Upload failed — cannot test download-urls")
         file_store_id = upload_r.json()["files"][0]["fileStoreId"]
@@ -388,7 +388,7 @@ class TestDownloadFileContract:
         files = make_files_param(make_dummy_text_file())
         upload_r = _send_multipart(request.node, f"{base_url}/upload",
                                    headers=auth_headers, files=files,
-                                   data={"tenantId": tenant_id})
+                                   data={"tenantId": tenant_id, "module": "conformance-test"})
         if upload_r.status_code != 201:
             pytest.skip("Upload failed — cannot test download")
         file_store_id = upload_r.json()["files"][0]["fileStoreId"]
@@ -405,7 +405,7 @@ class TestDownloadFileContract:
         files = make_files_param(make_dummy_text_file())
         upload_r = _send_multipart(request.node, f"{base_url}/upload",
                                    headers=auth_headers, files=files,
-                                   data={"tenantId": tenant_id})
+                                   data={"tenantId": tenant_id, "module": "conformance-test"})
         if upload_r.status_code != 201:
             pytest.skip("Upload failed")
         file_store_id = upload_r.json()["files"][0]["fileStoreId"]
