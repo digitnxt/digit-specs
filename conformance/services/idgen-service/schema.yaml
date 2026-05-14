@@ -564,7 +564,7 @@ components:
     UserAgentHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     UserIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/conformance/v3.0.0/common.yaml#/components/parameters/UserIdHeader'
     TenantIdHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
