@@ -44,6 +44,7 @@ components:
       required: true
       schema:
         type: string
+        minLength: 1
       description: Either the UUID of the version row or the stable registryId.
     RegistryIdQuery:
       name: registryId
@@ -51,6 +52,7 @@ components:
       required: true
       schema:
         type: string
+        minLength: 1
       description: Stable registry identifier shared across versions of a record.
     HistoryQuery:
       name: history
@@ -136,6 +138,7 @@ components:
       properties:
         schemaCode:
           type: string
+          minLength: 1
         definition:
           type: object
           additionalProperties: true
@@ -307,10 +310,14 @@ components:
               valid:
                 type: boolean
     ResponseEnvelope:
-      type: object
-      properties:
-        data:
-          description: Payload returned on success; varies by endpoint.
+      oneOf:
+      - type: object
+        properties:
+          data:
+            description: Payload returned on success; varies by endpoint.
+      - type: array
+        items:
+          $ref: '#/components/schemas/Error'
     SchemaResponse:
       allOf:
       - $ref: '#/components/schemas/ResponseEnvelope'
@@ -358,6 +365,7 @@ components:
           description: Field path or column to test (registryId by default).
         value:
           type: string
+          minLength: 1
           description: Value to verify.
       required:
       - value
@@ -465,6 +473,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '409':
+          description: Schema already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
         '401':
           description: Unauthorized
           content:
@@ -538,6 +552,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Schema not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
         '401':
           description: Unauthorized
           content:
@@ -594,7 +614,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SchemaResponse'
         '404':
-          description: Schema not found
+          description: Data not found
           content:
             application/json:
               schema:
@@ -681,6 +701,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Schema not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
         '401':
           description: Unauthorized
           content:
@@ -742,7 +768,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
         '404':
-          description: Schema not found
+          description: Data not found
           content:
             application/json:
               schema:
@@ -838,6 +864,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
         '401':
           description: Unauthorized
           content:
@@ -880,6 +912,7 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
       responses:
         '200':
           description: Registry data
@@ -954,6 +987,7 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
       requestBody:
         required: true
         content:
@@ -1016,6 +1050,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
         '401':
           description: Unauthorized
           content:
@@ -1120,6 +1160,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Schema not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
         '401':
           description: Unauthorized
           content:
@@ -1267,6 +1313,7 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
       responses:
         '200':
           description: Existence flag
@@ -1342,6 +1389,7 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RegistryIdQuery'
       responses:
         '200':
           description: Latest record or history
@@ -1427,6 +1475,7 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
       responses:
         '200':
           description: Verification status

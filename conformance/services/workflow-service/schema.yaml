@@ -548,6 +548,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -876,6 +884,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -963,6 +979,14 @@ paths:
           description: Internal server error
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -2156,6 +2180,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Escalation configuration not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -2669,6 +2701,22 @@ paths:
           description: Internal server error
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
           content:
             application/json:
               schema:
