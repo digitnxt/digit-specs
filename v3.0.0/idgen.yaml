@@ -73,7 +73,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IDGenTemplateResponse'
+                $ref: '#/components/schemas/IDGenTemplate'
         '400':
           description: Bad request.
           content:
@@ -144,7 +144,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IDGenTemplateResponse'
+                $ref: '#/components/schemas/IDGenTemplate'
         '400':
           description: Bad request.
           content:
@@ -224,7 +224,7 @@ paths:
           description: Template version (requires templateCode)
           schema:
             type: string
-            pattern: '^v\d+$'
+            pattern: '^v[1-9][0-9]*$'
         - in: query
           name: limit
           schema: 
@@ -258,7 +258,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/IDGenTemplateResponse'
+                  $ref: '#/components/schemas/IDGenTemplate'
         '400':
           description: Bad request.
           content:
@@ -321,7 +321,7 @@ paths:
           description: Template version to delete
           schema:
             type: string
-            pattern: '^v\d+$'
+            pattern: '^v[1-9][0-9]*$'
       responses:
         '200':
           description: Template deleted successfully
@@ -635,6 +635,7 @@ components:
 
     PaddingConfig:
       type: object
+      nullable: true
       description: |
         Controls left-padding of the {SEQ} token.
         This block is optional — omit it entirely to disable padding.
@@ -730,9 +731,13 @@ components:
             - `{RAND}`: Random string (from configured charset)
             
             **Date Format Keywords (case-insensitive):**
-            - yyyymmdd, ddmmyyyy, yyyy-mm-dd, dd-mm-yyyy
-            - yyyy/mm/dd, dd/mm/yyyy, yyyy.mm.dd, dd.mm.yyyy
-            - mmyyyy, mm-yyyy, yyyy-mm, yyyy, yy
+            - yyyymmdd, ddmmyyyy, mmddyyyy, yyyy-mm-dd, dd-mm-yyyy, mm-dd-yyyy
+            - yymmdd, ddmmyy, mmddyy, yy-mm-dd, dd-mm-yy
+            - yyyy/mm/dd, dd/mm/yyyy, mm/dd/yyyy, yy/mm/dd, dd/mm/yy
+            - yyyy.mm.dd, dd.mm.yyyy, mm.dd.yyyy, yy.mm.dd, dd.mm.yy
+            - mmyyyy, mm-yyyy, mm/yyyy, mm.yyyy
+            - yyyy-mm, yyyy/mm, yyyy.mm
+            - yyyy, yy
           example: "{ORG}-{DATE:yyyymmdd}-{SEQ}-{RAND}"
         sequence:
           $ref: '#/components/schemas/SequenceConfig'
@@ -757,7 +762,7 @@ components:
         config:
           $ref: '#/components/schemas/IDGenTemplateConfig'
     
-    IDGenTemplateResponse:
+    IDGenTemplate:
       type: object
       properties:
         id:
@@ -772,7 +777,7 @@ components:
           example: "receipt-id"
         version:
           type: string
-          pattern: '^v\d+$'
+          pattern: '^v[1-9][0-9]*$'
           readOnly: true
           description: |
             Immutable version of this template configuration.
@@ -780,7 +785,7 @@ components:
           example: "v1"
         config:
           $ref: '#/components/schemas/IDGenTemplateConfig'
-        auditDetails:
+        auditDetail:
           $ref: '#/components/schemas/AuditDetail'
      
     # ── ID Generation Schemas ────────────────────────────────────────────────────────
@@ -814,7 +819,7 @@ components:
           example: "receipt-id"
         version:
           type: string
-          pattern: '^v\d+$'
+          pattern: '^v[1-9][0-9]*$'
           readOnly: true
           description: Latest template version at the time of generation.
           example: "v3"
@@ -863,7 +868,7 @@ components:
           example: "BillNumber"
         version:
           type: string
-          pattern: '^v\d+$'
+          pattern: '^v[1-9][0-9]*$'
           readOnly: true
           description: Latest template version at the time of generation.
           example: "v1"
