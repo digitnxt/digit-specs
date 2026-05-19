@@ -357,7 +357,7 @@ paths:
 
         - If any rule fails validation, the entire operation is rolled back
 
-        - Maximum 100 rules per request
+        - Maximum 500 rules per request
 
 
         **Post-conditions:**
@@ -978,20 +978,46 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-    parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
   /jbac/rules:
     post:
       tags:
       - JBAC Rules
       summary: Create JBAC rule
       operationId: createJbacRule
-      description: Creates a new Job-Based Access Control rule for the tenant
+      description: 'Creates a new Job-Based Access Control rule for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Request body must contain valid rule configuration
+
+
+        **Business Rules:**
+
+        - Rule ID is auto-generated as UUID
+
+        - Path pattern supports static segments, `{param:UUID}` / `{param:ALNUM}` placeholders, and `*` as the last segment only
+
+        - HTTP method values must be one of: GET, POST, PUT, DELETE, PATCH
+
+        - Enforcement must be one of: REQUIRED, OPTIONAL, DISABLED
+
+        - parentImpliesChildren defaults to false if omitted
+
+        - extractJurisdiction is an optional JSON config blob (max 4096 bytes)
+
+
+        **Post-conditions:**
+
+        - Rule is persisted to database
+
+        - Response includes complete rule object with generated ID
+
+        '
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1086,9 +1112,37 @@ paths:
     get:
       tags:
       - JBAC Rules
-      summary: List JBAC rules
+      summary: List JBAC rules with pagination
       operationId: listJbacRules
-      description: Retrieves a paginated list of JBAC rules for the tenant
+      description: 'Retrieves a paginated list of Job-Based Access Control rules
+        for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - Results are filtered by tenant ID from header
+
+        - Disabled rules are NOT a concept here (JBAC has no enabled flag) — use enforcement=DISABLED to deactivate a rule
+
+        - Pagination defaults to limit=50, offset=0 if not specified
+
+        - Maximum page size is 100
+
+
+        **Post-conditions:**
+
+        - Response includes total count of rules matching filter
+
+        - Response includes current page limit and offset
+
+        '
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1233,14 +1287,14 @@ paths:
                 pathPattern: /api/reports
                 methods:
                 - POST
-                enforcement: STRICT
+                enforcement: REQUIRED
                 parentImpliesChildren: true
                 description: Allow managers to create reports
               - name: Analyst Access Rule
                 pathPattern: /api/reports
                 methods:
                 - GET
-                enforcement: PERMISSIVE
+                enforcement: OPTIONAL
                 parentImpliesChildren: false
                 description: Allow analysts to view reports
       responses:
@@ -1324,9 +1378,33 @@ paths:
     delete:
       tags:
       - JBAC Rules
-      summary: Delete all JBAC rules for tenant
+      summary: Delete all JBAC rules for a tenant
       operationId: deleteJbacRulesByTenant
-      description: Deletes all JBAC rules for the tenant
+      description: 'Deletes all JBAC rules for the tenant specified in X-Tenant-ID
+        header.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - This is a destructive operation that removes all rules for the tenant
+
+        - Operation is idempotent (deleting non-existent rules returns success)
+
+
+        **Post-conditions:**
+
+        - All rules for the tenant are removed
+
+        - Response is 204 No Content
+
+        '
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1404,9 +1482,32 @@ paths:
     get:
       tags:
       - JBAC Rules
-      summary: Get JBAC rule
+      summary: Get a single JBAC rule
       operationId: getJbacRule
-      description: Retrieves a specific JBAC rule by ID
+      description: 'Retrieves a specific JBAC rule by ID for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Rule ID must be a valid UUID
+
+
+        **Business Rules:**
+
+        - Rule must belong to the tenant specified in X-Tenant-ID header
+
+        - Deleted rules cannot be retrieved
+
+
+        **Post-conditions:**
+
+        - Response includes complete rule object with all fields
+
+        '
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1611,9 +1712,36 @@ paths:
     delete:
       tags:
       - JBAC Rules
-      summary: Delete JBAC rule
+      summary: Delete a JBAC rule
       operationId: deleteJbacRule
-      description: Deletes a JBAC rule
+      description: 'Deletes a JBAC rule for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Rule ID must be a valid UUID and exist
+
+        - Rule must belong to the tenant specified in X-Tenant-ID header
+
+
+        **Business Rules:**
+
+        - Delete is a hard delete — rule is permanently removed from database
+
+        - Deleted rules do not appear in list or get operations
+
+
+        **Post-conditions:**
+
+        - Rule is removed from database
+
+        - Response is 204 No Content on success
+
+        '
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1700,13 +1828,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-    parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
   /internal/rbac/rules:
     get:
       tags:
@@ -1752,8 +1873,6 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -1836,8 +1955,6 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -1938,8 +2055,6 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -2022,8 +2137,6 @@ paths:
               $ref: '#/components/headers/X-Request-ID'
             X-Correlation-ID:
               $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
             X-Rate-Limit:
               $ref: '#/components/headers/X-Rate-Limit'
             X-Rate-Limit-Remaining:
@@ -2034,6 +2147,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VersionResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -2070,14 +2191,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
     parameters: []
 components:
   securitySchemes:
@@ -2091,7 +2204,15 @@ components:
     UserAgentHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     UserIdHeader:
-      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/conformance/v3.0.0/common.yaml#/components/parameters/UserIdHeader'
+      name: X-User-ID
+      in: header
+      required: false
+      description: Unique identifier assigned to the user making the request.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 64
+        example: 550e8400-e29b-41d4-a716-446655440000
     TenantIdHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:

@@ -130,14 +130,17 @@ def assert_bulk_create_response(body):
 
 
 def assert_version_response(body):
-    """Validate VersionResponse: { version (32-char string), timestamp (int64) }."""
-    assert_required_fields(body, ["version", "timestamp"])
+    """Validate VersionResponse: { version (string, 1-128 chars) }.
+
+    Per the spec, `version` is an opaque token — clients should treat it as
+    a string for equality only, not parse it. The current server returns an
+    MD5 hex digest (32 chars), but the contract only guarantees 1-128.
+    """
+    assert_required_fields(body, ["version"])
     assert isinstance(body["version"], str), \
         f"'version' must be a string, got {type(body['version']).__name__}"
-    assert len(body["version"]) == 32, \
-        f"'version' must be exactly 32 characters, got {len(body['version'])}"
-    assert isinstance(body["timestamp"], int), \
-        f"'timestamp' must be an integer, got {type(body['timestamp']).__name__}"
+    assert 1 <= len(body["version"]) <= 128, \
+        f"'version' length must be 1-128, got {len(body['version'])}"
 
 
 def assert_internal_rbac_response(body):
