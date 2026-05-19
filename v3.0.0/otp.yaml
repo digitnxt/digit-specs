@@ -92,19 +92,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     get:
       summary: Get OTP config for a purpose
       operationId: getOtpConfig
@@ -175,19 +181,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     put:
       summary: Update OTP config for a purpose
       operationId: updateOtpConfig
@@ -262,25 +274,33 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
           description: "Conflict \u2014 immutable field change attempted (e.g., purpose)."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
     delete:
       summary: Delete OTP config for a purpose
       operationId: deleteOtpConfig
@@ -347,13 +367,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /generate:
     post:
       summary: Generate an OTP
@@ -372,10 +396,9 @@ paths:
         **Idempotency:** If an active OTP exists for the same (tenantId, destination,
         purpose)
 
-        and the cooldown window has not elapsed, the existing `referenceId` is returned
-        without
+        and the cooldown window has not elapsed, `429 OTP.ResendTooSoon` is returned.
 
-        generating a new OTP.
+        Use `/resend` to retry after the cooldown elapses.
 
 
         **Pre-conditions:**
@@ -445,7 +468,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OtpGenerateResponse'
         '400':
-          description: "Bad Request \u2014 missing or malformed fields."
+          description: "Bad Request \u2014 missing or malformed fields, config not\
+            \ found for this purpose, or purpose is disabled for this tenant."
           content:
             application/json:
               schema:
@@ -457,23 +481,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: "Forbidden \u2014 purpose is not configured or `isEnabled =\
-            \ false` for this tenant."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '423':
-          description: "Locked \u2014 identifier is in a lockout period. `retryAfter`\
-            \ seconds included."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
-          description: "Too Many Requests \u2014 generation rate limit exceeded."
+          description: "Too Many Requests \u2014 rate limit exceeded or identifier\
+            \ is in a lockout period."
           headers:
             Retry-After:
               schema:
@@ -482,13 +495,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /verify:
     post:
       summary: Verify an OTP
@@ -586,34 +603,52 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: "Not Found \u2014 referenceId does not exist."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '410':
           description: "Gone \u2014 OTP has expired (TTL elapsed, Redis key no longer\
             \ exists)."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '422':
           description: "Unprocessable \u2014 OTP does not match or context binding\
             \ (sessionId) failed."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '423':
           description: "Locked \u2014 OTP locked (maxAttempts reached) or identifier\
             \ in lockout period."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /invalidate:
     post:
       summary: Invalidate an OTP
@@ -681,13 +716,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /resend:
     post:
       summary: Resend an OTP
@@ -706,7 +745,7 @@ paths:
 
         **Cooldown enforcement:** If the last OTP was sent within `cooldownSeconds`,
 
-        the request is rejected with `429 RESEND_COOLDOWN` and a `Retry-After` header.
+        the request is rejected with `429 OTP.ResendTooSoon`.
 
 
         **Rate limiting:** Subject to `maxResendsPerHour` from the resolved purpose
@@ -790,19 +829,30 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: "Not Found \u2014 referenceId does not exist."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '423':
           description: "Locked \u2014 identifier is in an active lockout period."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: "Too Many Requests.\nTwo distinct conditions \u2014 differentiated\
-            \ by the `code` field in the error response:\n- `RESEND_COOLDOWN`: Cooldown\
-            \ window has not elapsed since the last generate or resend.\n- `RATE_LIMIT_EXCEEDED`:\
-            \ `maxResendsPerHour` limit reached for this identifier.\nBoth include\
-            \ a `Retry-After` header.\n"
+            \ by the `code` field:\n- `OTP.ResendTooSoon`: Cooldown window has not\
+            \ elapsed since the last generate or resend.\n- `OTP.MaxResendExceeded`:\
+            \ `maxResendsPerHour` limit reached for this identifier.\n"
           headers:
             Retry-After:
               schema:
@@ -811,26 +861,29 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
               examples:
                 cooldown_active:
                   summary: Cooldown window not elapsed
                   value:
-                    code: RESEND_COOLDOWN
-                    message: Please wait before requesting another OTP.
-                    retryAfter: 45
+                    - code: OTP.ResendTooSoon
+                      message: Please wait before requesting another OTP.
+                      retryAfter: 45
                 rate_limit_exceeded:
                   summary: Hourly resend limit reached
                   value:
-                    code: RATE_LIMIT_EXCEEDED
-                    message: Resend limit reached for this identifier.
-                    retryAfter: 2100
+                    - code: OTP.MaxResendExceeded
+                      message: Resend limit reached for this identifier.
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     BearerAuth:
@@ -860,7 +913,7 @@ components:
 
         For `/generate`: if an active OTP exists within cooldown for the same
 
-        (tenantId, identifier, purpose), the existing referenceId is returned.
+        (tenantId, identifier, purpose), `429 OTP.ResendTooSoon` is returned.
 
         '
       schema:
@@ -896,6 +949,7 @@ components:
       - transaction
       - forgot-password
       - phone-verify
+      - registration
       description: 'The business reason for the OTP.
 
         - **login**: User authentication flow.
@@ -905,6 +959,8 @@ components:
         - **forgot-password**: Password reset flow.
 
         - **phone-verify**: Mobile number ownership verification.
+
+        - **registration**: New user registration verification.
 
         '
     OtpLength:
@@ -973,7 +1029,7 @@ components:
           description: 'Duration (seconds) for which the identifier is locked after
             `maxAttempts` failed attempts.
 
-            During lockout both `/generate` and `/verify` return `423` for this identifier.
+            During lockout `/generate` returns `429 OTP.Locked` and `/resend` returns `423 OTP.Locked`.
 
             '
           example: 900
@@ -1000,18 +1056,16 @@ components:
           type: boolean
           description: 'Whether this purpose is active for this tenant.
 
-            If `false`, `/generate` returns `403 PURPOSE_NOT_CONFIGURED`.
+            If `false`, `/generate` returns `400 Config.Disabled`.
 
             '
           example: true
           default: true
         contextBindingRequired:
           type: boolean
-          description: 'Whether session binding is required for this purpose.
+          description: 'Whether session binding is configured for this purpose.
 
-            If `true`, the `sessionId` must be provided in metadata during generate
-
-            and must match during verify.
+            When `true`, the `sessionId` key in metadata is recorded with the OTP.
 
             '
           example: false
@@ -1039,20 +1093,15 @@ components:
       properties:
         identifier:
           type: string
-          minLength: 5
+          minLength: 1
           maxLength: 512
-          pattern: ^(individual|user|mobile|email):.+$
-          description: "Decentralized / resolvable identifier of the subject requesting\
-            \ the OTP.\nFormat: `{type}:{value}`\n\nSupported types:\n- **individual:{id}**\
-            \ \u2014 Individual registry ID. Notification Service resolves\n  mobile,\
-            \ email, and WhatsApp from the Individual registry.\n  Example: `individual:IND-8a2c4a74-11e5-4c3e-9d9f-f7f4c0b1b9a3`\n\
-            - **user:{id}** \u2014 User registry ID. Notification Service resolves\n\
-            \  contact details from the User registry.\n  Example: `user:USR-a1b2c3d4e5f6`\n\
-            - **mobile:{number}** \u2014 E.164 phone number. Notification Service\
-            \ uses\n  the value directly \u2014 no registry lookup required.\n  Example:\
-            \ `mobile:+919876543210`\n- **email:{address}** \u2014 Email address.\
-            \ Notification Service uses\n  the value directly \u2014 no registry lookup\
-            \ required.\n  Example: `email:user@example.com`\n"
+          description: "Identifier of the subject requesting the OTP.\n\nTwo accepted\
+            \ formats:\n- **Bare value** (auto-detected): pass a plain email address\
+            \ or phone number.\n  `user@example.com` \u2192 treated as email type.\n\
+            \  `+919876543210` \u2192 treated as mobile type.\n- **Prefixed** `{type}:{value}`:\
+            \ explicit type declaration.\n  Supported types: `individual`, `user`,\
+            \ `mobile`, `email`.\n  Examples: `mobile:+919876543210`, `email:user@example.com`,\n\
+            \  `individual:IND-8a2c4a74`, `user:USR-a1b2c3d4`\n"
         purpose:
           $ref: '#/components/schemas/OtpPurpose'
         metadata:
@@ -1132,10 +1181,8 @@ components:
           type: string
           minLength: 1
           maxLength: 128
-          description: 'Required only if `contextBindingRequired = true` for this
-            tenant+purpose.
-
-            Must match the `sessionId` submitted in the `metadata` at generate time.
+          description: 'Passed when `contextBindingRequired = true` for this
+            tenant+purpose. Stored with the OTP for context binding.
 
             '
           example: sess-abc123
