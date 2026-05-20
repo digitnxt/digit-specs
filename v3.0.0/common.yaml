@@ -43,6 +43,16 @@ components:
         minLength: 5
         maxLength: 64
         example: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+    UserIdHeader:
+      name: X-User-ID
+      in: header
+      required: false
+      description: Unique identifier assigned to the user making the request.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 64
+        example: 550e8400-e29b-41d4-a716-446655440000
     TenantIdHeader:
       name: X-Tenant-ID
       in: header
