@@ -898,7 +898,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data:
+  /{schemaCode}/data:
     get:
       tags:
       - Data
@@ -1189,7 +1189,7 @@ paths:
                 $ref: '#/components/schemas/ResponseEnvelope'
       description: Create a registry record for the specified schema.
       operationId: createRegistryData
-  /schema/{schemaCode}/data/{id}:
+  /{schemaCode}/data/{id}:
     delete:
       tags:
       - Data
@@ -1299,7 +1299,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_exists:
+  /{schemaCode}/data/_exists:
     get:
       tags:
       - Data
@@ -1375,7 +1375,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_registry:
+  /{schemaCode}/data/_registry:
     get:
       tags:
       - Data
@@ -1459,7 +1459,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_verify:
+  /{schemaCode}/data/_verify:
     get:
       tags:
       - Data
@@ -1548,7 +1548,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_search:
+  /{schemaCode}/data/_search:
     post:
       tags:
       - Data
