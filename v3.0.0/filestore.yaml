@@ -18,7 +18,7 @@ info:
 
     '
 servers:
-- url: /filestore/v3
+- url: /filestore/v3/files
   description: FileStore API
 security:
 - BearerAuth: []
@@ -30,7 +30,7 @@ tags:
   description: "Operations for managing metadata of document types used across various\
     \ services. \nIncludes creation, update, retrieval, and soft deletion.\n"
 paths:
-  /files/document-categories:
+  /document-categories:
     post:
       summary: Create a new document type
       operationId: createDocumentCategory
@@ -83,6 +83,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict — document category with this type already exists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -112,7 +120,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs POST on /files/document-categories.
+      description: Performs POST on /document-categories.
     get:
       summary: Search document types by filters
       operationId: searchDocumentCategory
@@ -205,9 +213,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs GET on /files/document-categories.
+      description: Performs GET on /document-categories.
     parameters: []
-  /files/document-categories/{docCode}:
+  /document-categories/{docCode}:
     get:
       summary: Get a document type by docCode
       operationId: getDocumentCategoryByCode
@@ -228,6 +236,7 @@ paths:
         description: Unique document code
         schema:
           type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
       responses:
         '200':
           description: Document type found
@@ -297,7 +306,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs GET on /files/document-categories/{docCode}.
+      description: Performs GET on /document-categories/{docCode}.
     put:
       summary: Update a document type
       operationId: updateDocumentCategory
@@ -318,6 +327,7 @@ paths:
         description: Unique document code
         schema:
           type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
       requestBody:
         required: true
         content:
@@ -393,7 +403,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs PUT on /files/document-categories/{docCode}.
+      description: Performs PUT on /document-categories/{docCode}.
     delete:
       summary: Delete or deactivate a document type
       operationId: deleteDocumentCategory
@@ -414,6 +424,7 @@ paths:
         description: Unique document code to delete or deactivate
         schema:
           type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
       responses:
         '200':
           description: Deleted successfully
@@ -487,14 +498,15 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs DELETE on /files/document-categories/{docCode}.
+      description: Performs DELETE on /document-categories/{docCode}.
     parameters:
     - name: docCode
       in: path
       required: true
       schema:
         type: string
-  /files/upload:
+        pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+  /upload:
     post:
       summary: Upload file directly
       operationId: directUpload
@@ -514,25 +526,7 @@ paths:
         content:
           multipart/form-data:
             schema:
-              type: object
-              required:
-              - file
-              properties:
-                file:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-                  description: One or more files to upload
-                module:
-                  type: string
-                  description: Module name for document category validation
-                tag:
-                  type: string
-                  description: Tag to associate with uploaded files
-                requestInfo:
-                  type: string
-                  description: JSON string containing request metadata
+              $ref: '#/components/schemas/UploadFormRequest'
       responses:
         '201':
           description: Files uploaded successfully
@@ -565,6 +559,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -594,10 +596,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: "Performs POST on /files/upload. This endpoint uses a verb-based path (/files/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
+      description: "Performs POST on /upload. This endpoint uses a verb-based path (/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
     parameters: []
-  /files/metadata:
-    post:
+  /metadata:
+    get:
       summary: Get file metadata by fileStoreId
       operationId: getMetadata
       tags:
@@ -617,6 +619,7 @@ paths:
         description: File store identifier
         schema:
           type: string
+          minLength: 1
       responses:
         '200':
           description: File metadata retrieved successfully
@@ -649,6 +652,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -678,10 +689,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs POST on /files/metadata.
+      description: Performs GET on /metadata.
     parameters: []
-  /files/tag:
-    post:
+  /tag:
+    get:
       summary: Get files by tag
       operationId: getFilesByTag
       tags:
@@ -701,6 +712,7 @@ paths:
         description: Tag to filter files
         schema:
           type: string
+          minLength: 1
       responses:
         '200':
           description: Files retrieved by tag successfully
@@ -733,6 +745,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -762,9 +782,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs POST on /files/tag.
+      description: Performs GET on /tag.
     parameters: []
-  /files/upload-url:
+  /upload-url:
     post:
       summary: Generate signed URL for file upload
       operationId: generateUploadUrl
@@ -817,6 +837,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -846,9 +874,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs POST on /files/upload-url.
+      description: Performs POST on /upload-url.
     parameters: []
-  /files/confirm-upload:
+  /confirm-upload:
     post:
       summary: Confirm file upload using fileStoreId
       operationId: confirmUpload
@@ -901,6 +929,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -930,9 +966,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: "Performs POST on /files/confirm-upload. This endpoint uses a verb-based path (/files/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
+      description: "Performs POST on /confirm-upload. This endpoint uses a verb-based path (/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
     parameters: []
-  /files/download-urls:
+  /download-urls:
     get:
       summary: Generate signed download URLs for given fileStoreIds
       operationId: getDownloadUrls
@@ -953,6 +989,7 @@ paths:
         description: Comma-separated list of fileStoreIds
         schema:
           type: string
+          minLength: 1
       responses:
         '200':
           description: Map of fileStoreIds to signed download URLs
@@ -985,6 +1022,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1014,9 +1059,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs GET on /files/download-urls.
+      description: Performs GET on /download-urls.
     parameters: []
-  /files/{fileStoreId}:
+  /{fileStoreId}:
     get:
       summary: Download file by fileStoreId (for direct download only)
       operationId: downloadFile
@@ -1037,6 +1082,7 @@ paths:
         description: Unique identifier of the file to download
         schema:
           type: string
+          format: uuid
       responses:
         '200':
           description: File download stream
@@ -1086,6 +1132,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1115,13 +1169,117 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs GET on /files/{fileStoreId}.
+      description: Performs GET on /{fileStoreId}.
+    delete:
+      summary: Delete file by fileStoreId
+      operationId: deleteFile
+      tags:
+      - FileStore
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: fileStoreId
+        in: path
+        required: true
+        description: Unique identifier of the file to delete
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: File deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden — insufficient permissions to delete this file
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Deletes a file from storage and removes its metadata. This operation is irreversible.
     parameters:
     - name: fileStoreId
       in: path
       required: true
       schema:
         type: string
+        format: uuid
 components:
   securitySchemes:
     BearerAuth:
@@ -1186,6 +1344,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/File'
+    UploadFormRequest:
+      type: object
+      required:
+      - file
+      - module
+      properties:
+        file:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: One or more files to upload
+        module:
+          type: string
+          description: Module name for document category validation
+          minLength: 2
+          maxLength: 64
+        tag:
+          type: string
+          description: Tag to associate with uploaded files
+          minLength: 1
+          maxLength: 128
+        auditDetail:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/AuditDetail'
     UploadRequest:
       type: object
       required:
@@ -1214,6 +1398,10 @@ components:
           description: Tag to associate with the file
           minLength: 1
           maxLength: 128
+        auditDetail:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/AuditDetail'
     UploadResponse:
       type: object
       required:
@@ -1289,7 +1477,6 @@ components:
         contentType:
           type: string
           description: MIME type of the file
-          minLength: 3
           maxLength: 100
         fileSize:
           type: integer
@@ -1335,11 +1522,10 @@ components:
         contentType:
           type: string
           description: MIME type of the file
-          minLength: 3
           maxLength: 100
         url:
           type: string
-          format: uri
+          format: uri-reference
           description: Download URL for the file
         tag:
           type: string
@@ -1352,7 +1538,6 @@ components:
       - type
       - code
       - allowedFormats
-      - maxSize
       - isSensitive
       properties:
         id:
@@ -1379,12 +1564,12 @@ components:
         minSize:
           type: string
           description: Minimum allowed size (e.g., "1MB")
-          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
+          pattern: ^([0-9]+(\.[0-9]+)?(KB|MB|GB))?$
           example: 1MB
         maxSize:
           type: string
           description: Maximum allowed size (e.g., "5MB")
-          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
+          pattern: ^([0-9]+(\.[0-9]+)?(KB|MB|GB))?$
           example: 5MB
         isSensitive:
           type: boolean
@@ -1393,9 +1578,11 @@ components:
           type: string
           description: Optional description
           minLength: 0
-          maxLength: 500
+          maxLength: 256
         isActive:
           type: boolean
           default: true
         auditDetail:
-          $ref: '#/components/schemas/AuditDetail'
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/AuditDetail'
