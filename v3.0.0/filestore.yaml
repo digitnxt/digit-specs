@@ -1,102 +1,176 @@
 openapi: 3.0.3
+
 info:
-  title: File Upload API
+  title: File Store Service API
   version: 3.0.0
-  description: 'API for managing file uploads and downloads using signed URLs, as
-    well as maintaining document type metadata.
+  description: |
+    REST APIs for file upload, download, metadata retrieval, and document
+    category management within the DIGIT platform.
 
+    The module is organised into two layers:
 
-    This API supports:
+    **Layer 1 — File Store**
+    Manages the lifecycle of uploaded files. Two upload paths are supported:
 
-    - Generating signed upload/download URLs
+    | Path | When to use |
+    |---|---|
+    | `POST /files` | Direct upload — multipart/form-data, file bytes sent in the request |
+    | `POST /files/upload-url` → `PUT <presignedUrl>` → `POST /files/confirm-upload` | Signed URL upload — client uploads directly to object storage, then confirms |
 
-    - Confirming uploads
+    After upload, files are referenced across the platform by their
+    `fileStoreId`. Signed download URLs and direct download are both supported.
 
-    - Fetching uploaded files
+    **Layer 2 — Document Categories**
+    Per-tenant metadata that defines allowed document types, permitted file
+    formats, size limits, and sensitivity classification. Consuming services
+    (Individual, Certificate) reference `DocumentCategory.code` to validate
+    uploaded documents.
 
-    - Managing document types (metadata for uploaded files)
+    **Key structural concepts:**
 
-    '
+    | Concept | Details |
+    |---|---|
+    | `fileStoreId` | System-generated unique identifier returned after upload — immutable |
+    | `module` | Logical grouping of files (e.g. `individual`, `certificate`) |
+    | `tag` | Free-text label for grouping related files |
+    | `DocumentCategory.code` | Immutable slug — used in all URIs and cross-service references |
+    | `isSensitive` | Marks files containing PII — governs access and encryption |
+    | Signed URL upload | Three-step: generate URL → upload to storage → confirm |
+
+    The `tenantId` is always resolved from the Bearer token and must not be
+    sent in request bodies or query parameters.
+
 servers:
-- url: /filestore/v3
-  description: FileStore API
+  - url: https://api.example.com/filestore/v3
+    description: Production server
+  - url: https://staging-api.example.com/filestore/v3
+    description: Staging server
+  - url: http://localhost:8080/filestore/v3
+    description: Local development server
+
 security:
-- BearerAuth: []
+  - BearerAuth: []
+
 tags:
-- name: FileStore
-  description: "Operations related to uploading and downloading files using signed\
-    \ or direct endpoints. \nIncludes upload confirmation and download URL generation.\n"
-- name: DocumentCategory
-  description: "Operations for managing metadata of document types used across various\
-    \ services. \nIncludes creation, update, retrieval, and soft deletion.\n"
+  - name: FileStore
+    description: |
+      File upload, download, metadata retrieval, and tag-based search.
+      Supports both direct multipart upload and signed URL upload flows.
+  - name: DocumentCategory
+    description: |
+      Per-tenant document category management.
+      Defines allowed document types, formats, size limits, and PII classification
+      used by consuming services to validate uploaded documents.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+
 paths:
-  /document-categories:
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # LAYER 1 — FILE STORE
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  /files:
+
     post:
-      summary: Create a new document type
-      operationId: createDocumentCategory
-      tags:
-      - DocumentCategory
+      summary: Upload file directly
+      operationId: directUpload
+      tags: [FileStore]
+      description: |
+        Uploads one or more files directly via multipart/form-data.
+        Returns a `fileStoreId` for each uploaded file — use these IDs to
+        reference the files across the platform.
+
+        **Business Rules:**
+        - One or more files may be uploaded in a single request.
+        - `module` is used to validate the file against the tenant's
+          `DocumentCategory` configuration if a matching category exists.
+        - `tenantId` is resolved from the Bearer token — not accepted in
+          the form body.
+        - File size and format are validated against the `DocumentCategory`
+          for the given `module` if configured.
+        - Each uploaded file receives a unique `fileStoreId`.
+
+        **Post-conditions:**
+        - Files are stored in object storage.
+        - `fileStoreId` values are returned for downstream reference.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DocumentCategory'
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: |
+                    One or more file binaries to upload.
+                    Multiple files may be included in a single request.
+                module:
+                  type: string
+                  minLength: 2
+                  maxLength: 64
+                  description: |
+                    Logical module name used to validate the file against the
+                    tenant's `DocumentCategory` configuration.
+                    Examples: `individual`, `certificate`, `grievance`.
+                  example: individual
+                tag:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  description: |
+                    Free-text label to group related files for later retrieval
+                    via `GET /files?tag=...`.
+                  example: aadhaar-upload-2025
       responses:
         '201':
-          description: Document type created
+          description: Files uploaded successfully.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentCategory'
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
+                $ref: '#/components/schemas/StorageResponse'
         '400':
-          description: Bad Request
+          description: Validation error — unsupported format, size exceeded, or missing required field.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized
+          description: Unauthorized — Bearer token missing or invalid.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too many requests.
+          description: Too many requests — rate limit exceeded.
           headers:
             Retry-After:
               schema:
@@ -106,256 +180,638 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs POST on /document-categories.
-    get:
-      summary: Search document types by filters
-      operationId: searchDocumentCategory
-      tags:
-      - DocumentCategory
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - in: query
-        name: type
-        schema:
-          type: string
-        description: Filter by document type
-      - in: query
-        name: docCode
-        schema:
-          type: string
-        description: Filter by document code
-      - in: query
-        name: isSensitive
-        schema:
-          type: boolean
-        description: Filter by sensitivity
-      responses:
-        '200':
-          description: List of document types
+        '500':
+          description: Internal server error.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DocumentCategory'
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Search files by tag
+      operationId: getFilesByTag
+      tags: [FileStore]
+      description: |
+        Returns all files associated with the given `tag` for the calling tenant.
+
+        **Business Rules:**
+        - `tag` is an exact-match filter.
+        - Results are scoped to the tenant resolved from the Bearer token.
+        - An empty result set returns `200` with an empty `files` array —
+          never `404`.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: tag
+          in: query
+          required: true
+          description: Tag to filter files by (exact match).
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          example: aadhaar-upload-2025
+      responses:
+        '200':
+          description: Files returned. Empty `files` array when no files match the tag.
           headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilesByTagResponse'
         '400':
-          description: Bad Request
+          description: Bad request — missing or invalid query parameters.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized
+          description: Unauthorized — Bearer token missing or invalid.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too many requests.
+          description: Too many requests — rate limit exceeded.
           headers:
             Retry-After:
               schema:
                 type: integer
-              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs GET on /document-categories.
-    parameters: []
-  /document-categories/{docCode}:
-    get:
-      summary: Get a document type by docCode
-      operationId: getDocumentCategoryByCode
-      tags:
-      - DocumentCategory
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - name: docCode
-        in: path
-        required: true
-        description: Unique document code
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Document type found
+        '500':
+          description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentCategory'
+                $ref: '#/components/schemas/Error'
+
+  /files/{fileStoreId}:
+
+    get:
+      summary: Download file by fileStoreId
+      operationId: downloadFile
+      tags: [FileStore]
+      description: |
+        Streams the raw file bytes for direct download. Use this for
+        server-to-server or in-browser download flows where a direct byte
+        stream is needed.
+
+        For client-facing downloads, prefer `GET /files/download-urls`
+        which returns short-lived signed URLs that can be served directly
+        from object storage without proxying through this service.
+
+        **Business Rules:**
+        - File must belong to the tenant resolved from the Bearer token.
+        - Response `Content-Type` matches the file's original MIME type.
+        - `Content-Disposition` is set to `attachment; filename=<originalName>`.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/FileStoreIdPath'
+      responses:
+        '200':
+          description: File stream returned.
           headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
+            Content-Disposition:
+              schema:
+                type: string
+              description: '`attachment; filename=<originalFileName>`'
+            Content-Type:
+              schema:
+                type: string
+              description: MIME type of the file (e.g. `application/pdf`, `image/jpeg`).
+            Content-Transfer-Encoding:
+              schema:
+                type: string
+              description: Transfer encoding — typically `binary`.
+            Accept-Ranges:
+              schema:
+                type: string
+              description: Indicates server supports range requests (`bytes`).
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
-          description: Document type not found
+          description: File not found.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests — rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/metadata:
+
+    get:
+      summary: Get file metadata by fileStoreId
+      operationId: getMetadata
+      tags: [FileStore]
+      description: |
+        Returns metadata for a specific file identified by its `fileStoreId`.
+        Does not return the file bytes — use `GET /files/{fileStoreId}` or
+        `GET /files/download-urls` for the actual file content.
+
+        **Business Rules:**
+        - File must belong to the tenant resolved from the Bearer token.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: fileStoreId
+          in: query
+          required: true
+          description: Unique identifier of the file whose metadata is to be retrieved.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 128
+      responses:
+        '200':
+          description: File metadata returned.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadata'
         '400':
-          description: Bad Request
+          description: Bad request — missing or invalid query parameters.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
+        '404':
+          description: File not found.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too many requests.
+          description: Too many requests — rate limit exceeded.
           headers:
             Retry-After:
               schema:
                 type: integer
-              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs GET on /document-categories/{docCode}.
-    put:
-      summary: Update a document type
-      operationId: updateDocumentCategory
-      tags:
-      - DocumentCategory
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/download-urls:
+
+    get:
+      summary: Generate signed download URLs for one or more files
+      operationId: getDownloadUrls
+      tags: [FileStore]
+      description: |
+        Returns short-lived signed download URLs for the given `fileStoreId`
+        values. Clients use these URLs to fetch files directly from object
+        storage without routing through this service.
+
+        **Business Rules:**
+        - All supplied `fileStoreId` values must belong to the tenant resolved
+          from the Bearer token.
+        - Signed URLs expire after the configured TTL (typically 15 minutes).
+        - Up to 50 `fileStoreId` values may be supplied per request.
+        - Any unrecognised `fileStoreId` is silently omitted from the response
+          rather than causing a `404`.
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - name: docCode
-        in: path
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: fileStoreIds
+          in: query
+          required: true
+          description: |
+            Repeatable. One or more `fileStoreId` values to generate download
+            URLs for. Multiple values are OR-ed.
+            Maximum 50 values per request.
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 50
+            items:
+              type: string
+              minLength: 2
+              maxLength: 128
+      responses:
+        '200':
+          description: Signed download URLs returned.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrlsResponse'
+        '400':
+          description: Bad request — missing or invalid query parameters.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests — rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/upload-url:
+
+    post:
+      summary: Generate signed URL for file upload (step 1 of 3)
+      operationId: generateUploadUrl
+      tags: [FileStore]
+      description: |
+        Generates a short-lived presigned URL to which the client uploads the
+        file directly to object storage. This is **step 1** of the three-step
+        signed URL upload flow.
+
+        **Signed URL upload flow:**
+        1. `POST /files/upload-url` — get presigned URL and `fileStoreId`.
+        2. `PUT <presignedUrl>` — client uploads file bytes directly to object
+           storage using the presigned URL (outside this API).
+        3. `POST /files/confirm-upload` — notify the service that the upload
+           is complete so it can validate and register the file.
+
+        **Business Rules:**
+        - `contentType` must be a valid MIME type.
+        - `module` is used to validate the file against the tenant's
+          `DocumentCategory` configuration.
+        - Presigned URL expires after the configured TTL (typically 15 minutes).
+        - The `fileStoreId` returned must be used in `POST /files/confirm-upload`.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
         required: true
-        description: Unique document code
-        schema:
-          type: string
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+            example:
+              fileName: aadhaar-front.jpg
+              contentType: image/jpeg
+              module: individual
+              tag: aadhaar-upload-2025
+      responses:
+        '200':
+          description: Presigned upload URL generated successfully.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests — rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/confirm-upload:
+
+    post:
+      summary: Confirm signed URL upload (step 3 of 3)
+      operationId: confirmUpload
+      tags: [FileStore]
+      description: |
+        Notifies the service that a file has been uploaded via the presigned
+        URL. The service validates the upload and registers the file for
+        platform use. This is **step 3** of the three-step signed URL upload
+        flow.
+
+        **Pre-conditions:**
+        - `POST /files/upload-url` must have been called and the presigned
+          URL used to upload the file to object storage (step 2).
+
+        **Business Rules:**
+        - `fileStoreId` must match one previously returned by
+          `POST /files/upload-url`.
+        - Returns `VALID` if the file exists in object storage and passes
+          format/size validation against the `DocumentCategory` config.
+        - Returns `INVALID` if the file is missing, corrupted, or fails
+          validation — the `fileStoreId` is invalidated and cannot be used.
+        - An `INVALID` response requires restarting the flow from step 1.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmUploadRequest'
+            example:
+              fileStoreId: fs-abc123-def456
+      responses:
+        '200':
+          description: Upload confirmation processed.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmUploadResponse'
+        '400':
+          description: Validation error — missing or invalid `fileStoreId`.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            `fileStoreId` not found — either never issued or already confirmed/invalidated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests — rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # LAYER 2 — DOCUMENT CATEGORIES
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  /document-categories:
+
+    post:
+      summary: Create document category
+      operationId: createDocumentCategory
+      tags: [DocumentCategory]
+      description: |
+        Creates a new document category for the calling tenant.
+
+        **Business Rules:**
+        - `code` is immutable after creation — acts as a slug used in URIs
+          and cross-service references. Returns `409` if `code` already exists
+          for this tenant.
+        - `code` must be uppercase, underscores allowed
+          (e.g. `AADHAAR_CARD`, `DRIVING_LICENSE`).
+        - `allowedFormats` must contain at least one entry.
+        - `maxSize` must be greater than `minSize` if both are supplied.
+        - `tenantId` is resolved from the Bearer token — not accepted in body.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/DocumentCategory'
+            examples:
+              identityDoc:
+                summary: Aadhaar card category
+                value:
+                  type: identity
+                  code: AADHAAR_CARD
+                  allowedFormats: [pdf, jpg, png]
+                  minSize: 10KB
+                  maxSize: 5MB
+                  isSensitive: true
+                  description: Aadhaar card — front and back scan.
+              addressDoc:
+                summary: Utility bill category
+                value:
+                  type: addressProof
+                  code: UTILITY_BILL
+                  allowedFormats: [pdf, jpg]
+                  maxSize: 5MB
+                  isSensitive: false
+                  description: Recent utility bill not older than 3 months.
       responses:
-        '200':
-          description: Updated successfully
+        '201':
+          description: Document category created.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentCategory'
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
         '400':
-          description: Bad Request
+          description: Validation error.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Document type not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: A document category with this `code` already exists for the tenant.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too many requests.
+          description: Too many requests — rate limit exceeded.
           headers:
             Retry-After:
               schema:
@@ -365,47 +821,320 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs PUT on /document-categories/{docCode}.
-    delete:
-      summary: Delete or deactivate a document type
-      operationId: deleteDocumentCategory
-      tags:
-      - DocumentCategory
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Search / list document categories
+      operationId: searchDocumentCategories
+      tags: [DocumentCategory]
+      description: |
+        Returns a paginated list of document categories for the calling tenant,
+        with optional filtering.
+
+        **Business Rules:**
+        - Results are scoped to the tenant resolved from the Bearer token.
+        - `type` and `code` filters are exact-match.
+        - An empty result set returns `200` with an empty `documentCategories`
+          array and `totalCount: 0` — never `404`.
+        - `page` is 1-indexed; default `1`. Default size `20`, maximum `100`.
       parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - name: docCode
-        in: path
-        required: true
-        description: Unique document code to delete or deactivate
-        schema:
-          type: string
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: type
+          in: query
+          required: false
+          description: Filter by document category type (exact match).
+          schema:
+            type: string
+            maxLength: 64
+        - name: code
+          in: query
+          required: false
+          description: Filter by document category code (exact match).
+          schema:
+            type: string
+            maxLength: 64
+        - name: isSensitive
+          in: query
+          required: false
+          description: Filter by sensitivity flag.
+          schema:
+            type: boolean
+        - name: isActive
+          in: query
+          required: false
+          description: Filter by active status. Defaults to returning all.
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          required: false
+          description: Page number — 1-indexed.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          required: false
+          description: Number of records per page (max 100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Deleted successfully
+          description: Document categories returned.
           headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentCategoryListResponse'
+        '400':
+          description: Bad request — invalid query parameters.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests — rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /document-categories/{code}:
+
+    get:
+      summary: Get document category by code
+      operationId: getDocumentCategoryByCode
+      tags: [DocumentCategory]
+      description: |
+        Retrieves a specific document category by its unique `code` for the
+        calling tenant.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/DocumentCategoryCodePath'
+      responses:
+        '200':
+          description: Document category returned.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentCategory'
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Document category not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests — rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update document category
+      operationId: updateDocumentCategory
+      tags: [DocumentCategory]
+      description: |
+        Replaces mutable fields on an existing document category.
+        `code` is immutable — supply it only in the path, never in the body.
+
+        **Business Rules:**
+        - `code` is immutable — returns `409` if supplied in the body and
+          differs from the path value.
+        - `allowedFormats` must contain at least one entry if supplied.
+        - `maxSize` must be greater than `minSize` if both are supplied.
+        - Omitted fields retain their existing values (partial update semantics).
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/DocumentCategoryCodePath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentCategory'
+            example:
+              type: identity
+              allowedFormats: [pdf, jpg, png, heic]
+              maxSize: 10MB
+              isSensitive: true
+              description: Updated — HEIC format now accepted.
+      responses:
+        '200':
+          description: Document category updated.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentCategory'
+        '400':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Document category not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict — immutable `code` field change attempted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests — rate limit exceeded.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete document category (soft delete)
+      operationId: deleteDocumentCategory
+      tags: [DocumentCategory]
+      description: |
+        Soft-deletes a document category by setting `isActive: false`.
+        The category record is retained for audit and historical reference.
+
+        **Business Rules:**
+        - Soft-deleted categories are excluded from search results by default.
+        - Uploading a file against a soft-deleted category returns `403`.
+        - Returns `404` if the category does not exist or is already deleted.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/DocumentCategoryCodePath'
+      responses:
+        '200':
+          description: Document category soft-deleted.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
           content:
             application/json:
               schema:
@@ -414,937 +1143,526 @@ paths:
                   deleted:
                     type: boolean
                     example: true
-        '400':
-          description: Bad Request
+        '401':
+          description: Unauthorized — Bearer token missing or invalid.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/Error'
         '404':
-          description: Document type not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
+          description: Document category not found or already deleted.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Too many requests.
+          description: Too many requests — rate limit exceeded.
           headers:
             Retry-After:
               schema:
                 type: integer
-              description: Seconds to wait before retrying.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Performs DELETE on /document-categories/{docCode}.
-    parameters:
-    - name: docCode
-      in: path
-      required: true
-      schema:
-        type: string
-  /upload:
-    post:
-      summary: Upload file directly
-      operationId: directUpload
-      tags:
-      - FileStore
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-              - file
-              properties:
-                file:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-                  description: One or more files to upload
-                tenantId:
-                  type: string
-                  description: Tenant identifier
-                module:
-                  type: string
-                  description: Module name for document category validation
-                tag:
-                  type: string
-                  description: Tag to associate with uploaded files
-                requestInfo:
-                  type: string
-                  description: JSON string containing request metadata
-      responses:
-        '201':
-          description: Files uploaded successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StorageResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Internal server error.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: "Performs POST on /upload. This endpoint uses a verb-based path (/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
-    parameters: []
-  /metadata:
-    post:
-      summary: Get file metadata by fileStoreId
-      operationId: getMetadata
-      tags:
-      - FileStore
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
-      - name: fileStoreId
-        in: query
-        required: true
-        description: File store identifier
-        schema:
-          type: string
-      responses:
-        '200':
-          description: File metadata retrieved successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FileMetadata'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /metadata.
-    parameters: []
-  /tag:
-    post:
-      summary: Get files by tag
-      operationId: getFilesByTag
-      tags:
-      - FileStore
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
-      - name: tag
-        in: query
-        required: true
-        description: Tag to filter files
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Files retrieved by tag successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FilesByTagResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /tag.
-    parameters: []
-  /upload-url:
-    post:
-      summary: Generate signed URL for file upload
-      operationId: generateUploadUrl
-      tags:
-      - FileStore
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UploadRequest'
-      responses:
-        '200':
-          description: Signed upload URL generated successfully
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UploadResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /upload-url.
-    parameters: []
-  /confirm-upload:
-    post:
-      summary: Confirm file upload using fileStoreId
-      operationId: confirmUpload
-      tags:
-      - FileStore
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConfirmUploadRequest'
-      responses:
-        '200':
-          description: Upload confirmed
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConfirmUploadResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: "Performs POST on /confirm-upload. This endpoint uses a verb-based path (/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
-    parameters: []
-  /download-urls:
-    get:
-      summary: Generate signed download URLs for given fileStoreIds
-      operationId: getDownloadUrls
-      tags:
-      - FileStore
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
-      - name: fileStoreIds
-        in: query
-        required: true
-        description: Comma-separated list of fileStoreIds
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Map of fileStoreIds to signed download URLs
-          headers:
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DownloadUrlsResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /download-urls.
-    parameters: []
-  /{fileStoreId}:
-    get:
-      summary: Download file by fileStoreId (for direct download only)
-      operationId: downloadFile
-      tags:
-      - FileStore
-      parameters:
-      - $ref: '#/components/parameters/RequestIdHeader'
-      - $ref: '#/components/parameters/CorrelationIdHeader'
-      - $ref: '#/components/parameters/UserAgentHeader'
-      - $ref: '#/components/parameters/TenantIdHeader'
-      - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/ClientSecret'
-      - $ref: '#/components/parameters/TimeStamp'
-      - name: fileStoreId
-        in: path
-        required: true
-        description: Unique identifier of the file to download
-        schema:
-          type: string
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
-      responses:
-        '200':
-          description: File download stream
-          headers:
-            Content-Disposition:
-              schema:
-                type: string
-              description: Attachment header with filename
-            Content-Type:
-              schema:
-                type: string
-              description: MIME type of the file
-            Content-Transfer-Encoding:
-              schema:
-                type: string
-              description: Transfer encoding (binary)
-            Accept-Ranges:
-              schema:
-                type: string
-              description: Indicates server supports range requests
-            X-Response-Time:
-              $ref: '#/components/headers/X-Response-Time'
-            X-Response-Timestamp:
-              $ref: '#/components/headers/X-Response-Timestamp'
-            X-Request-ID:
-              $ref: '#/components/headers/X-Request-ID'
-            X-Correlation-ID:
-              $ref: '#/components/headers/X-Correlation-ID'
-            X-Tenant-ID:
-              $ref: '#/components/headers/X-Tenant-ID'
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
-            X-Rate-Limit-Remaining:
-              $ref: '#/components/headers/X-Rate-Limit-Remaining'
-            X-Rate-Limit-Reset:
-              $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            '*/*':
-              schema:
-                type: string
-                format: binary
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Too many requests.
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs GET on /{fileStoreId}.
-    parameters:
-    - name: fileStoreId
-      in: path
-      required: true
-      schema:
-        type: string
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+
 components:
+
   securitySchemes:
     BearerAuth:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
+
   parameters:
     RequestIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
     CorrelationIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
     ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
     ClientSecret:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
     TimeStamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+      description: |
+        Unique key to prevent duplicate operations on retries.
+        Same key within 24 hours returns the original response without
+        re-executing the operation. Scoped per operation.
+    FileStoreIdPath:
+      name: fileStoreId
+      in: path
+      required: true
+      description: System-generated unique identifier of the file.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 128
+    DocumentCategoryCodePath:
+      name: code
+      in: path
+      required: true
+      description: |
+        Immutable unique code identifying the document category within the tenant.
+        Uppercase, underscores allowed. Examples: `AADHAAR_CARD`, `DRIVING_LICENSE`.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 64
+        pattern: '^[A-Z0-9_]+$'
+
   headers:
     X-Response-Time:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
     X-Response-Timestamp:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
     X-Request-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
     X-Correlation-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
     X-Tenant-ID:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
     X-Rate-Limit:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
     X-Rate-Limit-Remaining:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
     X-Rate-Limit-Reset:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
+
   schemas:
+
+    # ── Common refs ──────────────────────────────────────────────────────────────
+
     Error:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
+
     AuditDetail:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
-    File:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
+
+    # ── Layer 1 — File Store schemas ─────────────────────────────────────────────
+
+    FileRecord:
       type: object
+      description: |
+        Minimal file record returned after a successful direct upload.
+        Contains the `fileStoreId` needed to reference the file across the platform.
       properties:
         fileStoreId:
           type: string
-          description: Unique identifier of the uploaded file
           minLength: 2
           maxLength: 128
+          readOnly: true
+          description: |
+            System-generated unique identifier for the uploaded file.
+            Use this value to reference the file in Individual, Certificate,
+            and other service payloads.
+          example: fs-abc123-def456
         tenantId:
           type: string
-          description: Tenant identifier
           minLength: 2
           maxLength: 64
           readOnly: true
+          description: Tenant that owns this file. Populated from the Bearer token.
+
     StorageResponse:
       type: object
+      description: Response returned after a successful direct upload via `POST /files`.
+      required: [files]
       properties:
         files:
           type: array
+          description: |
+            One entry per uploaded file, in the same order as the files
+            submitted in the multipart request.
           items:
-            $ref: '#/components/schemas/File'
-    UploadRequest:
-      type: object
-      required:
-      - fileName
-      - contentType
-      - module
-      - tag
-      properties:
-        fileName:
-          type: string
-          description: Name of the file to upload
-          minLength: 1
-          maxLength: 255
-        contentType:
-          type: string
-          description: MIME type of the file
-          minLength: 3
-          maxLength: 100
-        module:
-          type: string
-          description: Module name for document category validation
-          minLength: 2
-          maxLength: 64
-        tag:
-          type: string
-          description: Tag to associate with the file
-          minLength: 1
-          maxLength: 128
-    UploadResponse:
-      type: object
-      required:
-      - preSignedUrl
-      - fileStoreId
-      properties:
-        preSignedUrl:
-          type: string
-          format: uri
-          description: Presigned URL for uploading the file
-        fileStoreId:
-          type: string
-          description: Unique identifier for the file
-          minLength: 2
-          maxLength: 128
-    ConfirmUploadRequest:
-      type: object
-      required:
-      - fileStoreId
-      properties:
-        fileStoreId:
-          type: string
-          description: Unique identifier of the uploaded file
-          minLength: 2
-          maxLength: 128
-    ConfirmUploadResponse:
-      type: object
-      required:
-      - status
-      properties:
-        status:
-          type: string
-          enum:
-          - VALID
-          - INVALID
-          description: Upload validation status
-          example: VALID
-    DownloadUrlsResponse:
-      type: object
-      properties:
-        fileStoreIds:
-          type: array
-          items:
-            $ref: '#/components/schemas/FileStoreResponse'
-      additionalProperties:
-        type: string
-        description: Map of fileStoreId to download URL
-    FileStoreResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          description: File store identifier
-          minLength: 2
-          maxLength: 128
-        url:
-          type: string
-          format: uri
-          description: Signed download URL
+            $ref: '#/components/schemas/FileRecord'
+
     FileMetadata:
       type: object
+      description: |
+        Full metadata record for an uploaded file. Does not include file bytes —
+        use `GET /files/{fileStoreId}` or `GET /files/download-urls` for content.
       properties:
         fileStoreId:
           type: string
-          description: Unique identifier of the file
           minLength: 2
           maxLength: 128
+          readOnly: true
+          description: Unique identifier of the file.
+          example: fs-abc123-def456
         fileName:
           type: string
-          description: Name of the file
           minLength: 1
           maxLength: 255
+          description: Original file name as submitted at upload time.
+          example: aadhaar-front.jpg
         contentType:
           type: string
-          description: MIME type of the file
           minLength: 3
           maxLength: 100
+          description: MIME type of the file.
+          example: image/jpeg
         fileSize:
           type: integer
           format: int64
-          description: Size of the file in bytes
           minimum: 0
+          description: Size of the file in bytes.
+          example: 204800
         module:
           type: string
-          description: Module associated with the file
           minLength: 2
           maxLength: 64
+          description: Module the file was uploaded under.
+          example: individual
         tag:
           type: string
-          description: Tag associated with the file
           minLength: 1
           maxLength: 128
+          description: Tag associated with the file at upload time.
+          example: aadhaar-upload-2025
         tenantId:
           type: string
-          description: Tenant identifier
           minLength: 2
           maxLength: 64
           readOnly: true
-    FilesByTagResponse:
-      type: object
-      properties:
-        files:
-          type: array
-          items:
-            $ref: '#/components/schemas/FileInfo'
+          description: Tenant that owns this file.
+
     FileInfo:
       type: object
+      description: Summary file record returned in tag-based search results.
       properties:
         fileStoreId:
           type: string
-          description: Unique identifier of the file
           minLength: 2
           maxLength: 128
+          readOnly: true
+          description: Unique identifier of the file.
+          example: fs-abc123-def456
         fileName:
           type: string
-          description: Name of the file
           minLength: 1
           maxLength: 255
+          description: Original file name.
+          example: aadhaar-front.jpg
         contentType:
           type: string
-          description: MIME type of the file
           minLength: 3
           maxLength: 100
+          description: MIME type of the file.
+          example: image/jpeg
+        tag:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Tag associated with this file.
+          example: aadhaar-upload-2025
         url:
           type: string
           format: uri
-          description: Download URL for the file
+          description: |
+            Short-lived signed download URL for this file.
+            Expires after the configured TTL (typically 15 minutes).
+          example: https://storage.example.com/files/fs-abc123-def456?sig=xyz
+
+    FilesByTagResponse:
+      type: object
+      description: |
+        Response for `GET /files?tag=...`. Returns all files matching the tag
+        for the calling tenant.
+      required: [files]
+      properties:
+        files:
+          type: array
+          description: Files matching the supplied tag.
+          items:
+            $ref: '#/components/schemas/FileInfo'
+
+    FileStoreUrlEntry:
+      type: object
+      description: A single fileStoreId-to-signed-URL mapping.
+      required: [fileStoreId, url]
+      properties:
+        fileStoreId:
+          type: string
+          minLength: 2
+          maxLength: 128
+          description: The file identifier.
+          example: fs-abc123-def456
+        url:
+          type: string
+          format: uri
+          description: |
+            Short-lived signed download URL. Expires after the configured TTL
+            (typically 15 minutes).
+          example: https://storage.example.com/files/fs-abc123-def456?sig=xyz
+
+    DownloadUrlsResponse:
+      type: object
+      description: |
+        Response for `GET /files/download-urls`. Returns one signed URL entry
+        per recognised `fileStoreId`. Unrecognised IDs are silently omitted.
+      required: [files]
+      properties:
+        files:
+          type: array
+          description: Signed URL entries for the requested file IDs.
+          items:
+            $ref: '#/components/schemas/FileStoreUrlEntry'
+
+    UploadUrlRequest:
+      type: object
+      description: |
+        Request body for generating a presigned upload URL (step 1 of the
+        signed URL upload flow).
+      required: [fileName, contentType, module]
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Name of the file to be uploaded. Used to set the object key in storage.
+          example: aadhaar-front.jpg
+        contentType:
+          type: string
+          minLength: 3
+          maxLength: 100
+          description: MIME type of the file. Used to set `Content-Type` on the presigned URL.
+          example: image/jpeg
+        module:
+          type: string
+          minLength: 2
+          maxLength: 64
+          description: |
+            Module name used to validate the file against the tenant's
+            `DocumentCategory` configuration.
+          example: individual
         tag:
           type: string
-          description: Tag associated with the file
           minLength: 1
           maxLength: 128
+          description: Free-text label to group related files. Nullable.
+          example: aadhaar-upload-2025
+      x-businessRules:
+        - contentType must be a valid MIME type.
+        - module is used to validate against DocumentCategory if a matching category exists.
+        - Presigned URL expires after the configured TTL (typically 15 minutes).
+
+    UploadUrlResponse:
+      type: object
+      description: |
+        Response for `POST /files/upload-url`. Contains the presigned URL
+        for direct upload to object storage and the `fileStoreId` to use
+        in the confirm step.
+      required: [presignedUrl, fileStoreId]
+      properties:
+        presignedUrl:
+          type: string
+          format: uri
+          description: |
+            Presigned URL to which the client must `PUT` the file bytes
+            directly. Valid for the configured TTL (typically 15 minutes).
+          example: https://storage.example.com/upload/fs-abc123?sig=xyz&exp=1700000000
+        fileStoreId:
+          type: string
+          minLength: 2
+          maxLength: 128
+          description: |
+            Unique identifier pre-assigned to the file. Must be supplied to
+            `POST /files/confirm-upload` after the upload completes.
+          example: fs-abc123-def456
+
+    ConfirmUploadRequest:
+      type: object
+      description: |
+        Request body for `POST /files/confirm-upload` (step 3 of the signed
+        URL upload flow).
+      required: [fileStoreId]
+      properties:
+        fileStoreId:
+          type: string
+          minLength: 2
+          maxLength: 128
+          description: |
+            The `fileStoreId` returned by `POST /files/upload-url`.
+            Identifies the file to be validated and registered.
+          example: fs-abc123-def456
+
+    ConfirmUploadResponse:
+      type: object
+      description: Result of the upload confirmation and validation.
+      required: [fileStoreId, status]
+      properties:
+        fileStoreId:
+          type: string
+          minLength: 2
+          maxLength: 128
+          description: The confirmed file identifier.
+          example: fs-abc123-def456
+        status:
+          type: string
+          enum: [VALID, INVALID]
+          description: |
+            Upload validation result.
+            - **VALID** — file exists in storage and passes all validations.
+              The `fileStoreId` is now active and may be referenced across
+              the platform.
+            - **INVALID** — file is missing, corrupted, or fails format/size
+              validation. The `fileStoreId` is invalidated. Restart the flow
+              from `POST /files/upload-url`.
+          example: VALID
+
+    # ── Layer 2 — Document Category schemas ──────────────────────────────────────
+
     DocumentCategory:
       type: object
-      required:
-      - type
-      - code
-      - allowedFormats
-      - maxSize
-      - isSensitive
+      description: |
+        Defines a class of document accepted by the tenant — its allowed formats,
+        size constraints, and PII sensitivity. Consuming services reference
+        `DocumentCategory.code` to validate uploaded documents.
+
+        `code` is immutable after creation — it acts as a slug used in all URIs
+        and cross-service references.
+      required: [type, code, allowedFormats, maxSize, isSensitive]
       properties:
         id:
           type: string
           format: uuid
-          description: System generated unique identifier of the category for internal
-            referance
           readOnly: true
+          description: System-generated unique identifier for this category record.
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
         type:
           type: string
-          description: High-level category like "identity", "addressProof", etc.
           minLength: 2
           maxLength: 64
+          description: |
+            High-level category grouping for this document type. Free text —
+            no predefined enum, any tenant-defined string is accepted.
+            Examples: `identity`, `addressProof`, `incomeProof`, `education`,
+            `medical`, `property`, `vehicle`, `businessRegistration`.
+          example: identity
         code:
           type: string
-          description: Unique code for document like "AADHAR", "DrivingLicense"
           minLength: 2
           maxLength: 64
+          pattern: '^[A-Z0-9_]+$'
+          description: |
+            Immutable unique code for this document category within the tenant.
+            Uppercase letters, digits, and underscores only.
+            Used in all URIs and cross-service references.
+            Examples: `AADHAAR_CARD`, `DRIVING_LICENSE`, `UTILITY_BILL`.
+          example: AADHAAR_CARD
         allowedFormats:
           type: array
+          minItems: 1
           items:
             type: string
-          description: Allowed file extensions like ["pdf", "jpg", "png"]
+            minLength: 1
+            maxLength: 10
+          description: |
+            File extensions accepted for this document type.
+            Lowercase, without leading dot.
+            Examples: `["pdf", "jpg", "png"]`.
+          example: [pdf, jpg, png]
         minSize:
           type: string
-          description: Minimum allowed size (e.g., "1MB")
-          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
-          example: 1MB
+          pattern: '^\d+(\.\d+)?(KB|MB|GB)$'
+          description: |
+            Minimum allowed file size. Must be less than `maxSize` if supplied.
+            Format: `<number>(KB|MB|GB)`. Examples: `10KB`, `1MB`.
+          example: 10KB
         maxSize:
           type: string
-          description: Maximum allowed size (e.g., "5MB")
-          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
+          pattern: '^\d+(\.\d+)?(KB|MB|GB)$'
+          description: |
+            Maximum allowed file size. Required.
+            Format: `<number>(KB|MB|GB)`. Examples: `5MB`, `10MB`.
           example: 5MB
         isSensitive:
           type: boolean
-          description: Marks if document contains PII or sensitive info
+          description: |
+            Whether documents of this type contain PII or other sensitive
+            information. When `true`, access is restricted to authorised
+            callers and files are subject to encryption-at-rest policies.
+          example: true
         description:
           type: string
-          description: Optional description
           minLength: 0
           maxLength: 500
+          description: Human-readable description of this document category. Nullable.
+          example: Aadhaar card — front and back scan required.
         isActive:
           type: boolean
           default: true
+          description: |
+            Whether this category is active. `false` after a soft-delete.
+            Soft-deleted categories are excluded from search results and
+            reject new file uploads.
+          example: true
+        version:
+          type: integer
+          format: int32
+          readOnly: true
+          description: Optimistic concurrency version. Incremented on every update.
+          example: 1
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
+      x-businessRules:
+        - code is immutable after creation; returns 409 if a change is attempted via PUT.
+        - code must match ^[A-Z0-9_]+$ — uppercase letters, digits, and underscores only.
+        - allowedFormats must contain at least one entry.
+        - maxSize must be greater than minSize if both are supplied.
+        - tenantId is resolved from Bearer token; not accepted in the body.
+        - Soft-deleted categories (isActive false) reject new file uploads with 403.
+
+    DocumentCategoryListResponse:
+      type: object
+      description: Paginated list of document categories for the calling tenant.
+      required: [documentCategories, totalCount, page, size, hasMore]
+      properties:
+        totalCount:
+          type: integer
+          minimum: 0
+          description: Total number of document categories matching the applied filters.
+          example: 12
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number (1-indexed).
+          example: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of records returned in this page.
+          example: 20
+        hasMore:
+          type: boolean
+          description: '`true` if there are additional pages beyond the current one.'
+          example: false
+        documentCategories:
+          type: array
+          description: Document category records matching the applied filters.
+          items:
+            $ref: '#/components/schemas/DocumentCategory'
