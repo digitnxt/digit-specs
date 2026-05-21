@@ -65,6 +65,11 @@ tags:
       Composite CRUD for a complete process definition — process metadata,
       states, and actions authored together in a single payload.
       This is the primary authoring interface for workflow processes.
+  - name: Process
+    description: |
+      Standalone CRUD for process metadata only (name, code, version, SLA).
+      Use these endpoints when creating or managing a process separately from
+      state/action definitions.
   - name: State
     description: |
       Granular management of individual states within a process.
@@ -475,6 +480,296 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /process:
+
+    post:
+      summary: Create a workflow process
+      operationId: createProcess
+      tags: [Process]
+      description: Performs POST on /workflow/v3/process.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, code]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 200 }
+                code: { type: string, minLength: 1, maxLength: 64 }
+                description: { type: string, maxLength: 1000 }
+                version: { type: string, maxLength: 32 }
+                sla: { type: integer, format: int64 }
+      responses:
+        '201':
+          description: Process created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  code: { type: string }
+                  description: { type: string }
+                  version: { type: string }
+                  sla: { type: integer, format: int64 }
+                  auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Process already exists
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+
+    get:
+      summary: Search processes
+      operationId: searchProcesses
+      tags: [Process]
+      description: Performs GET on /workflow/v3/process.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: name
+          in: query
+          required: false
+          schema: { type: string }
+        - name: code
+          in: query
+          required: false
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: List of processes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    name: { type: string }
+                    code: { type: string }
+                    description: { type: string }
+                    version: { type: string }
+                    sla: { type: integer, format: int64 }
+                    auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+
+  /process/id/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Get process by ID
+      operationId: getProcessById
+      tags: [Process]
+      description: Performs GET on /workflow/v3/process/id/{id}.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Process details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  code: { type: string }
+                  description: { type: string }
+                  version: { type: string }
+                  sla: { type: integer, format: int64 }
+                  auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '404':
+          description: Process not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+
+    put:
+      summary: Update process by ID
+      operationId: updateProcessById
+      tags: [Process]
+      description: Performs PUT on /workflow/v3/process/id/{id}.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                code: { type: string }
+                description: { type: string }
+                version: { type: string }
+                sla: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Updated process
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  code: { type: string }
+                  description: { type: string }
+                  version: { type: string }
+                  sla: { type: integer, format: int64 }
+                  auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '404':
+          description: Process not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+
+    delete:
+      summary: Delete process by ID
+      operationId: deleteProcessById
+      tags: [Process]
+      description: Performs DELETE on /workflow/v3/process/id/{id}.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean, example: true }
+        '404':
+          description: Process not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
 
   # ══════════════════════════════════════════════════════════════════════════════
   # LAYER 2 — GRANULAR STATE MANAGEMENT
