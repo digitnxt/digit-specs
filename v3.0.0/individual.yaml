@@ -335,17 +335,20 @@ paths:
         and `{ "exists": false }` if none are — always `200` regardless of
         whether a match is found. The response never contains record data.
 
-        **Accepts the same search filters as `GET /individuals`** — `id`,
+        Accepts the same filter fields as `GET /individuals` — `id`,
         `individualId`, `givenName`, `mobileNumber`, `gender`, `dateOfBirth`,
-        and `includeDeleted`. Pagination parameters (`page`, `size`) are not
-        applicable and are ignored if supplied.
+        and `includeDeleted` — but **scoped to checking a single individual**:
+        `id` and `individualId` accept at most one value each (the array
+        semantics of search do not apply here). Pagination parameters (`page`,
+        `size`) are not applicable and are ignored if supplied.
 
         **Business Rules:**
         - At least one filter parameter must be supplied — an unfiltered
           existence check across all records returns `400`.
-        - Same filter semantics as search apply: `id` and `individualId` are
-          OR-ed when repeated; `mobileNumber` is an exact match;
-          `givenName` is a partial case-insensitive match.
+        - `id` and `individualId` must each appear at most once; passing the
+          same parameter twice returns `400`.
+        - `mobileNumber` is an exact match; `givenName` is a partial
+          case-insensitive match.
         - `includeDeleted: false` (default) — soft-deleted records are excluded
           from the match. Set `true` to include them (requires elevated permissions).
         - The check is non-destructive and produces no audit event.
@@ -359,8 +362,8 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
-        - $ref: '#/components/parameters/IndividualIdFilter'
-        - $ref: '#/components/parameters/IndividualExternalIdFilter'
+        - $ref: '#/components/parameters/IndividualIdExistsFilter'
+        - $ref: '#/components/parameters/IndividualExternalIdExistsFilter'
         - $ref: '#/components/parameters/GivenNameFilter'
         - $ref: '#/components/parameters/MobileNumberFilter'
         - $ref: '#/components/parameters/GenderFilter'
@@ -905,6 +908,31 @@ components:
           type: string
           maxLength: 64
 
+    # Single-valued variants used exclusively by GET /individuals/exists.
+    # Existence check is for a single individual, so id/individualId accept
+    # at most one value each.
+    IndividualIdExistsFilter:
+      name: id
+      in: query
+      required: false
+      description: |
+        System UUID of the individual to check. Not repeatable —
+        passing this parameter more than once returns `400`.
+      schema:
+        type: string
+        format: uuid
+
+    IndividualExternalIdExistsFilter:
+      name: individualId
+      in: query
+      required: false
+      description: |
+        IDGen-generated external ID of the individual to check. Not
+        repeatable — passing this parameter more than once returns `400`.
+      schema:
+        type: string
+        maxLength: 64
+
     GivenNameFilter:
       name: givenName
       in: query
@@ -1082,6 +1110,10 @@ components:
           nullable: true
           description: Accuracy of the latitude/longitude coordinates in metres.
           example: 5.0
+        requestId:
+          type: string
+          maxLength: 128
+          description: The `X-Request-ID` from the request that last wrote this address record.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
@@ -1125,6 +1157,10 @@ components:
             The document's own reference number as printed on the physical
             document. Nullable — not all documents carry a reference number.
           example: DOC-2025-001
+        requestId:
+          type: string
+          maxLength: 128
+          description: The `X-Request-ID` from the request that last wrote this document record.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
@@ -1208,6 +1244,10 @@ components:
             Whether this identifier is currently active.
             Inactive identifiers are retained for audit purposes but excluded
             from uniqueness validation and search matching.
+        requestId:
+          type: string
+          maxLength: 128
+          description: The `X-Request-ID` from the request that last wrote this identifier record.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
@@ -1383,6 +1423,13 @@ components:
             match the server's current value — mismatch returns `409` with
             code `ROW_VERSION_MISMATCH`. Omitting bypasses optimistic locking.
           example: 1
+        requestId:
+          type: string
+          maxLength: 128
+          description: |
+            The `X-Request-ID` value from the request that last wrote this
+            record. Optional — stored for audit traceability.
+          example: req-550e8400-e29b-41d4-a716-446655440000
         address:
           type: array
           maxItems: 16
@@ -1550,5 +1597,9 @@ components:
           readOnly: true
           description: Optimistic concurrency version. Incremented on every update.
           example: 2
+        requestId:
+          type: string
+          maxLength: 128
+          description: The `X-Request-ID` from the request that last wrote this config record.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
