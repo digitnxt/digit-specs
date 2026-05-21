@@ -18,7 +18,7 @@ info:
     **Jurisdictions**
     Geographical area assignments that scope an employee's operational authority.
     Each jurisdiction record binds one employee to one or more boundaries,
-    each identified by a `boundaryCode` and `hierarchyType` (e.g., ward, block,
+    each identified by a `code`, `boundaryType` and `hierarchyType` (e.g., ward, block,
     district). An employee may hold multiple active jurisdiction records concurrently.
 
     **Key structural concepts:**
@@ -29,7 +29,7 @@ info:
     | `userId` | Reference to the platform User record (authentication identity). |
     | `individualId` | Reference to the Individual profile record (demographic data). |
     | `employeeType` | Classification of the employment arrangement (e.g., PERMANENT, CONTRACT, DEPUTATION). |
-    | `boundaries` | Array of `{ boundaryCode, hierarchyType }` objects defining the geographic scope of a jurisdiction. |
+    | `boundaryRelation` | Array of `{ code, boundaryType, hierarchyType }` objects defining the geographic scope of a jurisdiction. |
 
     The `tenantId` is always resolved from the Bearer token and must not be
     sent in request bodies.
@@ -683,11 +683,13 @@ paths:
                 summary: Assign employee to two ward-level boundaries
                 value:
                   employeeId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-                  boundaries:
-                    - boundaryCode: WARD-NBO-001
-                      hierarchyType: WARD
-                    - boundaryCode: WARD-NBO-002
-                      hierarchyType: WARD
+                  boundaryRelation:
+                    - code: WARD-NBO-001
+                      boundaryType: Ward
+                      hierarchyType: ADMIN
+                    - code: WARD-NBO-002
+                      boundaryType: Ward
+                      hierarchyType: ADMIN
                   isActive: true
       responses:
         '201':
@@ -1356,16 +1358,15 @@ components:
       type: object
       description: |
         A single boundary assignment within a jurisdiction, identifying
-        a specific geographical area by its code and its level in the
-        boundary hierarchy.
+        a specific geographical area by its `code` together with the
+        `boundaryType` it represents and the `hierarchyType` it belongs to.
 
-        `boundaryCode` is the tenant-defined identifier from the boundary
-        service. `hierarchyType` describes which level of the administrative
-        hierarchy the boundary belongs to — enabling filtering and display
-        logic at the correct geographical granularity.
-      required: [boundaryCode, hierarchyType]
+        The boundary service validates this triple — the code must exist as
+        the named `boundaryType` inside the given `hierarchyType`, otherwise
+        the jurisdiction is rejected with 400 `VALIDATION_ERROR`.
+      required: [code, boundaryType, hierarchyType]
       properties:
-        boundaryCode:
+        code:
           type: string
           minLength: 1
           maxLength: 128
@@ -1373,15 +1374,23 @@ components:
             Tenant-defined boundary identifier from the boundary service.
             Examples: `WARD-NBO-001`, `BLOCK-KSM-005`, `DISTRICT-MSA-003`.
           example: WARD-NBO-001
+        boundaryType:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |
+            The boundary-type label this code resolves to within the
+            chosen `hierarchyType`. Tenant-configured vocabulary — common
+            values: Ward, Block, District, City, State.
+          example: Ward
         hierarchyType:
           type: string
           minLength: 1
           maxLength: 64
           description: |
-            The level in the administrative boundary hierarchy this code
-            belongs to. Tenant-configured vocabulary.
-            Common values: WARD, BLOCK, DISTRICT, CITY, STATE.
-          example: WARD
+            The administrative boundary hierarchy this code belongs to.
+            Tenant-configured vocabulary — e.g. `ADMIN`, `REVENUE`.
+          example: ADMIN
 
     # ── Jurisdiction schemas ─────────────────────────────────────────────────────
 
@@ -1391,12 +1400,14 @@ components:
         Payload for creating a new jurisdiction assignment that binds an employee
         to one or more geographical boundaries.
 
-        Each entry in `boundaries` pairs a `boundaryCode` (the tenant-defined
-        identifier from the boundary service) with a `hierarchyType` (the level
-        in the boundary hierarchy it belongs to). At least one boundary is required.
+        Each entry in `boundaryRelation` carries a `code` (the tenant-defined
+        identifier from the boundary service), a `boundaryType` (the label
+        the code resolves to inside the chosen hierarchy), and a
+        `hierarchyType` (the hierarchy the code belongs to). At least one
+        boundary is required.
 
         An employee may hold multiple active jurisdiction records concurrently.
-      required: [employeeId, boundaries]
+      required: [employeeId, boundaryRelation]
       properties:
         employeeId:
           type: string
@@ -1405,27 +1416,29 @@ components:
             UUID of the employee this jurisdiction is assigned to.
             Must reference an existing, active employee record within the tenant.
           example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        boundaries:
+        boundaryRelation:
           type: array
           minItems: 1
           items:
             $ref: '#/components/schemas/Boundary'
           description: |
             Array of boundary assignments defining the geographical scope of
-            this jurisdiction. Each entry specifies a boundary code and its
-            position in the hierarchy (e.g., WARD, BLOCK, DISTRICT).
+            this jurisdiction. Each entry carries `code`, `boundaryType`, and
+            `hierarchyType`.
           example:
-            - boundaryCode: WARD-NBO-001
-              hierarchyType: WARD
-            - boundaryCode: WARD-NBO-002
-              hierarchyType: WARD
+            - code: WARD-NBO-001
+              boundaryType: Ward
+              hierarchyType: ADMIN
+            - code: WARD-NBO-002
+              boundaryType: Ward
+              hierarchyType: ADMIN
         isActive:
           type: boolean
           default: true
           description: Whether this jurisdiction assignment is active.
       x-businessRules:
         - employeeId must reference an existing employee within the same tenant.
-        - boundaries must contain at least one entry.
+        - boundaryRelation must contain at least one entry.
         - An employee may hold multiple active jurisdiction records concurrently.
 
     JurisdictionUpdateRequest:
@@ -1434,29 +1447,31 @@ components:
         Full replacement payload for an existing jurisdiction assignment.
         `id`, `employeeId`, and `tenantId` are immutable and ignored if supplied.
 
-        Supply all mutable fields — `boundaries` is fully replaced
+        Supply all mutable fields — `boundaryRelation` is fully replaced
         (not merged) with the submitted array.
       properties:
-        boundaries:
+        boundaryRelation:
           type: array
           minItems: 1
           items:
             $ref: '#/components/schemas/Boundary'
           description: |
             Replacement array of boundary assignments. Fully replaces the
-            existing `boundaries` — supply all entries that should remain.
+            existing `boundaryRelation` — supply all entries that should remain.
           example:
-            - boundaryCode: WARD-NBO-001
-              hierarchyType: WARD
-            - boundaryCode: WARD-NBO-003
-              hierarchyType: WARD
+            - code: WARD-NBO-001
+              boundaryType: Ward
+              hierarchyType: ADMIN
+            - code: WARD-NBO-003
+              boundaryType: Ward
+              hierarchyType: ADMIN
         isActive:
           type: boolean
           description: Active status of the jurisdiction assignment.
       x-businessRules:
         - id, employeeId, and tenantId are immutable — ignored if supplied.
-        - boundaries replaces the existing array entirely (full replace semantics).
-        - boundaries must contain at least one entry if supplied.
+        - boundaryRelation replaces the existing array entirely (full replace semantics).
+        - boundaryRelation must contain at least one entry if supplied.
 
     JurisdictionResponse:
       type: object
@@ -1476,7 +1491,7 @@ components:
           format: uuid
           description: UUID of the employee this jurisdiction is assigned to.
           example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        boundaries:
+        boundaryRelation:
           type: array
           items:
             $ref: '#/components/schemas/Boundary'
@@ -1484,10 +1499,12 @@ components:
             Array of boundary assignments defining the geographical scope
             of this jurisdiction.
           example:
-            - boundaryCode: WARD-NBO-001
-              hierarchyType: WARD
-            - boundaryCode: WARD-NBO-002
-              hierarchyType: WARD
+            - code: WARD-NBO-001
+              boundaryType: Ward
+              hierarchyType: ADMIN
+            - code: WARD-NBO-002
+              boundaryType: Ward
+              hierarchyType: ADMIN
         isActive:
           type: boolean
           description: Whether this jurisdiction assignment is currently active.
