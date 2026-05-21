@@ -607,20 +607,19 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
 
-  /process/id/{id}:
+  /process/code/{processCode}:
     parameters:
-      - name: id
+      - name: processCode
         in: path
         required: true
         schema:
           type: string
-          format: uuid
 
     get:
-      summary: Get process by ID
+      summary: Get process by code
       operationId: getProcessById
       tags: [Process]
-      description: Performs GET on /workflow/v3/process/id/{id}.
+      description: Performs GET on /workflow/v3/process/code/{processCode}.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -662,10 +661,10 @@ paths:
                 items: { $ref: '#/components/schemas/Error' }
 
     put:
-      summary: Update process by ID
+      summary: Update process by code
       operationId: updateProcessById
       tags: [Process]
-      description: Performs PUT on /workflow/v3/process/id/{id}.
+      description: Performs PUT on /workflow/v3/process/code/{processCode}.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -726,10 +725,10 @@ paths:
                 items: { $ref: '#/components/schemas/Error' }
 
     delete:
-      summary: Delete process by ID
+      summary: Delete process by code
       operationId: deleteProcessById
       tags: [Process]
-      description: Performs DELETE on /workflow/v3/process/id/{id}.
+      description: Performs DELETE on /workflow/v3/process/code/{processCode}.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
