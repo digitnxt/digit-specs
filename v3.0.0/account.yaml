@@ -1482,7 +1482,7 @@ components:
         Full tenant account record as returned by the service.
         All `readOnly` fields are server-managed and never accepted in request bodies.
         The password is **never** included in the response regardless of how it was set.
-      required: [id, name, email]
+      required: [id, code, name, email]
       properties:
         id:
           type: string
@@ -1490,6 +1490,19 @@ components:
           readOnly: true
           description: System-generated unique identifier for the tenant.
           example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        code:
+          type: string
+          readOnly: true
+          description: |
+            Natural-key identifier for the tenant, derived from `name` at
+            creation as `ToUpper(ReplaceAll(TrimSpace(name), " ", ""))`.
+            This is the value downstream services use as the tenant
+            identifier (Keycloak realm name, AccessControl scope,
+            pub/sub event keys, `X-Tenant-Id` on subsequent calls).
+            Unique across tenants. Immutable once created — `name`
+            cannot be updated because that would drift `code` away
+            from its source.
+          example: NAIROBICITYCOUNTY
         name:
           type: string
           description: Display name of the tenant organisation.
