@@ -43,8 +43,13 @@ components:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
     ForwardedForHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
-    ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
+    UserId:
+      name: X-User-ID
+      in: header
+      required: false
+      description: The ID of the user making the request.
+      schema:
+        type: string
     ClientSecret:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
     TimeStamp:
@@ -52,28 +57,40 @@ components:
   schemas:
     Message:
       type: object
+      required:
+      - code
+      - module
+      - locale
       properties:
         uuid:
           type: string
+          format: uuid
           description: Unique identifier of the record
         module:
           type: string
           description: Tag associated with the message (used for grouping)
+          minLength: 1
         locale:
           description: The language code for which the message is added
           type: string
+          minLength: 1
         code:
           description: The code of the message
           type: string
+          minLength: 1
         message:
           type: string
           description: The text to display
     UpdateMessage:
       type: object
+      required:
+      - uuid
       properties:
         uuid:
           type: string
+          format: uuid
           description: Unique identifier of the record
+          minLength: 1
         code:
           description: The code of the message
           type: string
@@ -81,20 +98,28 @@ components:
           type: string
     CreateMessagesRequest:
       type: object
+      required:
+      - messages
       properties:
         messages:
           type: array
+          minItems: 1
           items:
             $ref: '#/components/schemas/Message'
     UpsertMessagesRequest:
       type: object
+      required:
+      - messages
       properties:
         messages:
           type: array
+          minItems: 1
           items:
             $ref: '#/components/schemas/Message'
     UpdateMessagesRequest:
       type: object
+      required:
+      - messages
       properties:
         uuid:
           type: string
@@ -106,6 +131,7 @@ components:
           type: string
         messages:
           type: array
+          minItems: 1
           items:
             $ref: '#/components/schemas/UpdateMessage'
     FindMissingMessagesRequest:
@@ -151,16 +177,23 @@ components:
             $ref: '#/components/schemas/Message'
     FindMissingMessagesResponse:
       type: object
+      description: >
+        A map of module name to a map of locale to list of missing message codes.
+        Each top-level key is a module; under it, each key is a locale whose
+        value is the array of codes present in other locales but absent here.
       additionalProperties:
-        type: array
-        items:
-          type: string
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: string
       example:
-        en_IN:
-        - WELCOME_MESSAGE
-        - LOGOUT_BUTTON
-        fr_FR:
-        - WELCOME_MESSAGE
+        common:
+          en_IN:
+          - WELCOME_MESSAGE
+          - LOGOUT_BUTTON
+          hi_IN:
+          - WELCOME_MESSAGE
     CacheBustResponse:
       type: object
       properties:
@@ -191,7 +224,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
@@ -231,13 +264,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -246,7 +283,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       operationId: searchMessages
     post:
       tags:
@@ -259,7 +298,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -284,13 +323,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict — a message with the same tenant/locale/module/code already exists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '201':
           description: Messages created successfully
           content:
@@ -322,7 +373,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       operationId: createMessages
     put:
       tags:
@@ -336,7 +389,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -383,13 +436,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: One or more message UUIDs not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -398,22 +463,44 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       operationId: updateMessages
     delete:
       tags:
       - Messages
       summary: Delete localization messages
-      description: Deletes one or more localization messages based on their identifiers.
+      description: >
+        Deletes one or more localization messages by UUID. At least one `uuid`
+        or `uuids` query parameter must be provided; omitting both returns 400.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: uuid
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the message to delete.
+      - name: uuids
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+        description: UUIDs of multiple messages to delete. At least one of `uuid` or `uuids` is required.
       responses:
         '200':
           description: Messages deleted successfully
@@ -451,13 +538,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -466,9 +557,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       operationId: deleteMessages
-  /messages/_upsert:
+  /messages/upsert:
     put:
       tags:
       - Messages
@@ -482,7 +575,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -529,13 +622,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -544,27 +641,36 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       operationId: upsertMessages
-  /messages/_missing:
+  /messages/missing:
     post:
       tags:
       - Messages
       summary: Find missing localization codes for a tenant in the given locales
-      description: Finds all message codes that are missing for one or more locales
-        within a tenant. The API first determines the intersection of all keys defined
-        in the tenant (across all locales), and then identifies which of these keys
-        are missing in each specified locale. If the request body is empty, it checks
-        all locales in the tenant; otherwise, it checks only the provided locales.
+      description: >
+        Finds all message codes that are missing for one or more locales within a
+        tenant, grouped by module. The response is a map of module → locale →
+        [missing codes]. If the request body is empty all locales are checked;
+        otherwise only the provided locales are checked. An optional `module` query
+        parameter narrows the result to a single module.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: module
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter missing-codes analysis to a specific module.
       requestBody:
         description: An optional list of locales to check. If omitted, all locales
           for the tenant are checked.
@@ -575,7 +681,7 @@ paths:
               $ref: '#/components/schemas/FindMissingMessagesRequest'
       responses:
         '200':
-          description: A map of locales to their list of missing codes.
+          description: A map of module name to locale to list of missing codes.
           content:
             application/json:
               schema:
@@ -602,7 +708,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Validation error
           content:
@@ -616,13 +724,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -631,9 +743,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       operationId: findMissingMessages
-  /cache/_bust:
+  /cache:
     delete:
       tags:
       - Cache
@@ -645,7 +759,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
@@ -677,7 +791,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Validation error
           content:
@@ -691,7 +807,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -700,7 +818,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       operationId: bustCache
 security:
 - BearerAuth: []

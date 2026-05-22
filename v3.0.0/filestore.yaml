@@ -18,7 +18,7 @@ info:
 
     '
 servers:
-- url: /filestore/v3
+- url: /filestore/v3/files
   description: FileStore API
 security:
 - BearerAuth: []
@@ -83,18 +83,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict — document category with this type already exists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -105,7 +117,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs POST on /document-categories.
     get:
       summary: Search document types by filters
@@ -175,13 +189,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -192,7 +210,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs GET on /document-categories.
     parameters: []
   /document-categories/{docCode}:
@@ -216,6 +236,7 @@ paths:
         description: Unique document code
         schema:
           type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
       responses:
         '200':
           description: Document type found
@@ -245,7 +266,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -259,13 +282,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -276,7 +303,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs GET on /document-categories/{docCode}.
     put:
       summary: Update a document type
@@ -298,6 +327,7 @@ paths:
         description: Unique document code
         schema:
           type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
       requestBody:
         required: true
         content:
@@ -341,19 +371,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -364,7 +400,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs PUT on /document-categories/{docCode}.
     delete:
       summary: Delete or deactivate a document type
@@ -386,6 +424,7 @@ paths:
         description: Unique document code to delete or deactivate
         schema:
           type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
       responses:
         '200':
           description: Deleted successfully
@@ -427,19 +466,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -450,7 +495,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs DELETE on /document-categories/{docCode}.
     parameters:
     - name: docCode
@@ -458,6 +505,7 @@ paths:
       required: true
       schema:
         type: string
+        pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
   /upload:
     post:
       summary: Upload file directly
@@ -478,28 +526,7 @@ paths:
         content:
           multipart/form-data:
             schema:
-              type: object
-              required:
-              - file
-              properties:
-                file:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-                  description: One or more files to upload
-                tenantId:
-                  type: string
-                  description: Tenant identifier
-                module:
-                  type: string
-                  description: Module name for document category validation
-                tag:
-                  type: string
-                  description: Tag to associate with uploaded files
-                requestInfo:
-                  type: string
-                  description: JSON string containing request metadata
+              $ref: '#/components/schemas/UploadFormRequest'
       responses:
         '201':
           description: Files uploaded successfully
@@ -532,18 +559,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -554,11 +593,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: "Performs POST on /upload. This endpoint uses a verb-based path (/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
     parameters: []
   /metadata:
-    post:
+    get:
       summary: Get file metadata by fileStoreId
       operationId: getMetadata
       tags:
@@ -572,18 +613,13 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
       - name: fileStoreId
         in: query
         required: true
         description: File store identifier
         schema:
           type: string
+          minLength: 1
       responses:
         '200':
           description: File metadata retrieved successfully
@@ -616,18 +652,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -638,11 +686,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /metadata.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs GET on /metadata.
     parameters: []
   /tag:
-    post:
+    get:
       summary: Get files by tag
       operationId: getFilesByTag
       tags:
@@ -656,18 +706,13 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
       - name: tag
         in: query
         required: true
         description: Tag to filter files
         schema:
           type: string
+          minLength: 1
       responses:
         '200':
           description: Files retrieved by tag successfully
@@ -700,18 +745,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -722,8 +779,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-      description: Performs POST on /tag.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Performs GET on /tag.
     parameters: []
   /upload-url:
     post:
@@ -778,18 +837,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -800,7 +871,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs POST on /upload-url.
     parameters: []
   /confirm-upload:
@@ -856,18 +929,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -878,7 +963,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: "Performs POST on /confirm-upload. This endpoint uses a verb-based path (/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
     parameters: []
   /download-urls:
@@ -896,18 +983,13 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
       - name: fileStoreIds
         in: query
         required: true
         description: Comma-separated list of fileStoreIds
         schema:
           type: string
+          minLength: 1
       responses:
         '200':
           description: Map of fileStoreIds to signed download URLs
@@ -940,18 +1022,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -962,7 +1056,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs GET on /download-urls.
     parameters: []
   /{fileStoreId}:
@@ -986,12 +1082,7 @@ paths:
         description: Unique identifier of the file to download
         schema:
           type: string
-      - name: tenantId
-        in: query
-        required: false
-        description: Tenant identifier
-        schema:
-          type: string
+          format: uuid
       responses:
         '200':
           description: File download stream
@@ -1041,18 +1132,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -1063,14 +1166,120 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
       description: Performs GET on /{fileStoreId}.
+    delete:
+      summary: Delete file by fileStoreId
+      operationId: deleteFile
+      tags:
+      - FileStore
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: fileStoreId
+        in: path
+        required: true
+        description: Unique identifier of the file to delete
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: File deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden — insufficient permissions to delete this file
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: Deletes a file from storage and removes its metadata. This operation is irreversible.
     parameters:
     - name: fileStoreId
       in: path
       required: true
       schema:
         type: string
+        format: uuid
 components:
   securitySchemes:
     BearerAuth:
@@ -1135,6 +1344,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/File'
+    UploadFormRequest:
+      type: object
+      required:
+      - file
+      - module
+      properties:
+        file:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: One or more files to upload
+        module:
+          type: string
+          description: Module name for document category validation
+          minLength: 2
+          maxLength: 64
+        tag:
+          type: string
+          description: Tag to associate with uploaded files
+          minLength: 1
+          maxLength: 128
+        auditDetail:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/AuditDetail'
     UploadRequest:
       type: object
       required:
@@ -1163,6 +1398,10 @@ components:
           description: Tag to associate with the file
           minLength: 1
           maxLength: 128
+        auditDetail:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/AuditDetail'
     UploadResponse:
       type: object
       required:
@@ -1238,7 +1477,6 @@ components:
         contentType:
           type: string
           description: MIME type of the file
-          minLength: 3
           maxLength: 100
         fileSize:
           type: integer
@@ -1284,11 +1522,10 @@ components:
         contentType:
           type: string
           description: MIME type of the file
-          minLength: 3
           maxLength: 100
         url:
           type: string
-          format: uri
+          format: uri-reference
           description: Download URL for the file
         tag:
           type: string
@@ -1301,7 +1538,6 @@ components:
       - type
       - code
       - allowedFormats
-      - maxSize
       - isSensitive
       properties:
         id:
@@ -1328,12 +1564,12 @@ components:
         minSize:
           type: string
           description: Minimum allowed size (e.g., "1MB")
-          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
+          pattern: ^([0-9]+(\.[0-9]+)?(KB|MB|GB))?$
           example: 1MB
         maxSize:
           type: string
           description: Maximum allowed size (e.g., "5MB")
-          pattern: ^\d+(\.\d+)?(KB|MB|GB)$
+          pattern: ^([0-9]+(\.[0-9]+)?(KB|MB|GB))?$
           example: 5MB
         isSensitive:
           type: boolean
@@ -1342,9 +1578,11 @@ components:
           type: string
           description: Optional description
           minLength: 0
-          maxLength: 500
+          maxLength: 256
         isActive:
           type: boolean
           default: true
         auditDetail:
-          $ref: '#/components/schemas/AuditDetail'
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/AuditDetail'
