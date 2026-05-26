@@ -5,6 +5,7 @@ from tests.helpers.curl_builder import attach_curl
 from tests.helpers.validators import (
     assert_gateway_headers,
     assert_service_response_headers,
+    assert_json_content_type,
     assert_required_fields,
     assert_field_types,
     assert_shorten_response_shape,
@@ -43,6 +44,7 @@ class TestShortenContract:
                          headers=auth_headers, json_body=make_shorten_request())
         assert response.status_code == 201
         assert_service_response_headers(response)
+        assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
         assert_shorten_response_shape(response.json())
 
@@ -200,6 +202,7 @@ class TestConfigContract:
             assert response.status_code == 201, \
                 f"POST /v3/config expected 201, got {response.status_code}: {response.text}"
             assert_service_response_headers(response)
+            assert_json_content_type(response)
             assert_gateway_headers(response, gateway_headers_spec)
             assert_url_config_shape(response.json())
         finally:
@@ -230,6 +233,7 @@ class TestConfigContract:
             assert response.status_code == 200, \
                 f"GET /v3/config expected 200, got {response.status_code}: {response.text}"
             assert_service_response_headers(response)
+            assert_json_content_type(response)
             assert_gateway_headers(response, gateway_headers_spec)
             assert_url_config_shape(response.json())
         finally:
@@ -247,6 +251,7 @@ class TestConfigContract:
             assert response.status_code == 200, \
                 f"PUT /v3/config expected 200, got {response.status_code}: {response.text}"
             assert_service_response_headers(response)
+            assert_json_content_type(response)
             assert_gateway_headers(response, gateway_headers_spec)
             assert_url_config_shape(response.json())
             assert response.json()["shortKeyLength"] == 6, \
@@ -264,6 +269,7 @@ class TestConfigContract:
         assert response.status_code == 200, \
             f"DELETE /v3/config expected 200, got {response.status_code}: {response.text}"
         assert_service_response_headers(response)
+        assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
         assert_delete_config_shape(response.json())
 

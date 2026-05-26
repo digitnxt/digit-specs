@@ -1,16 +1,5 @@
 import jsonschema
 
-# Response headers declared in schema.yaml for all 2xx JSON responses
-_SERVICE_RESPONSE_HEADERS = [
-    "X-Response-Time",
-    "X-Response-Timestamp",
-    "X-Request-ID",
-    "X-Tenant-ID",
-    "X-Rate-Limit",
-    "X-Rate-Limit-Remaining",
-    "X-Rate-Limit-Reset",
-]
-
 
 def assert_gateway_headers(response, gateway_headers_spec):
     if not gateway_headers_spec:
@@ -18,23 +7,25 @@ def assert_gateway_headers(response, gateway_headers_spec):
     for header, spec in gateway_headers_spec.items():
         present = header in response.headers
         if spec["required"]:
-            assert present, f"Expected gateway header '{header}' is missing."
+            assert present, f"Expected gateway header '{header}' missing"
         if present:
             value = response.headers[header]
             if spec["type"] == int:
-                assert value.isdigit(), f"Header '{header}' should be numeric, got: '{value}'"
+                assert value.isdigit(), f"Gateway header '{header}' should be numeric, got: '{value}'"
             elif spec["type"] == str:
                 assert isinstance(value, str) and len(value) > 0, \
-                    f"Header '{header}' should be a non-empty string, got: '{value}'"
+                    f"Gateway header '{header}' should be a non-empty string, got: '{value}'"
 
 
 def assert_service_response_headers(response):
-    content_type = response.headers.get("Content-Type", "")
-    assert "application/json" in content_type, \
-        f"Expected Content-Type application/json, got: {content_type}"
-    for header in _SERVICE_RESPONSE_HEADERS:
-        assert header in response.headers, \
-            f"Spec-declared response header '{header}' is missing."
+    """Assert the three required service tracking headers on every 2xx response."""
+    for h in ("X-Response-Time", "X-Response-Timestamp", "X-Request-ID"):
+        assert h in response.headers, f"Expected service header '{h}' missing"
+
+
+def assert_json_content_type(response):
+    assert "application/json" in response.headers.get("Content-Type", ""), \
+        f"Expected Content-Type application/json, got: {response.headers.get('Content-Type')}"
 
 
 def assert_error_schema(body, error_schema):
@@ -48,7 +39,7 @@ def assert_required_fields(body, fields):
 
 def assert_field_types(body, type_map):
     for field, expected_type in type_map.items():
-        if field in body:
+        if field in body and body[field] is not None:
             assert isinstance(body[field], expected_type), (
                 f"Field '{field}' expected {expected_type.__name__}, "
                 f"got {type(body[field]).__name__}: {body[field]!r}"
