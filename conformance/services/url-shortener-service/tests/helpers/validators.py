@@ -70,7 +70,7 @@ def assert_redirect_response(response):
 
 
 def assert_url_config_shape(body):
-    """UrlConfig: required shortKeyLength (int 4–12), optional maxShortKeyRetries (int 1–50)."""
+    """UrlConfig: required shortKeyLength (int 4–12), optional maxShortKeyRetries (int 1–20)."""
     assert "shortKeyLength" in body, "UrlConfig must contain 'shortKeyLength'"
     assert isinstance(body["shortKeyLength"], int), \
         f"shortKeyLength must be an integer, got: {type(body['shortKeyLength']).__name__}"
@@ -79,8 +79,8 @@ def assert_url_config_shape(body):
     if "maxShortKeyRetries" in body and body["maxShortKeyRetries"] is not None:
         assert isinstance(body["maxShortKeyRetries"], int), \
             f"maxShortKeyRetries must be an integer, got: {type(body['maxShortKeyRetries']).__name__}"
-        assert 1 <= body["maxShortKeyRetries"] <= 50, \
-            f"maxShortKeyRetries must be 1–50, got: {body['maxShortKeyRetries']}"
+        assert 1 <= body["maxShortKeyRetries"] <= 20, \
+            f"maxShortKeyRetries must be 1–20, got: {body['maxShortKeyRetries']}"
 
 
 def assert_delete_config_shape(body):

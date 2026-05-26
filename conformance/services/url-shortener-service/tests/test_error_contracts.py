@@ -227,7 +227,7 @@ class TestConfigNegativeContracts:
                          headers=auth_headers,
                          json_body=make_invalid_url_config_request("retries_too_high"))
         assert response.status_code == 400, \
-            f"maxShortKeyRetries > 50: expected 400, got {response.status_code}"
+            f"maxShortKeyRetries > 20: expected 400, got {response.status_code}"
         assert_error_array(response.json())
         assert_gateway_headers(response, gateway_headers_spec)
 

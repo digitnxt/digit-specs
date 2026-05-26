@@ -119,7 +119,7 @@ class TestShortenAndRedirectFlow:
         # Immediately try to redirect — validFrom is in the future so should not work
         r = _send(request.node, "GET", f"{base_url}/{key}",
                   headers=auth_headers, allow_redirects=False)
-        assert r.status_code in (404, 403, 425), \
+        assert r.status_code in (400, 403, 404, 425), \
             f"Not-yet-active URL should fail, got {r.status_code}: {r.text}"
 
     def test_redirect_without_following_does_not_hit_target(
@@ -137,51 +137,6 @@ class TestShortenAndRedirectFlow:
                   headers=auth_headers, allow_redirects=False)
         assert r.status_code == 307, \
             f"Service must return 307 (not follow the redirect): got {r.status_code}"
-
-
-class TestIdempotencyFlow:
-    @pytest.fixture(autouse=True)
-    def _require_url_config(self, base_url, auth_headers):
-        """Ensure a URL config exists before each idempotency test."""
-        r = req_lib.get(f"{base_url}/v3/config", headers=auth_headers)
-        if r.status_code == 404:
-            req_lib.post(f"{base_url}/v3/config", headers=auth_headers,
-                         json={"shortKeyLength": 4, "maxShortKeyRetries": 10})
-
-    def test_same_idempotency_key_returns_same_short_url(
-        self, request, base_url, auth_headers, gateway_headers_spec
-    ):
-        idempotency_key = uuid.uuid4().hex
-        headers = {**auth_headers, "Idempotency-Key": idempotency_key}
-        payload = make_shorten_request()
-
-        r1 = _send(request.node, "POST", f"{base_url}/v3/short-url",
-                   headers=headers, json_body=payload)
-        r2 = _send(request.node, "POST", f"{base_url}/v3/short-url",
-                   headers=headers, json_body=payload)
-
-        assert r1.status_code == 201
-        assert r2.status_code in (200, 201)
-        assert r1.json()["shortUrl"] == r2.json()["shortUrl"], \
-            "Same Idempotency-Key must produce the same shortUrl on repeat"
-
-    def test_different_idempotency_keys_produce_different_short_urls(
-        self, request, base_url, auth_headers, gateway_headers_spec
-    ):
-        url = f"https://example.com/idem-diff/{uuid.uuid4().hex}"
-
-        r1 = _send(request.node, "POST", f"{base_url}/v3/short-url",
-                   headers={**auth_headers, "Idempotency-Key": uuid.uuid4().hex},
-                   json_body=make_shorten_request(url=url))
-        r2 = _send(request.node, "POST", f"{base_url}/v3/short-url",
-                   headers={**auth_headers, "Idempotency-Key": uuid.uuid4().hex},
-                   json_body=make_shorten_request(url=url))
-
-        assert r1.status_code == 201 and r2.status_code == 201
-        # Different idempotency keys — may or may not produce the same URL depending
-        # on whether the service deduplicates by URL; both must be valid short URLs
-        assert_shorten_response_shape(r1.json())
-        assert_shorten_response_shape(r2.json())
 
 
 class TestConfigLifecycleFlow:

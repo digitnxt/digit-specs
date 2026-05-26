@@ -66,7 +66,7 @@ def make_invalid_url_config_request(strategy="missing_required"):
         "key_too_large":     {"shortKeyLength": 13},
         "wrong_type":        {"shortKeyLength": "four"},
         "retries_too_low":   {"shortKeyLength": 4, "maxShortKeyRetries": 0},
-        "retries_too_high":  {"shortKeyLength": 4, "maxShortKeyRetries": 51},
+        "retries_too_high":  {"shortKeyLength": 4, "maxShortKeyRetries": 21},
     }
     return strategies.get(strategy, {})
 
@@ -79,7 +79,7 @@ def make_invalid_shorten_request(strategy="missing_url"):
         "empty_url":         {"url": ""},
         "invalid_url":       {"url": "not-a-valid-url"},
         "null_url":          {"url": None},
-        "url_too_long":      {"url": "https://example.com/" + "x" * 2050},
+        "url_too_long":      {"url": "https://example.com/" + "x" * 8193},
         "wrong_type":        {"url": 12345},
         "negative_valid_from": {"url": "https://example.com/test", "validFrom": -1},
         "negative_valid_till": {"url": "https://example.com/test", "validTill": -1},
