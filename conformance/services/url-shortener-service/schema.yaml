@@ -10,9 +10,9 @@ info:
     Shorten endpoint requires X-Tenant-ID and X-Client-ID headers.
 
 servers:
-  - url: https://api.example.com/url-shortener/v3
+  - url: https://api.example.com/url-shortener
     description: Production server
-  - url: https://staging-api.example.com/url-shortener/v3
+  - url: https://staging-api.example.com/url-shortener
     description: Staging server
 
 security:
@@ -33,7 +33,7 @@ paths:
 
   # ── CONFIG ──────────────────────────────────────────────────────────
 
-  /config:
+  /v3/config:
     post:
       summary: Create URL config
       description: |
@@ -335,7 +335,7 @@ paths:
 
   # ── SHORTEN ────────────────────────────────────────────────────────────────
 
-  /short-url:
+  /v3/short-url:
     post:
       summary: Shorten URL
       description: |

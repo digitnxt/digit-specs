@@ -51,6 +51,26 @@ def extract_key_from_short_url(short_url: str) -> str:
     return short_url.rstrip("/").split("/")[-1]
 
 
+# ── Config payloads ────────────────────────────────────────────────────────
+
+def make_url_config_request(short_key_length=4, **overrides):
+    """Valid UrlConfigRequest. Required: shortKeyLength (int 4–12)."""
+    base = {"shortKeyLength": short_key_length, "maxShortKeyRetries": 10}
+    return {**base, **overrides}
+
+
+def make_invalid_url_config_request(strategy="missing_required"):
+    strategies = {
+        "missing_required":  {},
+        "key_too_small":     {"shortKeyLength": 3},
+        "key_too_large":     {"shortKeyLength": 13},
+        "wrong_type":        {"shortKeyLength": "four"},
+        "retries_too_low":   {"shortKeyLength": 4, "maxShortKeyRetries": 0},
+        "retries_too_high":  {"shortKeyLength": 4, "maxShortKeyRetries": 51},
+    }
+    return strategies.get(strategy, {})
+
+
 # ── Invalid payloads ───────────────────────────────────────────────────────
 
 def make_invalid_shorten_request(strategy="missing_url"):

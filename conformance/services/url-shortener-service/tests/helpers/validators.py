@@ -1,5 +1,16 @@
 import jsonschema
 
+# Response headers declared in schema.yaml for all 2xx JSON responses
+_SERVICE_RESPONSE_HEADERS = [
+    "X-Response-Time",
+    "X-Response-Timestamp",
+    "X-Request-ID",
+    "X-Tenant-ID",
+    "X-Rate-Limit",
+    "X-Rate-Limit-Remaining",
+    "X-Rate-Limit-Reset",
+]
+
 
 def assert_gateway_headers(response, gateway_headers_spec):
     if not gateway_headers_spec:
@@ -21,6 +32,9 @@ def assert_service_response_headers(response):
     content_type = response.headers.get("Content-Type", "")
     assert "application/json" in content_type, \
         f"Expected Content-Type application/json, got: {content_type}"
+    for header in _SERVICE_RESPONSE_HEADERS:
+        assert header in response.headers, \
+            f"Spec-declared response header '{header}' is missing."
 
 
 def assert_error_schema(body, error_schema):
@@ -62,3 +76,33 @@ def assert_redirect_response(response):
     assert location, "307 response must include a non-empty Location header"
     assert location.startswith("http"), \
         f"Location header must be an absolute URI, got: {location!r}"
+
+
+def assert_url_config_shape(body):
+    """UrlConfig: required shortKeyLength (int 4–12), optional maxShortKeyRetries (int 1–50)."""
+    assert "shortKeyLength" in body, "UrlConfig must contain 'shortKeyLength'"
+    assert isinstance(body["shortKeyLength"], int), \
+        f"shortKeyLength must be an integer, got: {type(body['shortKeyLength']).__name__}"
+    assert 4 <= body["shortKeyLength"] <= 12, \
+        f"shortKeyLength must be 4–12, got: {body['shortKeyLength']}"
+    if "maxShortKeyRetries" in body and body["maxShortKeyRetries"] is not None:
+        assert isinstance(body["maxShortKeyRetries"], int), \
+            f"maxShortKeyRetries must be an integer, got: {type(body['maxShortKeyRetries']).__name__}"
+        assert 1 <= body["maxShortKeyRetries"] <= 50, \
+            f"maxShortKeyRetries must be 1–50, got: {body['maxShortKeyRetries']}"
+
+
+def assert_delete_config_shape(body):
+    """DELETE /v3/config response shape: {deleted: boolean}."""
+    assert "deleted" in body, "Delete config response must contain 'deleted'"
+    assert isinstance(body["deleted"], bool), \
+        f"'deleted' must be a boolean, got: {type(body['deleted']).__name__}"
+
+
+def assert_error_array(body):
+    """Error responses are arrays of Error objects per the spec."""
+    assert isinstance(body, list), \
+        f"Error response body must be an array, got: {type(body).__name__}"
+    for item in body:
+        assert isinstance(item, dict), \
+            f"Each error item must be an object, got: {type(item).__name__}"

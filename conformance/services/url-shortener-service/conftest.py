@@ -26,8 +26,6 @@ def pytest_addoption(parser):
                      help="Base URL of the service under test")
     parser.addoption("--api-token", action="store", default="",
                      help="Bearer token for authenticated endpoints")
-    parser.addoption("--tenant-id", action="store", default="pb.amritsar",
-                     help="Tenant ID passed as X-Tenant-ID header")
     parser.addoption("--gateway", action="store", default=None,
                      choices=["kong", "aws", "custom"],
                      help="Gateway profile for header validation.")
@@ -41,18 +39,8 @@ def base_url(request):
 @pytest.fixture(scope="session")
 def auth_headers(request):
     token = request.config.getoption("--api-token")
-    tenant = request.config.getoption("--tenant-id")
-    headers = {}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    if tenant:
-        headers["X-Tenant-ID"] = tenant
-    return headers
-
-
-@pytest.fixture(scope="session")
-def tenant_id(request):
-    return request.config.getoption("--tenant-id")
+    # X-Tenant-ID is injected by the gateway from the bearer token — do not set manually.
+    return {"Authorization": f"Bearer {token}"} if token else {}
 
 
 @pytest.fixture(scope="session")

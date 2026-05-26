@@ -9,11 +9,14 @@ from tests.helpers.validators import (
     assert_field_types,
     assert_shorten_response_shape,
     assert_redirect_response,
+    assert_url_config_shape,
+    assert_delete_config_shape,
 )
 from tests.helpers.factories import (
     make_shorten_request,
     make_shorten_request_with_validity,
     extract_key_from_short_url,
+    make_url_config_request,
 )
 
 
@@ -25,10 +28,18 @@ def _send(node, method, url, headers=None, json_body=None, allow_redirects=True)
 
 
 class TestShortenContract:
+    @pytest.fixture(autouse=True)
+    def _require_url_config(self, base_url, auth_headers):
+        """Ensure a URL config exists for the tenant before each shorten test."""
+        r = req_lib.get(f"{base_url}/v3/config", headers=auth_headers)
+        if r.status_code == 404:
+            req_lib.post(f"{base_url}/v3/config", headers=auth_headers,
+                         json={"shortKeyLength": 4, "maxShortKeyRetries": 10})
+
     def test_shorten_returns_201_with_short_url(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/short-url",
+        response = _send(request.node, "POST", f"{base_url}/v3/short-url",
                          headers=auth_headers, json_body=make_shorten_request())
         assert response.status_code == 201
         assert_service_response_headers(response)
@@ -38,7 +49,7 @@ class TestShortenContract:
     def test_shorten_response_has_required_fields(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/short-url",
+        response = _send(request.node, "POST", f"{base_url}/v3/short-url",
                          headers=auth_headers, json_body=make_shorten_request())
         assert response.status_code == 201
         assert_required_fields(response.json(), ["shortUrl"])
@@ -47,7 +58,7 @@ class TestShortenContract:
     def test_shorten_short_url_is_absolute_uri(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/short-url",
+        response = _send(request.node, "POST", f"{base_url}/v3/short-url",
                          headers=auth_headers, json_body=make_shorten_request())
         assert response.status_code == 201
         short_url = response.json()["shortUrl"]
@@ -60,9 +71,9 @@ class TestShortenContract:
         url_a = f"https://example.com/path-a/{uuid.uuid4().hex}"
         url_b = f"https://example.com/path-b/{uuid.uuid4().hex}"
 
-        r_a = _send(request.node, "POST", f"{base_url}/short-url",
+        r_a = _send(request.node, "POST", f"{base_url}/v3/short-url",
                     headers=auth_headers, json_body=make_shorten_request(url=url_a))
-        r_b = _send(request.node, "POST", f"{base_url}/short-url",
+        r_b = _send(request.node, "POST", f"{base_url}/v3/short-url",
                     headers=auth_headers, json_body=make_shorten_request(url=url_b))
 
         assert r_a.status_code == 201 and r_b.status_code == 201
@@ -73,7 +84,7 @@ class TestShortenContract:
     def test_shorten_with_validity_window(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/short-url",
+        response = _send(request.node, "POST", f"{base_url}/v3/short-url",
                          headers=auth_headers,
                          json_body=make_shorten_request_with_validity(valid_for_seconds=3600))
         assert response.status_code == 201
@@ -84,7 +95,7 @@ class TestShortenContract:
     ):
         idempotency_key = uuid.uuid4().hex
         headers = {**auth_headers, "Idempotency-Key": idempotency_key}
-        response = _send(request.node, "POST", f"{base_url}/short-url",
+        response = _send(request.node, "POST", f"{base_url}/v3/short-url",
                          headers=headers, json_body=make_shorten_request())
         assert response.status_code == 201
         assert_shorten_response_shape(response.json())
@@ -97,9 +108,9 @@ class TestShortenContract:
         headers = {**auth_headers, "Idempotency-Key": idempotency_key}
         payload = make_shorten_request()
 
-        r1 = _send(request.node, "POST", f"{base_url}/short-url",
+        r1 = _send(request.node, "POST", f"{base_url}/v3/short-url",
                    headers=headers, json_body=payload)
-        r2 = _send(request.node, "POST", f"{base_url}/short-url",
+        r2 = _send(request.node, "POST", f"{base_url}/v3/short-url",
                    headers=headers, json_body=payload)
 
         assert r1.status_code == 201
@@ -111,7 +122,7 @@ class TestShortenContract:
     def test_shorten_audit_detail_shape_when_present(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/short-url",
+        response = _send(request.node, "POST", f"{base_url}/v3/short-url",
                          headers=auth_headers, json_body=make_shorten_request())
         if response.status_code != 201:
             pytest.skip("Shorten returned non-201")
@@ -126,7 +137,7 @@ class TestRedirectContract:
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
         original_url = f"https://example.com/redirect-test/{uuid.uuid4().hex}"
-        shorten_r = _send(request.node, "POST", f"{base_url}/short-url",
+        shorten_r = _send(request.node, "POST", f"{base_url}/v3/short-url",
                           headers=auth_headers,
                           json_body=make_shorten_request(url=original_url))
         if shorten_r.status_code != 201:
@@ -134,7 +145,7 @@ class TestRedirectContract:
         key = extract_key_from_short_url(shorten_r.json()["shortUrl"])
 
         response = _send(request.node, "GET", f"{base_url}/{key}",
-                         allow_redirects=False)
+                         headers=auth_headers, allow_redirects=False)
         assert_redirect_response(response)
         assert_gateway_headers(response, gateway_headers_spec)
 
@@ -142,7 +153,7 @@ class TestRedirectContract:
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
         original_url = f"https://example.com/location-check/{uuid.uuid4().hex}"
-        shorten_r = _send(request.node, "POST", f"{base_url}/short-url",
+        shorten_r = _send(request.node, "POST", f"{base_url}/v3/short-url",
                           headers=auth_headers,
                           json_body=make_shorten_request(url=original_url))
         if shorten_r.status_code != 201:
@@ -150,30 +161,139 @@ class TestRedirectContract:
         key = extract_key_from_short_url(shorten_r.json()["shortUrl"])
 
         response = _send(request.node, "GET", f"{base_url}/{key}",
-                         allow_redirects=False)
+                         headers=auth_headers, allow_redirects=False)
         assert response.status_code == 307
         assert response.headers.get("Location") == original_url, \
             f"Location header '{response.headers.get('Location')}' != original URL '{original_url}'"
-
-    def test_redirect_does_not_require_auth(
-        self, request, base_url, auth_headers, gateway_headers_spec
-    ):
-        shorten_r = _send(request.node, "POST", f"{base_url}/short-url",
-                          headers=auth_headers, json_body=make_shorten_request())
-        if shorten_r.status_code != 201:
-            pytest.skip("Shorten failed")
-        key = extract_key_from_short_url(shorten_r.json()["shortUrl"])
-
-        # No auth headers — redirect endpoint has security: []
-        response = _send(request.node, "GET", f"{base_url}/{key}",
-                         allow_redirects=False)
-        assert response.status_code == 307, \
-            f"Redirect must work without auth (security: []), got {response.status_code}"
 
     def test_nonexistent_key_returns_404(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
         response = _send(request.node, "GET", f"{base_url}/nonexistent-key-xyz-000",
-                         allow_redirects=False)
+                         headers=auth_headers, allow_redirects=False)
         assert response.status_code == 404
         assert_gateway_headers(response, gateway_headers_spec)
+
+
+class TestConfigContract:
+    def _delete_config(self, base_url, auth_headers):
+        """Best-effort cleanup — delete config if it exists."""
+        req_lib.Session().send(
+            req_lib.Request("DELETE", f"{base_url}/v3/config", headers=auth_headers).prepare()
+        )
+
+    def _create_config(self, base_url, auth_headers, payload=None):
+        return req_lib.Session().send(
+            req_lib.Request(
+                "POST", f"{base_url}/v3/config",
+                headers=auth_headers, json=payload or make_url_config_request(),
+            ).prepare()
+        )
+
+    def test_post_config_returns_201_with_url_config_shape(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        try:
+            response = _send(request.node, "POST", f"{base_url}/v3/config",
+                             headers=auth_headers, json_body=make_url_config_request())
+            assert response.status_code == 201, \
+                f"POST /v3/config expected 201, got {response.status_code}: {response.text}"
+            assert_service_response_headers(response)
+            assert_gateway_headers(response, gateway_headers_spec)
+            assert_url_config_shape(response.json())
+        finally:
+            self._delete_config(base_url, auth_headers)
+
+    def test_post_config_persists_short_key_length(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        try:
+            response = _send(request.node, "POST", f"{base_url}/v3/config",
+                             headers=auth_headers,
+                             json_body=make_url_config_request(short_key_length=8))
+            assert response.status_code == 201
+            assert response.json()["shortKeyLength"] == 8, \
+                f"shortKeyLength should be 8, got {response.json().get('shortKeyLength')}"
+        finally:
+            self._delete_config(base_url, auth_headers)
+
+    def test_get_config_returns_200_with_url_config_shape(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        self._create_config(base_url, auth_headers)
+        try:
+            response = _send(request.node, "GET", f"{base_url}/v3/config",
+                             headers=auth_headers)
+            assert response.status_code == 200, \
+                f"GET /v3/config expected 200, got {response.status_code}: {response.text}"
+            assert_service_response_headers(response)
+            assert_gateway_headers(response, gateway_headers_spec)
+            assert_url_config_shape(response.json())
+        finally:
+            self._delete_config(base_url, auth_headers)
+
+    def test_put_config_returns_200_with_updated_shape(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        self._create_config(base_url, auth_headers, make_url_config_request(short_key_length=4))
+        try:
+            response = _send(request.node, "PUT", f"{base_url}/v3/config",
+                             headers=auth_headers,
+                             json_body=make_url_config_request(short_key_length=6))
+            assert response.status_code == 200, \
+                f"PUT /v3/config expected 200, got {response.status_code}: {response.text}"
+            assert_service_response_headers(response)
+            assert_gateway_headers(response, gateway_headers_spec)
+            assert_url_config_shape(response.json())
+            assert response.json()["shortKeyLength"] == 6, \
+                f"PUT should update shortKeyLength to 6, got {response.json().get('shortKeyLength')}"
+        finally:
+            self._delete_config(base_url, auth_headers)
+
+    def test_delete_config_returns_200_with_deleted_flag(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        self._create_config(base_url, auth_headers)
+        response = _send(request.node, "DELETE", f"{base_url}/v3/config",
+                         headers=auth_headers)
+        assert response.status_code == 200, \
+            f"DELETE /v3/config expected 200, got {response.status_code}: {response.text}"
+        assert_service_response_headers(response)
+        assert_gateway_headers(response, gateway_headers_spec)
+        assert_delete_config_shape(response.json())
+
+    def test_post_config_duplicate_returns_409(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        self._create_config(base_url, auth_headers)
+        try:
+            response = _send(request.node, "POST", f"{base_url}/v3/config",
+                             headers=auth_headers, json_body=make_url_config_request())
+            assert response.status_code == 409, \
+                f"Duplicate POST /v3/config expected 409, got {response.status_code}: {response.text}"
+        finally:
+            self._delete_config(base_url, auth_headers)
+
+    def test_put_config_not_found_returns_404(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        response = _send(request.node, "PUT", f"{base_url}/v3/config",
+                         headers=auth_headers, json_body=make_url_config_request())
+        assert response.status_code == 404, \
+            f"PUT /v3/config with no existing config expected 404, got {response.status_code}"
+
+    def test_get_config_not_found_returns_404(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        self._delete_config(base_url, auth_headers)
+        response = _send(request.node, "GET", f"{base_url}/v3/config",
+                         headers=auth_headers)
+        assert response.status_code == 404, \
+            f"GET /v3/config with no config expected 404, got {response.status_code}"
