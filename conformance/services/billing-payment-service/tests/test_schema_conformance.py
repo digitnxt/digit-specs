@@ -12,8 +12,11 @@ from schemathesis.specs.openapi.checks import (
 )
 from tests.helpers.validators import assert_gateway_headers
 
-_SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema.yaml"
-schema = schemathesis.openapi.from_path(_SCHEMA_PATH)
+_service_root = pathlib.Path(__file__).parent.parent
+_resolved     = _service_root / "schema.resolved.yaml"
+_schema_file  = _resolved if _resolved.exists() else _service_root / "schema.yaml"
+
+schema = schemathesis.openapi.from_path(_schema_file)
 
 # Checks skipped for infrastructure / gateway reasons:
 #   ignored_auth              — base_url unavailable for secondary request when schema loaded from file

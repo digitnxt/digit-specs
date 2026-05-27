@@ -5,6 +5,4 @@ __pycache__/
 .hypothesis/
 reports/
 schema.resolved.yaml
-venv/
-*.egg-info/
 .DS_Store

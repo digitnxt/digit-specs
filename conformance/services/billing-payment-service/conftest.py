@@ -1,10 +1,103 @@
+import os
+import re
+import tempfile
 import pathlib
 import threading
 import pytest
+import requests as _http
 import schemathesis
 from tests.helpers.curl_builder import build_curl
 
-_SCHEMA_PATH = pathlib.Path(__file__).parent / "schema.yaml"
+_SERVICE_ROOT    = os.path.dirname(__file__)
+_SCHEMA_ORIGINAL = os.path.join(_SERVICE_ROOT, "schema.yaml")
+_SCHEMA_RESOLVED = os.path.join(_SERVICE_ROOT, "schema.resolved.yaml")
+
+
+def _raw_url_to_api_url(raw_url: str) -> str:
+    """
+    Convert a raw.githubusercontent.com URL to a GitHub Contents API URL.
+
+    raw.githubusercontent.com returns 404 for private repos regardless of auth.
+    The Contents API works correctly with fine-grained PATs.
+
+    Example:
+      https://raw.githubusercontent.com/org/repo/refs/heads/main/v3/common.yaml
+      → https://api.github.com/repos/org/repo/contents/v3/common.yaml?ref=refs/heads/main
+    """
+    suffix = raw_url[len("https://raw.githubusercontent.com/"):]
+    owner, repo, *rest = suffix.split("/")
+    rest_str = "/".join(rest)
+
+    if rest_str.startswith("refs/heads/") or rest_str.startswith("refs/tags/"):
+        parts    = rest_str.split("/")
+        ref      = "/".join(parts[:3])   # refs/heads/main
+        filepath = "/".join(parts[3:])
+    else:
+        parts    = rest_str.split("/", 1)
+        ref      = parts[0]
+        filepath = parts[1] if len(parts) > 1 else ""
+
+    return f"https://api.github.com/repos/{owner}/{repo}/contents/{filepath}?ref={ref}"
+
+
+def _resolve_remote_refs(token: str) -> None:
+    """
+    Download every remote $ref URL in schema.yaml via the GitHub Contents API
+    and rewrite them to local temp-file paths, writing the result to
+    schema.resolved.yaml.
+
+    Called from pytest_configure (before test collection) so that
+    test_schema_conformance.py can load the resolved file at module-import time.
+
+    Uses the GitHub Contents API (not raw.githubusercontent.com) because
+    raw.githubusercontent.com returns 404 for private repos even with a valid PAT.
+    The Accept: application/vnd.github.raw+json header returns the file content
+    directly instead of the base64-encoded JSON wrapper.
+    """
+    with open(_SCHEMA_ORIGINAL) as f:
+        content = f.read()
+
+    raw_urls  = re.findall(r"https://raw\.githubusercontent\.com/[^\s'\"#]+", content)
+    base_urls = sorted({url.split("#")[0] for url in raw_urls})
+
+    if not base_urls:
+        return
+
+    tmpdir  = tempfile.mkdtemp(prefix="digit_specs_refs_")
+    headers = {
+        "Authorization":        f"Bearer {token}",
+        "Accept":               "application/vnd.github.raw+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    for raw_url in base_urls:
+        api_url = _raw_url_to_api_url(raw_url)
+        try:
+            resp = _http.get(api_url, headers=headers, timeout=15)
+            resp.raise_for_status()
+        except _http.exceptions.RequestException as exc:
+            raise RuntimeError(
+                f"Failed to fetch schema $ref component.\n"
+                f"  Raw URL : {raw_url}\n"
+                f"  API URL : {api_url}\n"
+                f"  Error   : {exc}\n"
+                f"Check that --schema-token / SCHEMA_TOKEN is a valid fine-grained PAT\n"
+                f"with Contents: Read-only access to the digit-specs repo."
+            ) from exc
+
+        filename   = raw_url.rstrip("/").split("/")[-1]
+        local_path = os.path.join(tmpdir, filename)
+        with open(local_path, "w") as f:
+            f.write(resp.text)
+        content = content.replace(raw_url, local_path)
+
+    with open(_SCHEMA_RESOLVED, "w") as f:
+        f.write(content)
+
+
+def _active_schema_path() -> str:
+    """Return the resolved schema if it exists, otherwise the original."""
+    return _SCHEMA_RESOLVED if os.path.exists(_SCHEMA_RESOLVED) else _SCHEMA_ORIGINAL
 
 GATEWAY_HEADER_PROFILES = {
     "kong": {
@@ -55,6 +148,23 @@ def pytest_addoption(parser):
         default="default",
         help="X-Tenant-ID header value for all requests"
     )
+    parser.addoption(
+        "--schema-token",
+        action="store",
+        default=os.environ.get("SCHEMA_TOKEN", ""),
+        help="GitHub PAT for resolving private $ref components in schema.yaml. "
+             "Can also be set via the SCHEMA_TOKEN environment variable.",
+    )
+
+
+def pytest_configure(config):
+    """Resolve remote $refs before test collection using the provided schema token."""
+    try:
+        token = config.getoption("--schema-token")
+    except ValueError:
+        token = os.environ.get("SCHEMA_TOKEN", "")
+    if token:
+        _resolve_remote_refs(token)
 
 
 # ── HTTP capture (intercepts every requests.Session.send) ─────────────────────
@@ -237,4 +347,4 @@ def gateway_headers_spec(request):
 
 @pytest.fixture(scope="session")
 def swagger_schema():
-    return schemathesis.openapi.from_path(_SCHEMA_PATH)
+    return schemathesis.openapi.from_path(_active_schema_path())
