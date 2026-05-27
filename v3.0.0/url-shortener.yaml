@@ -10,9 +10,9 @@ info:
     Shorten endpoint requires X-Tenant-ID and X-Client-ID headers.
 
 servers:
-  - url: https://api.example.com/url-shortener/v3
+  - url: https://api.example.com/url-shortener
     description: Production server
-  - url: https://staging-api.example.com/url-shortener/v3
+  - url: https://staging-api.example.com/url-shortener
     description: Staging server
 
 security:
@@ -33,7 +33,7 @@ paths:
 
   # ── CONFIG ──────────────────────────────────────────────────────────
 
-  /config:
+  /v3/config:
     post:
       summary: Create URL config
       description: |
@@ -335,7 +335,7 @@ paths:
 
   # ── SHORTEN ────────────────────────────────────────────────────────────────
 
-  /short-url:
+  /v3/short-url:
     post:
       summary: Shorten URL
       description: |
@@ -386,6 +386,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized — missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
           content:
             application/json:
               schema:
@@ -600,7 +608,7 @@ components:
           type: integer
           description: Maximum count of short key retries
           minimum: 1
-          maximum: 50
+          maximum: 20
           default: 10
           example: 10
         auditDetail:
@@ -620,7 +628,7 @@ components:
           type: integer
           description: Maximum count of short key retries
           minimum: 1
-          maximum: 50
+          maximum: 20
           default: 10
           example: 10
 
@@ -633,7 +641,7 @@ components:
         url:
           type: string
           format: uri
-          maxLength: 2048
+          maxLength: 8192
           description: The long URL to shorten
           example: https://example.com/some/very/long/path?with=query&params=here
         validFrom:
