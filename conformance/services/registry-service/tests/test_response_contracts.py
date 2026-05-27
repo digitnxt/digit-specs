@@ -128,7 +128,7 @@ class TestRegistryDataCreateContract:
         _send(request.node, "POST", f"{base_url}/schema",
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
-            response = _send(request.node, "POST", f"{base_url}/schema/{code}/data",
+            response = _send(request.node, "POST", f"{base_url}/{code}/data",
                              headers=auth_headers, json_body=make_data_request())
             assert response.status_code in (201, 202), f"Create data failed: {response.text}"
             assert_json_content_type(response)
@@ -151,7 +151,7 @@ class TestRegistryDataSearchContract:
         _send(request.node, "POST", f"{base_url}/schema",
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
-            response = _send(request.node, "POST", f"{base_url}/schema/{code}/data/_search",
+            response = _send(request.node, "POST", f"{base_url}/{code}/data/_search",
                              headers=auth_headers, json_body=make_search_request())
             assert response.status_code == 200
             assert_json_content_type(response)
@@ -170,7 +170,7 @@ class TestRegistryDataSearchContract:
         _send(request.node, "POST", f"{base_url}/schema",
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
-            response = _send(request.node, "POST", f"{base_url}/schema/{code}/data/_search",
+            response = _send(request.node, "POST", f"{base_url}/{code}/data/_search",
                              headers=auth_headers,
                              json_body={"filters": {"name": "nonexistent"}, "limit": 10})
             assert response.status_code == 200
@@ -187,7 +187,7 @@ class TestRegistryDataExistsContract:
         _send(request.node, "POST", f"{base_url}/schema",
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
-            response = _send(request.node, "GET", f"{base_url}/schema/{code}/data/_exists",
+            response = _send(request.node, "GET", f"{base_url}/{code}/data/_exists",
                              headers=auth_headers, params={"id": "nonexistent-id"})
             assert response.status_code == 200
             assert_json_content_type(response)

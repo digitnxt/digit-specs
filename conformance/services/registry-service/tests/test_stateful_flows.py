@@ -108,7 +108,7 @@ class TestRegistryDataLifecycle:
             assert r.status_code == 201, f"Schema create failed: {r.text}"
 
             # 1. CREATE data
-            r = _send(request.node, "POST", f"{base_url}/schema/{code}/data",
+            r = _send(request.node, "POST", f"{base_url}/{code}/data",
                       headers=auth_headers, json_body=make_data_request())
             assert r.status_code in (201, 202), f"Data create failed: {r.text}"
             assert_gateway_headers(r, gateway_headers_spec)
@@ -119,20 +119,20 @@ class TestRegistryDataLifecycle:
                 registry_id = data["registryId"]
 
                 # 2. GET by id
-                r = _send(request.node, "GET", f"{base_url}/schema/{code}/data",
+                r = _send(request.node, "GET", f"{base_url}/{code}/data",
                           headers=auth_headers, params={"id": record_id})
                 assert r.status_code == 200
                 assert r.json()["data"]["id"] == record_id
                 assert_gateway_headers(r, gateway_headers_spec)
 
                 # 3. GET by registryId
-                r = _send(request.node, "GET", f"{base_url}/schema/{code}/data/_registry",
+                r = _send(request.node, "GET", f"{base_url}/{code}/data/_registry",
                           headers=auth_headers, params={"registryId": registry_id})
                 assert r.status_code == 200
                 assert_gateway_headers(r, gateway_headers_spec)
 
                 # 4. UPDATE
-                r = _send(request.node, "PUT", f"{base_url}/schema/{code}/data",
+                r = _send(request.node, "PUT", f"{base_url}/{code}/data",
                           headers=auth_headers,
                           params={"id": record_id},
                           json_body=make_data_request(version=data["version"]))
@@ -141,7 +141,7 @@ class TestRegistryDataLifecycle:
 
                 # 5. DELETE
                 r = _send(request.node, "DELETE",
-                          f"{base_url}/schema/{code}/data/{record_id}",
+                          f"{base_url}/{code}/data/{record_id}",
                           headers=auth_headers)
                 assert r.status_code in (200, 202), f"Data delete failed: {r.text}"
                 assert_gateway_headers(r, gateway_headers_spec)
@@ -158,7 +158,7 @@ class TestRegistryDataLifecycle:
             _send(request.node, "POST", f"{base_url}/schema",
                   headers=auth_headers, json_body=make_schema_request(schema_code=code))
 
-            r = _send(request.node, "POST", f"{base_url}/schema/{code}/data",
+            r = _send(request.node, "POST", f"{base_url}/{code}/data",
                       headers=auth_headers, json_body=make_data_request())
             if r.status_code not in (201, 202):
                 pytest.skip("Data create failed — skipping exists test")
@@ -169,7 +169,7 @@ class TestRegistryDataLifecycle:
 
             # Check _exists returns a boolean
             params = {"id": record_id} if record_id else {"id": "some-id"}
-            r = _send(request.node, "GET", f"{base_url}/schema/{code}/data/_exists",
+            r = _send(request.node, "GET", f"{base_url}/{code}/data/_exists",
                       headers=auth_headers, params=params)
             assert r.status_code == 200
             body = r.json()
@@ -189,11 +189,11 @@ class TestRegistryDataLifecycle:
                   headers=auth_headers, json_body=make_schema_request(schema_code=code))
 
             record_name = f"SearchRecord-{code[:8]}"
-            _send(request.node, "POST", f"{base_url}/schema/{code}/data",
+            _send(request.node, "POST", f"{base_url}/{code}/data",
                   headers=auth_headers,
                   json_body=make_data_request(data={"name": record_name, "value": "v1"}))
 
-            r = _send(request.node, "POST", f"{base_url}/schema/{code}/data/_search",
+            r = _send(request.node, "POST", f"{base_url}/{code}/data/_search",
                       headers=auth_headers,
                       json_body={"filters": {"name": record_name}, "limit": 10})
             assert r.status_code == 200
@@ -213,14 +213,14 @@ class TestRegistryDataLifecycle:
             _send(request.node, "POST", f"{base_url}/schema",
                   headers=auth_headers, json_body=make_schema_request(schema_code=code))
 
-            r = _send(request.node, "POST", f"{base_url}/schema/{code}/data",
+            r = _send(request.node, "POST", f"{base_url}/{code}/data",
                       headers=auth_headers, json_body=make_data_request())
             if r.status_code not in (201, 202):
                 pytest.skip("Data create failed — skipping history test")
 
             if r.status_code == 201:
                 registry_id = r.json()["data"]["registryId"]
-                r = _send(request.node, "GET", f"{base_url}/schema/{code}/data/_registry",
+                r = _send(request.node, "GET", f"{base_url}/{code}/data/_registry",
                           headers=auth_headers,
                           params={"registryId": registry_id, "history": "true"})
                 assert r.status_code == 200
@@ -237,7 +237,7 @@ class TestRegistryDataLifecycle:
             _send(request.node, "POST", f"{base_url}/schema",
                   headers=auth_headers, json_body=make_schema_request(schema_code=code))
 
-            r = _send(request.node, "POST", f"{base_url}/schema/{code}/data",
+            r = _send(request.node, "POST", f"{base_url}/{code}/data",
                       headers=auth_headers, json_body=make_data_request())
             if r.status_code not in (201, 202):
                 pytest.skip("Data create failed — skipping isExist test")
