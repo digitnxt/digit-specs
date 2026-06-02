@@ -1,0 +1,51 @@
+prerequisites:
+  - id: SEED-001
+    description: A Process with at least one INITIAL state must exist before any ProcessInstance can be created; the transition endpoint returns 404 if the process is absent.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /workflow/v3/process/code/TEST-PROCESS
+      expect_status: 200
+    create:
+      method: POST
+      path: /workflow/v3/process
+      body:
+        name: Test Process
+        code: TEST-PROCESS
+        description: Seed process for integration tests
+        sla: 1440
+
+  - id: SEED-002
+    description: An INITIAL state must exist in the seed process before the first transition can be executed; the transition service looks up the initial state on instance creation.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /workflow/v3/process/TEST-PROCESS/state/SUBMITTED
+      expect_status: 200
+    create:
+      method: POST
+      path: /workflow/v3/process/TEST-PROCESS/state
+      body:
+        code: SUBMITTED
+        name: Submitted
+        isInitial: true
+        sla: 60
+
+  - id: SEED-003
+    description: A second state must exist so actions (transitions) between states can be defined and the workflow can advance.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /workflow/v3/process/TEST-PROCESS/state/APPROVED
+      expect_status: 200
+    create:
+      method: POST
+      path: /workflow/v3/process/TEST-PROCESS/state
+      body:
+        code: APPROVED
+        name: Approved
+        isInitial: false
+        sla: 120

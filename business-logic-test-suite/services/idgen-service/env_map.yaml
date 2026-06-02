@@ -1,0 +1,4 @@
+# services/idgen/env_map.yaml
+# Maps ${VAR_NAME} tokens to their runtime values.
+IDGEN_BILL_NUMBER_TEMPLATE_CODE: "BillNumber"
+IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE: "ReceiptNumber"

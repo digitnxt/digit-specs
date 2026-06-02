@@ -1,0 +1,3 @@
+# services/boundary/env_map.yaml
+# Maps ${VAR_NAME} tokens to their runtime values.
+# No environment variable references found in BUSINESS_RULES.md

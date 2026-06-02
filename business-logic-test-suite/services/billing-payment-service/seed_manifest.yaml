@@ -1,0 +1,88 @@
+prerequisites:
+  - id: SEED-001
+    description: An active BusinessService must exist before TaxHead, Demand, Bill, or Payment can be created; all downstream entities hard-fail if the service is absent or inactive.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /billing/v3/business-services/TEST-BS
+      expect_status: 200
+    create:
+      method: POST
+      path: /billing/v3/business-services
+      body:
+        code: TEST-BS
+        name: Test Business Service
+        allowedPaymentModes:
+          - CASH
+        billExpiryDays: 30
+        partialPaymentAllowed: false
+        isActive: true
+        effectiveFrom: 0
+
+  - id: SEED-002
+    description: An active TaxHead belonging to TEST-BS must exist before a Demand can be created; demand creation rejects unknown or cross-service tax heads.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /billing/v3/tax-heads/TEST-TAX
+      expect_status: 200
+    create:
+      method: POST
+      path: /billing/v3/tax-heads
+      body:
+        code: TEST-TAX
+        name: Test Tax Head
+        businessServiceCode: TEST-BS
+        order: 1
+        effectiveFrom: 0
+        isActive: true
+
+  - id: SEED-003
+    description: The IDGen bill-number template must exist in the IDGen service before any bill can be generated; bill generation rolls back if IDGen returns 404.
+    service: idgen
+    base_url_arg: --idgen-url
+    check:
+      method: GET
+      path: /idgen/v3/template
+      params:
+        templateCode: "${IDGEN_BILL_NUMBER_TEMPLATE_CODE}"
+      expect_status: 200
+    create:
+      method: POST
+      path: /idgen/v3/template
+      body:
+        templateCode: "${IDGEN_BILL_NUMBER_TEMPLATE_CODE}"
+        config:
+          template: "BILL-{DATE:yyyymmdd}-{SEQ}"
+          sequence:
+            scope: DAILY
+            start: 1
+            padding:
+              length: 5
+              char: "0"
+
+  - id: SEED-004
+    description: The IDGen receipt-number template must exist in the IDGen service before any payment can be created; payment creation rolls back if IDGen returns 404.
+    service: idgen
+    base_url_arg: --idgen-url
+    check:
+      method: GET
+      path: /idgen/v3/template
+      params:
+        templateCode: "${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}"
+      expect_status: 200
+    create:
+      method: POST
+      path: /idgen/v3/template
+      body:
+        templateCode: "${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}"
+        config:
+          template: "RCPT-{DATE:yyyymmdd}-{SEQ}"
+          sequence:
+            scope: DAILY
+            start: 1
+            padding:
+              length: 5
+              char: "0"

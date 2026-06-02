@@ -1,0 +1,41 @@
+prerequisites:
+  - id: SEED-001
+    description: An EMAIL NotificationTemplate must exist for the tenant before POST /v3/email/send can succeed; the send endpoint returns 404 if no template is found.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /notification/v3/template
+      params:
+        templateId: seed-email-welcome
+        type: EMAIL
+      expect_status: 200
+    create:
+      method: POST
+      path: /notification/v3/template
+      body:
+        templateId: seed-email-welcome
+        type: EMAIL
+        subject: "Hello {{.Name}}"
+        content: "<p>Hello {{.Name}}, welcome to the platform.</p>"
+        isHTML: true
+
+  - id: SEED-002
+    description: An SMS NotificationTemplate must exist for the tenant before POST /v3/sms/send can succeed; the send endpoint returns 404 if no template is found.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /notification/v3/template
+      params:
+        templateId: seed-sms-otp
+        type: SMS
+      expect_status: 200
+    create:
+      method: POST
+      path: /notification/v3/template
+      body:
+        templateId: seed-sms-otp
+        type: SMS
+        content: "Your OTP is {{.OTP}}. Valid for 10 minutes."
+        isHTML: false

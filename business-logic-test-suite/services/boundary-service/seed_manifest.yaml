@@ -1,0 +1,46 @@
+prerequisites:
+  - id: SEED-001
+    description: A BoundaryHierarchyDefinition must exist before any BoundaryRelationship can be created; relationships require a valid hierarchyType to reference.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /boundary/v3/hierarchy
+      params:
+        hierarchyType: ADMIN
+      expect_status: 200
+    create:
+      method: POST
+      path: /boundary/v3/hierarchy
+      body:
+        hierarchy:
+          hierarchyType: ADMIN
+          boundaryHierarchy:
+            - boundaryType: STATE
+              parentBoundaryType: null
+              active: true
+            - boundaryType: DISTRICT
+              parentBoundaryType: STATE
+              active: true
+            - boundaryType: WARD
+              parentBoundaryType: DISTRICT
+              active: true
+
+  - id: SEED-002
+    description: A Boundary entity must exist before a BoundaryRelationship referencing its code can be created.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /boundary/v3/boundaries
+      params:
+        codes: STATE_001
+      expect_status: 200
+    create:
+      method: POST
+      path: /boundary/v3/boundaries
+      body:
+        boundary:
+          - code: STATE_001
+            additionalAttributes:
+              name: Sample State

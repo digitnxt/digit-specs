@@ -1,0 +1,4 @@
+# No session-scoped prerequisites required for this service.
+# The Localization Service has no predefined data dependencies. Messages are
+# created at test time via POST /messages or PUT /messages/upsert.
+# Infrastructure dependencies (PostgreSQL, Redis, Kafka) are deployment concerns.

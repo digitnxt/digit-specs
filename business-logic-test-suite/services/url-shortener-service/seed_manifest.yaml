@@ -1,0 +1,15 @@
+prerequisites:
+  - id: SEED-001
+    description: A UrlConfig must exist for the tenant before any URL can be shortened; the shorten endpoint returns 404 config-not-found if no config row exists.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /url-shortener/v3/config
+      expect_status: 200
+    create:
+      method: POST
+      path: /url-shortener/v3/config
+      body:
+        shortKeyLength: 6
+        maxShortKeyRetries: 10

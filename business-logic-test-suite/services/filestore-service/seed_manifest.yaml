@@ -1,0 +1,24 @@
+prerequisites:
+  - id: SEED-001
+    description: An active DocumentCategory must exist before any file upload can succeed; uploads are rejected with 400 if no matching active category is found for the module parameter.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /filestore/v3/files/test/document-categories/test-doc
+      expect_status: 200
+    create:
+      method: POST
+      path: /filestore/v3/files/test/document-categories
+      body:
+        type: TEST
+        code: test-doc
+        allowedFormats:
+          - ".pdf"
+          - ".jpg"
+          - ".png"
+        minSize: "1KB"
+        maxSize: "10MB"
+        isSensitive: false
+        description: Test document category for integration tests
+        isActive: true

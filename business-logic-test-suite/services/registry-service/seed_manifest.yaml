@@ -1,0 +1,22 @@
+prerequisites:
+  - id: SEED-001
+    description: Create a baseline schema so data endpoints can be exercised; the Registry requires a schema to exist before any data for that schema can be created.
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /registry/v3/schema/seed-schema
+      expect_status: 200
+    create:
+      method: POST
+      path: /registry/v3/schema
+      body:
+        schemaCode: seed-schema
+        definition:
+          $schema: "https://json-schema.org/draft/2020-12/schema"
+          type: object
+          properties:
+            name:
+              type: string
+          required:
+            - name

@@ -1,0 +1,5 @@
+# No session-scoped prerequisites required for this service.
+# The Individual Service operates independently. All entity types are created
+# at test time via POST /individuals. The only optional prerequisite is a
+# tenant validation config (POST /configs), which can be created inline if
+# custom mobileRegex, nameRegex, or uniquenessCriteria is required.
