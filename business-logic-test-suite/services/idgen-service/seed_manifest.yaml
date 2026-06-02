@@ -1,3 +1,4 @@
 # No session-scoped prerequisites required for this service.
 # IDGen does not depend on any other service and does not require pre-existing
-# data to start. Templates are created by callers (e.g. Billing) at deployment time.
+# data to start. Templates are created by callers (e.g. Billing) as part of
+# their own deployment setup.

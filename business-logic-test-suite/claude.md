@@ -1053,66 +1053,114 @@ IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE: "RECEIPT-NUMBER"
 
 ## `generate_rule_coverage_table.py`
 
+Rule IDs live in `BUSINESS_RULES.md` headings — not in the spec.
+Expected heading format: `### BR-<CATEGORY>-<NNN>: <title>`
+
 ```python
 """
-Cross-references x-business-rules from schema.yaml against test class names.
+Parses rule IDs from BUSINESS_RULES.md headings and cross-references them
+against test class names in the tests/ directory.
+
 Writes reports/rule_coverage_table.md.
 Run: python generate_rule_coverage_table.py
+
+Heading format in BUSINESS_RULES.md:
+  ### BR-CF-001: Padding length must cover sequence start width
+  ### BR-CS-001: Template must exist before generation
+  ### BR-LC-001: Updates are append-only
+  ### BR-CM-001: IDGen required for bill number generation
+
+Test class naming convention (must match for coverage to register):
+  class TestBR_CF_001_padding_length_vs_start
+  class TestBR_CS_001_template_must_exist
+
+The slug after the ID is ignored — only the ID is matched.
 """
-import yaml, os, re
+import os
+import re
 
 
-def collect_rule_ids_from_spec(schema_path):
-    with open(schema_path) as f:
-        spec = yaml.safe_load(f)
-    ids = []
-    for path_item in spec.get("paths", {}).values():
-        for op in path_item.values():
-            if isinstance(op, dict):
-                for rule in op.get("x-business-rules", []):
-                    ids.append((
-                        rule.get("id",        "UNNAMED"),
-                        rule.get("title",     ""),
-                        rule.get("test-type", ""),
-                    ))
-    return ids
+def collect_rules(rules_path="BUSINESS_RULES.md"):
+    """
+    Returns list of (rule_id, title, category) tuples in document order.
+    Parses headings of the form: ### BR-<CATEGORY>-<NNN>: <title>
+    """
+    category_labels = {
+        "CF": "Cross-field",
+        "CS": "Cross-schema",
+        "LC": "Lifecycle",
+        "CM": "Cross-module",
+    }
+    rules = []
+    try:
+        with open(rules_path) as f:
+            for line in f:
+                m = re.match(r'^###\s+(BR-([A-Z]+)-\d+):\s+(.+)', line.strip())
+                if m:
+                    rule_id  = m.group(1)
+                    cat_code = m.group(2)
+                    title    = m.group(3).strip()
+                    category = category_labels.get(cat_code, cat_code)
+                    rules.append((rule_id, title, category))
+    except FileNotFoundError:
+        print(f"WARNING: {rules_path} not found.")
+    return rules
 
 
-def collect_covered_slugs(test_dir):
+def collect_covered_ids(test_dir="tests"):
+    """
+    Scans test_*.py files for class TestBR_<CATEGORY>_<NNN>_ and returns
+    the set of matched IDs in BR-<CATEGORY>-<NNN> form.
+    """
     covered = set()
+    pattern = re.compile(r'class\s+TestBR_([A-Z]+)_(\d+)_')
     for root, _, files in os.walk(test_dir):
         for fname in files:
             if not fname.startswith("test_") or not fname.endswith(".py"):
                 continue
             with open(os.path.join(root, fname)) as f:
-                src = f.read()
-            for match in re.findall(r"class TestBR_([A-Z0-9_]+)_", src):
-                covered.add(match)
+                for line in f:
+                    for m in pattern.finditer(line):
+                        covered.add(f"BR-{m.group(1)}-{m.group(2)}")
     return covered
 
 
-def generate(schema_path="schema.yaml", test_dir="tests",
+def generate(rules_path="BUSINESS_RULES.md", test_dir="tests",
              output="reports/rule_coverage_table.md"):
-    rules   = collect_rule_ids_from_spec(schema_path)
-    covered = collect_covered_slugs(test_dir)
+    rules   = collect_rules(rules_path)
+    covered = collect_covered_ids(test_dir)
+
+    if not rules:
+        print("No rules found in BUSINESS_RULES.md — nothing to report.")
+        return
+
+    covered_count = sum(1 for rid, _, _ in rules if rid in covered)
+    total_count   = len(rules)
 
     os.makedirs(os.path.dirname(output), exist_ok=True)
     with open(output, "w") as f:
         f.write("# Business rule test coverage\n\n")
-        f.write("| Rule ID | Title | Type | Covered |\n")
-        f.write("|---------|-------|------|---------|\n")
-        for rid, title, rtype in rules:
-            slug = rid.replace("-", "_").lstrip("BR_").lstrip("br_")
-            ok   = "✅" if slug in covered else "❌"
-            f.write(f"| {rid} | {title} | {rtype} | {ok} |\n")
-    print(f"Written {output}")
+        f.write(f"**{covered_count} / {total_count} rules covered**\n\n")
+        f.write("| Rule ID | Title | Category | Covered |\n")
+        f.write("|---------|-------|----------|---------| \n")
+        for rule_id, title, category in rules:
+            status = "✅" if rule_id in covered else "❌"
+            f.write(f"| `{rule_id}` | {title} | {category} | {status} |\n")
+
+    uncovered = [(rid, t) for rid, t, _ in rules if rid not in covered]
+    if uncovered:
+        print(f"\n⚠️  {len(uncovered)} uncovered rule(s):")
+        for rid, title in uncovered:
+            print(f"   {rid}  {title}")
+    else:
+        print(f"✅  All {total_count} rules have test coverage.")
+    print(f"\nWritten: {output}")
 
 
 if __name__ == "__main__":
     generate()
 ```
 
----
 
 ## CI integration — one job per service
 
@@ -1204,8 +1252,10 @@ access to the repo hosting shared spec components.
     upload the output alongside the HTML report
 18. `${VAR_NAME}` tokens in seed bodies are resolved from `env_map.yaml` first,
     then OS environment — never hardcode template codes or similar values
-19. If no `x-business-rules` annotations exist in the spec, derive IDs from
-    section headings in `BUSINESS_RULES.md` using `BR-<CATEGORY>-<NNN>`
+19. Rule IDs live in `BUSINESS_RULES.md` headings as `### BR-<CATEGORY>-<NNN>: <title>`.
+    Never derive IDs from the spec — the spec is only for the conformance suite.
+    Never renumber or reorder existing IDs after tests have been written; new
+    rules always append the next available NNN within their category.
 20. When `BUSINESS_RULES.md` mentions operational details (DB sequence names,
     Kafka topics, Flyway migrations, OTEL spans), ignore them — they are not
     test targets

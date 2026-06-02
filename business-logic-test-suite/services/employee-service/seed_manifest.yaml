@@ -1,12 +1,5 @@
 # No session-scoped prerequisites required for this service.
 # The Employee Service's cross-module validations (Individual, Keycloak, Boundary)
-# are configurable via feature flags. When testing with all flags disabled, no
-# prerequisites are needed. When flags are enabled:
-#
-# - INDIVIDUAL_ENABLED=true: ensure an Individual exists in the Individual service
-#   before creating employees with that individualId
-# - BOUNDARY_ENABLED=true: ensure a BoundaryHierarchy and Boundary entity exist
-#   before creating jurisdictions with those boundary codes
-# - KEYCLOAK_ENABLED=true: ensure the user exists in Keycloak before referencing userId
-#
-# These are conditional prerequisites managed at the test level, not seeded here.
+# are controlled by feature flags. When all flags are disabled the service
+# operates standalone with no prerequisites. When flags are enabled, dependency
+# data must be seeded in the respective services before employee tests run.

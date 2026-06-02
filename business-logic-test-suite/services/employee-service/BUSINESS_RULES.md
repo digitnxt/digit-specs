@@ -1,104 +1,94 @@
 # Business Rules — Employee Service
 
----
-
 ## Cross-Field Rules
 
-### Cross-field: Required employee fields
+### BR-CF-001: Required core employee fields non-empty
 
 **Entities involved:** Employee (`employeeType`, `department`, `designation`)  
-**Rule:** `employeeType`, `department`, and `designation` are all required and non-empty on create and full update (PUT). Partial update (PATCH) may omit them.  
+**Rule:** `employeeType`, `department`, and `designation` are mandatory on creation and must be non-empty strings.  
 **Violation response:** 400 — `VALIDATION_ERROR`
 
 ---
 
-### Cross-field: EmployeeType must be a valid enum value
+### BR-CF-002: Employee type must be valid enum
 
 **Entities involved:** Employee (`employeeType`)  
-**Rule:** `employeeType` must be one of: `PERMANENT`, `CONTRACT`, `TEMPORARY`.  
+**Rule:** `employeeType` must be one of: `PERMANENT`, `CONTRACT`, or `TEMPORARY`.  
 **Violation response:** 400 — `VALIDATION_ERROR`
 
 ---
 
-### Cross-field: Employee code uniqueness per tenant
+### BR-CF-003: Boundary relation array non-empty with complete elements
 
-**Entities involved:** Employee (`code`, `tenant_id`)  
-**Rule:** `code` must be unique within a tenant. Two employees in the same tenant cannot share a code. If `code` is not provided on create, the service generates one via IDGen.  
-**Violation response:** 409 — `EMPLOYEE_CODE_EXISTS`
-
----
-
-### Cross-field: boundaryRelation requires all three sub-fields
-
-**Entities involved:** Jurisdiction (`boundaryRelation`)  
-**Rule:** `boundaryRelation` must contain at least one element. Each element must specify all three fields: `code`, `boundaryType`, and `hierarchyType`. Missing any field in an element is rejected.  
+**Entities involved:** EmployeeJurisdiction (`boundaryRelation`)  
+**Rule:** `boundaryRelation` array must have at least one element on creation; each element must include all three fields: `code`, `boundaryType`, and `hierarchyType`.  
 **Violation response:** 400 — `VALIDATION_ERROR`
 
 ---
 
 ## Cross-Schema Rules
 
-### Cross-schema: Tenant isolation via schema separation
+### BR-CS-001: Employee code uniqueness per tenant
 
-**Entities involved:** Employee, Jurisdiction  
-**Rule:** All queries are scoped to `tenant_id` from the `X-Tenant-ID` header via `SET search_path = tenant_schema`. Employees and jurisdictions from one tenant cannot be accessed by another.  
-**Violation response:** Implicit (queries return empty for other tenants); 500 if tenant header missing
-
----
-
-### Cross-schema: Jurisdiction requires valid employee in same tenant
-
-**Entities involved:** Jurisdiction, Employee  
-**Rule:** When creating or updating a jurisdiction, the referenced `employeeId` must exist in the same tenant. Jurisdictions cannot be created for employees that do not exist.  
-**Violation response:** 400 — `VALIDATION_ERROR` ("employee not found")
+**Entities involved:** Employee (`code`, `tenant_id`)  
+**Rule:** If `code` is provided, it must be unique within the tenant scope: no two employees in the same tenant may share the same code. If no code is provided, the service generates one via IDGen.  
+**Violation response:** 409 — `EMPLOYEE_CODE_EXISTS`
 
 ---
 
-### Cross-schema: Boundary validation via Boundary service
+### BR-CS-002: Jurisdiction employee reference must exist
 
-**Entities involved:** Jurisdiction (`boundaryRelation`), Boundary service  
-**Rule:** When `BOUNDARY_ENABLED = true`, each `(code, boundaryType, hierarchyType)` triple in `boundaryRelation` must be validated against the Boundary service's SearchRelationship API. Invalid or non-existent combinations are rejected.  
-**Violation response:** 400 — `VALIDATION_ERROR` ("invalid boundary relations")
+**Entities involved:** EmployeeJurisdiction, Employee  
+**Rule:** `employeeId` in a jurisdiction record must reference an existing employee in the same tenant. Jurisdictions cannot be created for employees that do not exist.  
+**Violation response:** 400 — `VALIDATION_ERROR`
+
+---
+
+### BR-CS-003: Employee deletion cascades to jurisdictions
+
+**Entities involved:** Employee, EmployeeJurisdiction  
+**Rule:** When an employee is hard-deleted, all jurisdiction records are automatically removed via `ON DELETE CASCADE` foreign key constraint.  
+**Violation response:** N/A (cascade enforced by DB)
 
 ---
 
 ## Lifecycle Rules
 
-### Lifecycle: Soft deactivation preserves record
+### BR-LC-001: Soft deactivation preserves employee record
 
 **Entities involved:** Employee (`isActive`)  
-**Rule:** `POST /employees/:id/deactivate` sets `isActive = false`. The employee record is retained in the database for audit and historical purposes. Deactivated employees can be reactivated.  
-**Violation response:** 404 — `NOT_FOUND` if employee not found
+**Rule:** `POST /employees/:id/deactivate` sets `isActive = false`; the employee record persists for audit history. Deactivated employees can be reactivated.  
+**Violation response:** 404 — `NOT_FOUND` (if employee not found)
 
 ---
 
-### Lifecycle: Hard delete cascades to jurisdictions
+### BR-LC-002: Hard delete removes record and cascades
 
-**Entities involved:** Employee, Jurisdiction  
-**Rule:** `DELETE /employees/:id` permanently removes the employee record. All jurisdiction rows associated with that employee are automatically deleted via the `ON DELETE CASCADE` foreign key constraint.  
-**Violation response:** 404 — `NOT_FOUND` if employee not found
+**Entities involved:** Employee, EmployeeJurisdiction  
+**Rule:** `DELETE /employees/:id` permanently removes the employee record. All associated jurisdiction rows are automatically deleted via the `ON DELETE CASCADE` foreign key constraint.  
+**Violation response:** 404 — `NOT_FOUND` (if employee not found)
 
 ---
 
-### Lifecycle: Full update (PUT) replaces jurisdictions
+### BR-LC-003: PUT replaces jurisdictions atomically
 
-**Entities involved:** Employee, Jurisdiction  
-**Rule:** `PUT /employees/:id` deletes all existing jurisdictions for the employee and inserts the new set from the request. There is no partial merge of jurisdictions — the set is fully replaced.  
-**Violation response:** 404 — `NOT_FOUND` if employee not found; 400 if jurisdiction data invalid
+**Entities involved:** Employee, EmployeeJurisdiction  
+**Rule:** Full update via `PUT /employees/:id` deletes all existing jurisdictions and inserts new ones from the request body. There is no partial merge — the jurisdiction set is fully replaced.  
+**Violation response:** 404 — `NOT_FOUND` (if employee not found); 400 if jurisdiction data invalid
 
 ---
 
 ## Cross-Module Rules
 
-### Cross-module: IDGen required for code generation
+### BR-CM-001: IDGen auto-generates code when omitted
 
 **Entities involved:** Employee (`code`), IDGen service  
-**Rule:** If an employee is created without a `code`, the service calls IDGen to generate a unique code. If IDGen fails, the create operation fails.  
+**Rule:** If no `code` is provided during creation, the service calls IDGen to generate a unique code. If IDGen fails, the create operation fails.  
 **Violation response:** 500 — `ID_GENERATION_ERROR`
 
 ---
 
-### Cross-module: Individual ID validation (optional)
+### BR-CM-002: Individual service validates individual ID
 
 **Entities involved:** Employee (`individualId`), Individual service  
 **Rule:** When `INDIVIDUAL_ENABLED = true`, the `individualId` provided on create or update must exist in the Individual service. If the individual is not found, the operation is rejected.  
@@ -106,18 +96,26 @@
 
 ---
 
-### Cross-module: Keycloak user ID validation (optional)
+### BR-CM-003: Keycloak validates user ID
 
 **Entities involved:** Employee (`userId`), Keycloak  
-**Rule:** When `KEYCLOAK_ENABLED = true`, the `userId` provided on create or update must be a valid Keycloak user. If the user is not found in Keycloak, the operation is rejected.  
+**Rule:** When `KEYCLOAK_ENABLED = true`, the `userId` provided on create or update must be a valid Keycloak user. If the user is not found, the operation is rejected.  
 **Violation response:** 400 — `VALIDATION_ERROR` ("user not found in Keycloak")
 
 ---
 
-### Cross-module: PubSub events are fire-and-forget
+### BR-CM-004: Boundary service validates jurisdiction relations
 
-**Entities involved:** Employee, Jurisdiction, PubSub  
-**Rule:** After each successful mutation (create, update, delete), an event is published to the configured Kafka/Redis topic. Publish failures are logged but do not block the HTTP response.  
+**Entities involved:** EmployeeJurisdiction (`boundaryRelation`), Boundary service  
+**Rule:** When `BOUNDARY_ENABLED = true`, each `(code, boundaryType, hierarchyType)` triple in `boundaryRelation` must be validated against the Boundary service's SearchRelationship API. Invalid or non-existent combinations are rejected.  
+**Violation response:** 400 — `VALIDATION_ERROR` ("invalid boundary relations")
+
+---
+
+### BR-CM-005: PubSub events are fire-and-forget
+
+**Entities involved:** Employee, EmployeeJurisdiction, PubSub  
+**Rule:** After each successful mutation (create, update, delete), corresponding events are published to PubSub. Publish failures are logged but do not block the HTTP response.  
 **Violation response:** N/A (caller sees 200/201/204)
 
 ---

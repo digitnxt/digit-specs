@@ -1,6 +1,6 @@
 prerequisites:
   - id: SEED-001
-    description: Create a baseline schema so data endpoints can be exercised; the Registry requires a schema to exist before any data for that schema can be created.
+    description: A Schema must exist before any data for that schemaCode can be created; the data endpoints return 404 if the schema is absent.
     service: self
     base_url_arg: --base-url
     check:

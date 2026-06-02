@@ -1,140 +1,114 @@
 # Business Rules — Boundary Service
 
----
-
 ## Cross-Field Rules
 
-### Cross-field: GeoJSON geometry validity
+### BR-CF-001: Geometry type and structure alignment
 
 **Entities involved:** Boundary (`geometry`)  
-**Rule:** If `geometry` is provided, `type` must be one of the valid GeoJSON types (`Point`, `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`). Coordinates must conform to the structure required by that type. For `Polygon`, every ring must be closed (first and last coordinate pair must be identical).  
+**Rule:** If `geometry` is provided, its `type` must be one of: `Point`, `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, or `GeometryCollection`. The `coordinates` array must match the type's structural requirements. For `Polygon` types, all rings must be closed (first coordinate equals last coordinate).  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
-### Cross-field: Hierarchy must have exactly one root
+### BR-CF-002: Hierarchy contains exactly one root
 
-**Entities involved:** BoundaryHierarchyDefinition (`boundaryHierarchy` array)  
-**Rule:** In the `boundaryHierarchy` array, exactly one entry must have `parentBoundaryType = null`. Multiple root entries or zero root entries are rejected.  
+**Entities involved:** BoundaryHierarchyDefinition (`boundaryHierarchy`)  
+**Rule:** The `boundaryHierarchy` array must contain exactly one entry where `parentBoundaryType` is null. Multiple root entries or zero root entries are invalid.  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
-### Cross-field: Hierarchy parent types must exist in the same array
+### BR-CF-003: Hierarchy defines no circular dependencies
 
-**Entities involved:** BoundaryHierarchyDefinition (`boundaryHierarchy` array)  
-**Rule:** Every `parentBoundaryType` value referenced in the `boundaryHierarchy` array must itself appear as a `boundaryType` in the same array. A type cannot reference a parent that is not defined in the same hierarchy definition.  
+**Entities involved:** BoundaryHierarchyDefinition (`boundaryHierarchy`)  
+**Rule:** No `boundaryType` in the `boundaryHierarchy` array may directly or transitively reference itself through parent relationships. All `parentBoundaryType` values referenced must exist as entries in the same array.  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
-### Cross-field: Hierarchy must not be acyclic
+### BR-CF-004: Relationship boundary type exists in hierarchy
 
-**Entities involved:** BoundaryHierarchyDefinition  
-**Rule:** No `boundaryType` may reference itself directly or indirectly as a parent (no circular dependency). A type cannot appear as both ancestor and descendant of itself.  
+**Entities involved:** BoundaryRelationship, BoundaryHierarchyDefinition  
+**Rule:** The `boundaryType` field in a relationship must be defined as an entry in the referenced hierarchy's `boundaryHierarchy` array for the same `hierarchyType`.  
+**Violation response:** 400 — `BAD_REQUEST`
+
+---
+
+### BR-CF-005: Parent boundary type matches hierarchy definition
+
+**Entities involved:** BoundaryRelationship, BoundaryHierarchyDefinition  
+**Rule:** If `parent` is specified in a relationship, the parent boundary's `boundaryType` must exactly match the declared `parentBoundaryType` of the current `boundaryType` in the hierarchy definition.  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
 ## Cross-Schema Rules
 
-### Cross-schema: Relationship boundary code must reference existing Boundary
+### BR-CS-001: Relationship references existing boundary entity
 
-**Entities involved:** BoundaryRelationship, Boundary  
-**Rule:** When creating a boundary relationship, the `code` field must reference an existing boundary entity in `boundary_v1` for the same `tenantid`. Relationships cannot be created for boundary codes that do not exist.  
-**Violation response:** 400 — `BAD_REQUEST`
-
----
-
-### Cross-schema: Relationship hierarchyType must reference existing Hierarchy
-
-**Entities involved:** BoundaryRelationship, BoundaryHierarchyDefinition  
-**Rule:** The `hierarchyType` in a relationship must reference an existing hierarchy definition in `boundary_hierarchy_v1` for the same `tenantid`.  
-**Violation response:** 400 — `BAD_REQUEST`
+**Entities involved:** BoundaryRelationship → Boundary  
+**Rule:** The `code` field in a relationship must reference an existing `boundary_v1` record with matching `tenantid`. Relationships cannot be created for boundary codes that do not exist.  
+**Violation response:** 404 — `NOT_FOUND`
 
 ---
 
-### Cross-schema: Relationship boundaryType must be defined in the hierarchy
+### BR-CS-002: Relationship references existing hierarchy definition
 
-**Entities involved:** BoundaryRelationship, BoundaryHierarchyDefinition  
-**Rule:** The `boundaryType` specified in a relationship must exist in the `boundaryHierarchy` array of the referenced hierarchy definition.  
-**Violation response:** 400 — `BAD_REQUEST`
+**Entities involved:** BoundaryRelationship → BoundaryHierarchyDefinition  
+**Rule:** The `hierarchyType` field in a relationship must reference an existing `boundary_hierarchy_v1` record for the same `tenantid`.  
+**Violation response:** 404 — `NOT_FOUND`
 
 ---
 
-### Cross-schema: Parent relationship must exist
+### BR-CS-003: Parent relationship record must exist
 
 **Entities involved:** BoundaryRelationship (self-referential)  
-**Rule:** If a relationship specifies a `parent` code, that parent relationship must already exist in `boundary_relationship_v1` for the same `tenantid` and `hierarchyType`.  
-**Violation response:** 400 — `BAD_REQUEST`
-
----
-
-### Cross-schema: Parent boundaryType must be declared parent in hierarchy
-
-**Entities involved:** BoundaryRelationship, BoundaryHierarchyDefinition  
-**Rule:** If a relationship specifies a `parent`, the parent's `boundaryType` must be the declared `parentBoundaryType` of the child's `boundaryType` in the hierarchy definition.  
-**Violation response:** 400 — `BAD_REQUEST`
-
----
-
-### Cross-schema: Tenant isolation
-
-**Entities involved:** Boundary, BoundaryHierarchyDefinition, BoundaryRelationship  
-**Rule:** All three tables are filtered by `tenantid`. Cross-tenant queries are prevented. A boundary, hierarchy, or relationship from one tenant cannot be referenced by another tenant.  
-**Violation response:** Implicit (queries return empty results for other tenants)
+**Rule:** If `parent` is specified, an existing relationship record must exist for that parent code in the same `hierarchyType` and `tenantid`.  
+**Violation response:** 404 — `NOT_FOUND`
 
 ---
 
 ## Lifecycle Rules
 
-### Lifecycle: Boundary code uniqueness per tenant
+### BR-LC-001: Boundary code uniqueness per tenant
 
 **Entities involved:** Boundary  
-**Rule:** `(code, tenantid)` must be unique. Once a boundary code is created for a tenant, it cannot be duplicated.  
+**Rule:** Each `code` must be unique within a tenant. Creating a boundary with a duplicate `code` for the same `tenantid` is rejected.  
 **Violation response:** 409 — `CONFLICT`
 
 ---
 
-### Lifecycle: Hierarchy type uniqueness per tenant
+### BR-LC-002: Hierarchy type uniqueness per tenant
 
 **Entities involved:** BoundaryHierarchyDefinition  
-**Rule:** `(tenantid, hierarchytype)` must be unique. Only one hierarchy definition per type per tenant is allowed.  
+**Rule:** Each `hierarchyType` must be unique within a tenant. Creating a hierarchy with a duplicate `hierarchyType` for the same `tenantid` is rejected.  
 **Violation response:** 409 — `CONFLICT`
 
 ---
 
-### Lifecycle: Relationship uniqueness per code and hierarchy
+### BR-LC-003: Relationship key uniqueness per tenant
 
 **Entities involved:** BoundaryRelationship  
-**Rule:** `(tenantid, code, hierarchytype)` is the composite primary key. A boundary code may appear in multiple hierarchies but only once per hierarchy per tenant.  
+**Rule:** Each combination of `(code, hierarchyType)` must be unique within a tenant. A boundary code can participate in at most one relationship per hierarchy type per tenant.  
 **Violation response:** 409 — `CONFLICT`
-
----
-
-### Lifecycle: Audit fields set on creation, modifiedBy updated on update
-
-**Entities involved:** Boundary, BoundaryHierarchyDefinition, BoundaryRelationship  
-**Rule:** On creation: `createdBy` = X-User-ID, `createdTime` = current epoch ms, `modifiedBy` = X-User-ID, `modifiedTime` = current epoch ms. On update: only `modifiedBy` and `modifiedTime` change; `createdBy` and `createdTime` are never overwritten.  
-**Violation response:** N/A (enforced by service layer)
 
 ---
 
 ## Cross-Module Rules
 
-### Cross-module: PubSub publish is fire-and-forget
+### BR-CM-001: Tenant isolation across all operations
 
-**Entities involved:** Boundary, BoundaryRelationship, PubSub  
-**Rule:** After create or update, the service publishes an event to the configured PubSub topic. If the PubSub backend is unavailable, the operation is still considered successful and the event is silently dropped.  
-**Violation response:** N/A (logged; caller sees 200/201)
+**Entities involved:** Boundary, BoundaryHierarchyDefinition, BoundaryRelationship  
+**Rule:** All queries are scoped to `tenantid` from the `X-Tenant-ID` header. Cross-tenant data access is prevented implicitly.  
+**Violation response:** 400 — `BAD_REQUEST` (missing header); implicit isolation otherwise
 
 ---
 
-### Cross-module: Tenant migration consumer
+### BR-CM-002: PubSub publish is fire-and-forget
 
-**Entities involved:** Tenant migration, PostgreSQL schema  
-**Rule:** When `SCHEMA_SEPARATION_MODE=true`, the service subscribes to the tenant migration topic and runs Flyway migrations for new tenants before any requests for that tenant can succeed.  
-**Violation response:** 500 — `INTERNAL_SERVER_ERROR` (if tenant schema is not initialized)
+**Entities involved:** Boundary, BoundaryRelationship, PubSub  
+**Rule:** After create or update, the service publishes an event to the configured PubSub topic. If the PubSub backend is unavailable, the operation still succeeds and the event is silently dropped.  
+**Violation response:** N/A (caller sees 200/201)
 
 ---
 
@@ -143,16 +117,15 @@
 | HTTP Status | Condition | Error Code |
 |---|---|---|
 | 400 | Missing `X-Tenant-ID` header | `BAD_REQUEST` |
-| 400 | Invalid GeoJSON geometry (invalid type, unclosed polygon ring, wrong coordinate structure) | `BAD_REQUEST` |
+| 400 | Invalid geometry (type unknown, unclosed polygon ring, wrong coordinate structure) | `BAD_REQUEST` |
 | 400 | Hierarchy has multiple roots or zero roots | `BAD_REQUEST` |
-| 400 | Hierarchy has parent type not defined in same array | `BAD_REQUEST` |
-| 400 | Circular dependency in hierarchy | `BAD_REQUEST` |
-| 400 | Relationship code does not reference existing boundary | `BAD_REQUEST` |
-| 400 | Relationship hierarchyType not found for tenant | `BAD_REQUEST` |
-| 400 | Relationship boundaryType not in hierarchy | `BAD_REQUEST` |
-| 400 | Parent relationship not found | `BAD_REQUEST` |
-| 400 | Parent boundaryType order mismatch | `BAD_REQUEST` |
-| 404 | Boundary / hierarchy / relationship not found | `NOT_FOUND` |
+| 400 | Hierarchy `parentBoundaryType` not found in same array | `BAD_REQUEST` |
+| 400 | Circular dependency detected in hierarchy | `BAD_REQUEST` |
+| 400 | `boundaryType` not in hierarchy definition | `BAD_REQUEST` |
+| 400 | Parent `boundaryType` order mismatch | `BAD_REQUEST` |
+| 404 | Boundary code not found for tenant | `NOT_FOUND` |
+| 404 | Hierarchy type not found for tenant | `NOT_FOUND` |
+| 404 | Parent relationship record not found | `NOT_FOUND` |
 | 409 | Duplicate boundary code per tenant | `CONFLICT` |
 | 409 | Duplicate hierarchy type per tenant | `CONFLICT` |
 | 409 | Duplicate relationship (code + hierarchyType) per tenant | `CONFLICT` |

@@ -1,6 +1,6 @@
 prerequisites:
   - id: SEED-001
-    description: A Process with at least one INITIAL state must exist before any ProcessInstance can be created; the transition endpoint returns 404 if the process is absent.
+    description: A Process must exist before any State or ProcessInstance can be created; the transition endpoint returns 404 if the process is absent (BR-CS-001, BR-CS-004).
     service: self
     base_url_arg: --base-url
     check:
@@ -17,7 +17,7 @@ prerequisites:
         sla: 1440
 
   - id: SEED-002
-    description: An INITIAL state must exist in the seed process before the first transition can be executed; the transition service looks up the initial state on instance creation.
+    description: An INITIAL state must exist in the seed process before the first transition can be executed; the transition service looks up the initial state on instance creation (BR-CS-001).
     service: self
     base_url_arg: --base-url
     check:
@@ -34,7 +34,7 @@ prerequisites:
         sla: 60
 
   - id: SEED-003
-    description: A second state must exist so actions (transitions) between states can be defined and the workflow can advance.
+    description: A target state must exist so actions (transitions) between states can be defined and the workflow can advance (BR-CS-002).
     service: self
     base_url_arg: --base-url
     check:

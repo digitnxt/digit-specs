@@ -1,6 +1,6 @@
 prerequisites:
   - id: SEED-001
-    description: A BoundaryHierarchyDefinition must exist before any BoundaryRelationship can be created; relationships require a valid hierarchyType to reference.
+    description: A BoundaryHierarchyDefinition must exist before any BoundaryRelationship can be created; relationships require a valid hierarchyType to reference (BR-CS-002).
     service: self
     base_url_arg: --base-url
     check:
@@ -27,7 +27,7 @@ prerequisites:
               active: true
 
   - id: SEED-002
-    description: A Boundary entity must exist before a BoundaryRelationship referencing its code can be created.
+    description: A Boundary entity must exist before a BoundaryRelationship referencing its code can be created (BR-CS-001).
     service: self
     base_url_arg: --base-url
     check:

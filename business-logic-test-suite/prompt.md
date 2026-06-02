@@ -5,7 +5,7 @@ the business logic test suite. Run them in order — the output of each feeds
 the next.
 
 ```
-Prompt 1: CLAUDE.md → BUSINESS_RULES.md
+Prompt 1: service CLAUDE.md → BUSINESS_RULES.md
 Prompt 2: BUSINESS_RULES.md → env_map.yaml
 Prompt 3: BUSINESS_RULES.md + schema.yaml → seed_manifest.yaml
 ```
@@ -57,15 +57,32 @@ Exclude everything else. Specifically, do NOT include:
 - Any detail that describes HOW the rule is implemented rather than WHAT the
   rule requires
 
-For each rule you extract, write it in this format:
+For each rule you extract, write it in this exact format:
 
-### <Category>: <short title>
+### BR-<CATEGORY>-<NNN>: <short title>
 
 **Entities involved:** <list>
 **Rule:** <one or two sentences stating the constraint precisely>
 **Violation response:** <HTTP status> — <error code or message shape>
 
-Where category is one of: Cross-field, Cross-schema, Lifecycle, Cross-module.
+Where:
+- CATEGORY is one of: CF (cross-field), CS (cross-schema), LC (lifecycle),
+  CM (cross-module)
+- NNN is a zero-padded 3-digit counter that resets per category, starting at
+  001 for each category
+- short title is 5–8 words precisely describing the constraint
+
+Example headings:
+  ### BR-CF-001: Padding length must cover sequence start width
+  ### BR-CF-002: Charset range must be ordered and class-homogeneous
+  ### BR-CS-001: Template must exist before generation
+  ### BR-LC-001: Updates are append-only with version increment
+  ### BR-CM-001: IDGen required for bill number generation
+
+The IDs must be stable — do not change them on subsequent runs. They are used
+as test class identifiers: BR-CF-001 maps to TestBR_CF_001_<slug> in the test
+suite. Reordering or renumbering rules after tests have been written breaks the
+coverage table.
 
 Do not paraphrase rules in a way that loses precision. If the original states
 an exact value (e.g. "padding.length must be >= the number of digits in
@@ -192,7 +209,7 @@ Rules:
 Service CLAUDE.md
       │
       ▼ Prompt 1
-BUSINESS_RULES.md
+BUSINESS_RULES.md          ← rule IDs live here (BR-CF-001, BR-CS-001, ...)
       │
       ├──▶ Prompt 2 ──▶ env_map.yaml
       │
@@ -201,3 +218,23 @@ BUSINESS_RULES.md
 
 Once all three files exist alongside `schema.yaml`, the suite is ready to
 generate using `CLAUDE.md`.
+
+---
+
+## How rule IDs flow through the system
+
+```
+BUSINESS_RULES.md heading          Test class name                Coverage table
+─────────────────────────────────  ─────────────────────────────  ─────────────
+### BR-CF-001: Padding length...   class TestBR_CF_001_padding_   BR-CF-001 ✅
+### BR-CS-001: Template must...    class TestBR_CS_001_template_  BR-CS-001 ✅
+### BR-LC-001: Updates append...   (not yet written)              BR-LC-001 ❌
+```
+
+`generate_rule_coverage_table.py` reads IDs from `BUSINESS_RULES.md` headings
+and checks for matching `TestBR_<CATEGORY>_<NNN>_` class names in the test
+files. No spec annotations are involved.
+
+**Never renumber or reorder rule IDs after tests have been written.** Adding a
+new rule always appends the next available NNN within its category. Deleting a
+rule retires its ID — do not reuse it.

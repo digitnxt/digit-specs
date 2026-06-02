@@ -1,6 +1,6 @@
 prerequisites:
   - id: SEED-001
-    description: An EMAIL NotificationTemplate must exist for the tenant before POST /v3/email/send can succeed; the send endpoint returns 404 if no template is found.
+    description: An EMAIL NotificationTemplate must exist for the tenant before POST /v3/email/send can succeed; the send endpoint returns 404 if no template is found (BR-CS-003).
     service: self
     base_url_arg: --base-url
     check:
@@ -21,7 +21,7 @@ prerequisites:
         isHTML: true
 
   - id: SEED-002
-    description: An SMS NotificationTemplate must exist for the tenant before POST /v3/sms/send can succeed; the send endpoint returns 404 if no template is found.
+    description: An SMS NotificationTemplate must exist for the tenant before POST /v3/sms/send can succeed; the send endpoint returns 404 if no template is found (BR-CS-003).
     service: self
     base_url_arg: --base-url
     check:

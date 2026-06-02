@@ -1,10 +1,8 @@
 # Business Rules — Individual Service
 
----
-
 ## Cross-Field Rules
 
-### Cross-field: At least one contact method required
+### BR-CF-001: At least one contact method required
 
 **Entities involved:** Individual (`mobileNumber`, `email`)  
 **Rule:** At least one of `mobileNumber` or `email` must be provided on both create and update operations.  
@@ -12,7 +10,7 @@
 
 ---
 
-### Cross-field: Each identifier type may appear at most once
+### BR-CF-002: Each identifier type appears at most once
 
 **Entities involved:** Individual.identifiers (`identifierType`)  
 **Rule:** Each `identifierType` (e.g. `AADHAAR`, `PAN`, `PASSPORT`) may appear at most once per individual in the identifiers array. Duplicate types in the same request are rejected.  
@@ -20,7 +18,7 @@
 
 ---
 
-### Cross-field: Address requires at least one location field
+### BR-CF-003: Address requires at least one location field
 
 **Entities involved:** Address (within Individual)  
 **Rule:** Each address entry must include at least one of: `doorNo`, `street`, `landmark`, or `city`.  
@@ -28,7 +26,7 @@
 
 ---
 
-### Cross-field: Latitude bounds
+### BR-CF-004: Latitude bounds between minus ninety and ninety
 
 **Entities involved:** Address (`latitude`)  
 **Rule:** If `latitude` is provided, it must be in the range [−90, 90].  
@@ -36,7 +34,7 @@
 
 ---
 
-### Cross-field: Longitude bounds
+### BR-CF-005: Longitude bounds between minus one-eighty and one-eighty
 
 **Entities involved:** Address (`longitude`)  
 **Rule:** If `longitude` is provided, it must be in the range [−180, 180].  
@@ -44,7 +42,7 @@
 
 ---
 
-### Cross-field: Date of birth must not be in the future
+### BR-CF-006: Date of birth must not be in future
 
 **Entities involved:** Individual (`dateOfBirth`)  
 **Rule:** `dateOfBirth` must not be after the current server date.  
@@ -52,7 +50,7 @@
 
 ---
 
-### Cross-field: Date of birth must not exceed 150 years in the past
+### BR-CF-007: Date of birth maximum one-hundred-fifty years past
 
 **Entities involved:** Individual (`dateOfBirth`)  
 **Rule:** `dateOfBirth` must not be more than 150 years before the current date.  
@@ -60,7 +58,7 @@
 
 ---
 
-### Cross-field: Age bounds
+### BR-CF-008: Age must be between zero and one-hundred-fifty
 
 **Entities involved:** Individual (`age`)  
 **Rule:** If `age` is provided, it must be in the range [0, 150].  
@@ -68,7 +66,7 @@
 
 ---
 
-### Cross-field: Cardinality limits on nested entities
+### BR-CF-009: Cardinality limits on nested entity arrays
 
 **Entities involved:** Individual.addresses, Individual.identifiers, Individual.documents  
 **Rule:** `addresses` may contain at most 16 entries; `identifiers` at most 16 entries; `documents` at most 20 entries.  
@@ -78,15 +76,15 @@
 
 ## Cross-Schema Rules
 
-### Cross-schema: Mobile number uniqueness per tenant (baseline)
+### BR-CS-001: Mobile number uniqueness per tenant baseline
 
 **Entities involved:** Individual (`mobileNumber`), `individual_v3.hashedmobilenumber`  
-**Rule:** `mobileNumber` must be unique per tenant by default. Checked by comparing SHA-256 hashes. Can be overridden by removing `"mobileNumber"` from the tenant's `uniquenessCriteria` config.  
+**Rule:** `mobileNumber` must be unique per tenant by default (checked by comparing SHA-256 hashes). This can be overridden by removing `"mobileNumber"` from the tenant's `uniquenessCriteria` configuration.  
 **Violation response:** 409 — `UNIQUE_ENTITY_ERROR`
 
 ---
 
-### Cross-schema: Name uniqueness (tenant-configured)
+### BR-CS-002: Name uniqueness when tenant configured
 
 **Entities involved:** Individual (`givenName`, `familyName`), `individual_config_v3.uniquenesscriteria`  
 **Rule:** If the tenant's `uniquenessCriteria` includes `"name"`, then the combination of `(givenName, familyName)` must be unique per tenant on create and update.  
@@ -94,15 +92,15 @@
 
 ---
 
-### Cross-schema: Tenant config is a singleton
+### BR-CS-003: Tenant config is singleton per tenant
 
 **Entities involved:** `individual_config_v3`  
-**Rule:** At most one configuration record exists per tenant. `POST /configs` creates on first call and updates on subsequent calls (upsert). Separate create vs. update calls are not required.  
+**Rule:** At most one configuration record exists per tenant. `POST /configs` creates on first call and updates on subsequent calls (upsert). No separate create vs. update distinction.  
 **Violation response:** N/A (idempotent upsert)
 
 ---
 
-### Cross-schema: Optimistic lock on update
+### BR-CS-004: Optimistic lock required when version supplied
 
 **Entities involved:** Individual (`rowversion`)  
 **Rule:** If `version` is provided in a `PUT` request body, it must exactly match the server's current `rowversion`. A mismatch means another actor has modified the record.  
@@ -112,7 +110,7 @@
 
 ## Lifecycle Rules
 
-### Lifecycle: Creation initialises audit and version
+### BR-LC-001: Creation initialises immutable audit fields
 
 **Entities involved:** Individual  
 **Rule:** On successful create: `isActive = true`, `version = 1`, `createdBy` = X-User-ID, `createdTime` = current timestamp, `individualId` generated by IDGen. These fields are never changed after creation.  
@@ -120,15 +118,15 @@
 
 ---
 
-### Lifecycle: Update increments version and preserves immutable fields
+### BR-LC-002: Update increments version and preserves immutable fields
 
 **Entities involved:** Individual  
-**Rule:** On update (`PUT`): `version` is incremented, `modifiedBy` and `modifiedTime` are updated. The fields `id`, `individualId`, `tenantId`, `createdBy`, `createdTime`, and `isActive` are immutable and ignored if supplied in the request. `additionalAttributes` is replaced in full (not merged).  
+**Rule:** On `PUT`: `version` is incremented, `modifiedBy` and `modifiedTime` are updated. The fields `id`, `individualId`, `tenantId`, `createdBy`, `createdTime`, and `isActive` are immutable and ignored if supplied in the request. `additionalAttributes` is replaced in full (not merged).  
 **Violation response:** 404 — `NOT_FOUND` if individual absent; 409 — `ROW_VERSION_MISMATCH` if stale version
 
 ---
 
-### Lifecycle: Soft delete marks individual and cascade to identifiers
+### BR-LC-003: Soft delete marks individual and cascades identifiers
 
 **Entities involved:** Individual, Identifier  
 **Rule:** `DELETE /individuals/:id` sets `isActive = false` on the individual and `active = false` on all child identifier records. Address and document records are not cascade-soft-deleted. The individual record is never physically removed.  
@@ -136,7 +134,7 @@
 
 ---
 
-### Lifecycle: Soft-deleted records excluded by default
+### BR-LC-004: Soft-deleted records excluded by default
 
 **Entities involved:** Individual  
 **Rule:** `GET /individuals` and `GET /individuals/:id` exclude records with `isActive = false` by default. To include soft-deleted records, pass `includeDeleted = true` on the search endpoint.  
@@ -146,7 +144,7 @@
 
 ## Cross-Module Rules
 
-### Cross-module: IDGen required for individualId generation
+### BR-CM-001: IDGen required for individualId generation
 
 **Entities involved:** Individual (`individualId`), IDGen library  
 **Rule:** On create, the service calls the embedded IDGen library to generate a unique `individualId`. If IDGen returns an error or empty ID, the create operation fails.  
@@ -154,7 +152,7 @@
 
 ---
 
-### Cross-module: Vault encryption (optional)
+### BR-CM-002: Vault encryption fails hard when enabled
 
 **Entities involved:** Individual (`mobileNumber`, `email`), Vault  
 **Rule:** When `VAULT_ENABLED = true`, `mobileNumber` and `email` are encrypted before persisting and decrypted on authorised read. If Vault is unavailable, the operation fails.  
@@ -162,7 +160,7 @@
 
 ---
 
-### Cross-module: PubSub events are fire-and-forget
+### BR-CM-003: PubSub events are fire-and-forget
 
 **Entities involved:** Individual, PubSub  
 **Rule:** After any successful write (create, update, delete, config upsert), an event is published to the configured PubSub topic. Publish failures are logged but do not fail the HTTP response.  

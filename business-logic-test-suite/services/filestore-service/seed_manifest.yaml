@@ -1,6 +1,6 @@
 prerequisites:
   - id: SEED-001
-    description: An active DocumentCategory must exist before any file upload can succeed; uploads are rejected with 400 if no matching active category is found for the module parameter.
+    description: An active DocumentCategory must exist before any file upload can succeed; uploads are rejected with 400 if no matching active category is found for the module parameter (BR-CS-001).
     service: self
     base_url_arg: --base-url
     check:

@@ -1,6 +1,6 @@
 prerequisites:
   - id: SEED-001
-    description: A UrlConfig must exist for the tenant before any URL can be shortened; the shorten endpoint returns 404 config-not-found if no config row exists.
+    description: A UrlConfig must exist for the tenant before any URL can be shortened; the shorten endpoint returns 404 config-not-found if no config row exists (BR-CS-001).
     service: self
     base_url_arg: --base-url
     check:

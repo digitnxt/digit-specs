@@ -1,163 +1,129 @@
 # Business Rules — IDGen Service
 
----
-
 ## Cross-Field Rules
 
-### Cross-field: Padding length must cover sequence start digits
+### BR-CF-001: Padding must accommodate sequence start
 
-**Entities involved:** IDGenTemplateConfig (`sequence.padding.length`, `sequence.start`)  
-**Rule:** `padding.length` must be ≥ the number of digits in `sequence.start`. For example, if `start = 1000`, `padding.length` must be ≥ 4. A padding length shorter than the digit count of start renders padding meaningless and is rejected.  
+**Entities involved:** IDGenTemplateConfig (`sequence.start`, `sequence.padding.length`)  
+**Rule:** The `sequence.start` value must not exceed the number of digits representable by `padding.length`. If `sequence.start` is 1000, `padding.length` must be ≥ 4; otherwise padding has no effect and the configuration is rejected.  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
-### Cross-field: Charset range order and class homogeneity
+### BR-CF-002: Charset ranges must be valid byte ranges
 
 **Entities involved:** IDGenTemplateConfig (`random.charset`)  
-**Rule:** In a charset range expression (e.g. `A-Z`, `0-9`), the start byte must be ≤ the end byte. Ranges that cross character classes — such as `A-1` (mixing uppercase letters and digits) — are rejected. An empty charset string is also rejected.  
+**Rule:** In `random.charset`, character ranges like `A-Z` or `0-9` must have start byte ≤ end byte. Ranges cannot cross character classes (e.g., `A-1` is rejected). An empty charset string is not allowed.  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
-### Cross-field: Date format must match predefined keyword list
+### BR-CF-003: Date format must match keyword list
 
 **Entities involved:** IDGenTemplateConfig, `{DATE:format}` token  
-**Rule:** The format string inside a `{DATE:format}` token must exactly match one of the predefined date format keywords (e.g. `yyyymmdd`, `dd-mm-yyyy`). Free-form Go layout strings are not accepted.  
+**Rule:** The `{DATE:format}` token only accepts predefined format keywords (e.g., `yyyymmdd`, `yyyy-mm-dd`, `yyyy/mm/dd`). Free-form Go layout strings are not permitted.  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
-### Cross-field: Variable tokens validated at generation time, not at template creation time
+### BR-CF-004: Template variables validated at generation time
 
-**Entities involved:** IDGenTemplateConfig (`template` string), GenerateIDRequest (`variables`)  
-**Rule:** Template syntax is valid if a `{varName}` token is a non-reserved name. However, whether the required variable is present is checked at generation time: if `variables` does not contain a key matching the token name, ID generation fails.  
-**Violation response:** 422 — `UNPROCESSABLE_ENTITY` (at generate time, not create time)
-
----
-
-### Cross-field: Bulk count range
-
-**Entities involved:** BulkGenerateRequest (`count`)  
-**Rule:** The `count` field for bulk generation must be between 1 and 1000 (inclusive).  
-**Violation response:** 400 — `VALIDATION_ERROR`
+**Entities involved:** IDGenTemplateConfig, GenerateIDRequest (`variables`)  
+**Rule:** Template syntax validity is determined at creation time. However, whether a required variable is present is checked at generation time — not at template creation time. A missing variable causes generation to fail.  
+**Violation response:** 422 — `UNPROCESSABLE_ENTITY` (at generation time)
 
 ---
 
-### Cross-field: Scoped reset counter resets to sequence.start, not 1
+### BR-CF-005: Scope counter resets to sequence start
 
 **Entities involved:** IDGenSequenceReset, IDGenTemplateConfig (`sequence.start`, `sequence.scope`)  
-**Rule:** When a scoped (DAILY / MONTHLY / YEARLY) counter rolls over to a new scope window, the counter resets to `sequence.start` — not to 1. This applies consistently on every reset boundary.  
-**Violation response:** N/A (enforced internally; not directly a caller error)
+**Rule:** When a scoped (DAILY / MONTHLY / YEARLY) counter rolls over to a new scope window, the counter resets to `sequence.start` — not to 1. The custom start value is honoured on every reset.  
+**Violation response:** N/A (enforced internally; no caller-visible error)
 
 ---
 
 ## Cross-Schema Rules
 
-### Cross-schema: Template must exist before ID generation
-
-**Entities involved:** IDGenTemplate, GenerateIDRequest  
-**Rule:** A generate request must reference an existing `(tenantId, templateCode)` for which a template (any version) has been created. If no such template exists, generation is rejected.  
-**Violation response:** 404 — `NOT_FOUND`
-
----
-
-### Cross-schema: One PostgreSQL sequence per (tenant, templateCode)
+### BR-CS-001: One PostgreSQL sequence per template per tenant
 
 **Entities involved:** IDGenTemplate, IDGenSequenceLookup  
-**Rule:** Exactly one PostgreSQL sequence (named `seq_v1_<sha1(tenantId:templateCode)>`) is created when the first version of a template is created, and is shared across all versions. A second template with the same `(tenantId, templateCode)` cannot be created.  
-**Violation response:** 409 — `CONFLICT`
+**Rule:** A single PostgreSQL sequence is created per `(tenantid, templatecode)` pair at template creation time and is shared across all versions. A sequence creation failure prevents template creation.  
+**Violation response:** 500 — `INTERNAL_SERVER_ERROR`
 
 ---
 
-### Cross-schema: Sequence and lookup are dropped only when the last version is deleted
+### BR-CS-002: Sequence only dropped on last version delete
 
-**Entities involved:** IDGenTemplate, IDGenSequenceLookup, IDGenSequenceReset  
-**Rule:** Deleting a non-last version of a template has no effect on the underlying PostgreSQL sequence, the lookup row, or any sequence-reset rows. The sequence and lookup row are dropped, and all reset rows deleted, only when the last remaining version is deleted.  
-**Violation response:** N/A (enforced internally; not a caller error)
+**Entities involved:** IDGenTemplate, IDGenSequenceLookup  
+**Rule:** The PostgreSQL sequence and lookup row are only dropped when the last version of the template is deleted. Deleting a non-last version has no effect on the sequence.  
+**Violation response:** N/A (deletion succeeds; sequence retained)
 
 ---
 
-### Cross-schema: GLOBAL scope start is immutable after sequence creation
+### BR-CS-003: Global scope start cannot be updated
 
-**Entities involved:** IDGenTemplate (`sequence.scope`, `sequence.start`), IDGenSequenceLookup  
-**Rule:** Updating a template whose sequence scope is `GLOBAL` with a different `sequence.start` value is rejected. The underlying PostgreSQL sequence was already initialized with the original start value and cannot be retroactively changed without dropping and recreating it.  
+**Entities involved:** IDGenTemplate (`sequence.scope`, `sequence.start`)  
+**Rule:** If a template uses `sequence.scope = GLOBAL` and an update attempts to change `sequence.start`, the update is rejected because the PostgreSQL sequence was already initialized with the original start value; retro-changing is not supported.  
 **Violation response:** 422 — `UNPROCESSABLE_ENTITY`
 
 ---
 
-### Cross-schema: Scope-reset rows are created lazily and orphaned on scope change
+### BR-CS-004: Scope reset rows deleted with last version
 
-**Entities involved:** IDGenSequenceReset, IDGenTemplateConfig (`sequence.scope`)  
-**Rule:** `idgen_sequence_resets` rows are inserted only on first use of a new scope window. If a template is updated to change scope (e.g. from `DAILY` to `MONTHLY`), old rows from the previous scope remain orphaned in the table until the last template version is deleted (at which point all reset rows for that `(tenantId, templateCode)` are deleted).  
-**Violation response:** N/A (orphaned rows are harmless; no caller-visible error)
+**Entities involved:** IDGenTemplate, IDGenSequenceReset  
+**Rule:** All `idgen_sequence_resets` rows for a `(tenantid, templatecode)` pair are deleted when the last template version is deleted.  
+**Violation response:** N/A (cascade; no caller-visible error)
 
 ---
 
 ## Lifecycle Rules
 
-### Lifecycle: Updates are append-only (version increment)
-
-**Entities involved:** IDGenTemplate (`version`)  
-**Rule:** Every `PUT /v3/template` inserts a new row with `version = latest + 1`. Previous version rows are never modified or deleted as a side effect of an update. The database enforces `UNIQUE(tenantid, templatecode, version)` and `CHECK(version > 0)`.  
-**Violation response:** 404 — `NOT_FOUND` (if no prior version exists to update)
-
----
-
-### Lifecycle: createdBy and createdTime are immutable after v1
-
-**Entities involved:** IDGenTemplate (`createdBy`, `createdTime`)  
-**Rule:** `createdBy` and `createdTime` are set only on version 1. On every subsequent version they are copied verbatim from the v1 row. `modifiedBy` and `modifiedTime` are updated on every new version with the current actor and timestamp.  
-**Violation response:** Not directly user-visible; the fields are silently preserved by the service layer.
-
----
-
-### Lifecycle: Delete targets a specific version only
+### BR-LC-001: Template creation enforces code uniqueness
 
 **Entities involved:** IDGenTemplate  
-**Rule:** `DELETE /v3/template?templateCode={code}&version={vN}` deletes exactly the row matching `(tenantId, templateCode, version)`. All other versions are unaffected unless this was the last version.  
-**Violation response:** 404 — `NOT_FOUND` (if targeted version does not exist)
+**Rule:** A template with `(tenantID, templateCode)` cannot be created if one already exists for that tenant. Attempting to create a duplicate returns 409.  
+**Violation response:** 409 — `CONFLICT`
 
 ---
 
-### Lifecycle: Version query parameter requires templateCode
+### BR-LC-002: Updates are append-only with version increment
 
-**Entities involved:** IDGenTemplate, GET `/v3/template`  
-**Rule:** On `GET /v3/template`, the `version` query parameter may not be supplied without also supplying `templateCode`.  
-**Violation response:** 400 — `BAD_REQUEST`
+**Entities involved:** IDGenTemplate (`version`, `createdBy`, `createdTime`)  
+**Rule:** Each `PUT /v3/template` creates a new row with `version = latest + 1`. The `createdBy` and `createdTime` from version 1 are preserved verbatim across all subsequent versions. `modifiedBy` and `modifiedTime` are updated on every new version.  
+**Violation response:** 404 — `NOT_FOUND` (if no prior version exists)
+
+---
+
+### BR-LC-003: Delete targets specific version only
+
+**Entities involved:** IDGenTemplate  
+**Rule:** `DELETE /v3/template?templateCode={code}&version={vN}` deletes exactly the row matching `(tenantId, templateCode, version)`. All other versions are unaffected unless this is the last version.  
+**Violation response:** 404 — `NOT_FOUND` (if targeted version does not exist)
 
 ---
 
 ## Cross-Module Rules
 
-### Cross-module: Billing uses IDGen for bill numbers
+### BR-CM-001: Billing depends on IDGen bill-number template
 
 **Entities involved:** IDGenTemplate, Billing service  
-**Rule:** The Billing service calls `POST /v3/generate` with `templateCode = ${IDGEN_BILL_NUMBER_TEMPLATE_CODE}` during bill generation. If this IDGen call fails (service unreachable, template not found, or generation error), the entire bill generation is rolled back in Billing.  
-**Violation response:** Billing receives 404/500 from IDGen → Billing returns 500 to its caller
+**Rule:** The Billing service expects a template with `templateCode = ${IDGEN_BILL_NUMBER_TEMPLATE_CODE}` to be pre-seeded in IDGen before any bill can be generated. If the template is absent, Billing returns a generation-failed error and rolls back the bill. If IDGen is unreachable, Billing rolls back as well.  
+**Violation response:** 500 — `INTERNAL_SERVER_ERROR` (from Billing's perspective)
 
 ---
 
-### Cross-module: Billing uses IDGen for receipt numbers
+### BR-CM-002: Billing depends on IDGen receipt-number template
 
 **Entities involved:** IDGenTemplate, Billing service  
-**Rule:** The Billing service calls `POST /v3/generate/bulk` (one ID per bill in the payment) during payment creation using `templateCode = ${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}`. If IDGen is unreachable, the entire payment transaction in Billing is rolled back.  
-**Violation response:** Billing receives 404/500 from IDGen → Billing returns 500 to its caller
+**Rule:** The Billing service expects a template with `templateCode = ${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}` to be pre-seeded in IDGen before any payment can be created. If the template is absent or IDGen is unreachable, Billing rolls back the entire payment.  
+**Violation response:** 500 — `INTERNAL_SERVER_ERROR` (from Billing's perspective)
 
 ---
 
-### Cross-module: IDGen templates must be pre-configured before Billing is used
-
-**Entities involved:** IDGenTemplate, Billing service  
-**Rule:** The Billing service expects the templates identified by `${IDGEN_BILL_NUMBER_TEMPLATE_CODE}` and `${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}` to already exist in IDGen. If they are absent, Billing cannot generate bills or process payments. These templates must be seeded in IDGen before Billing goes live.  
-**Violation response:** Billing returns 500 — `INTERNAL_SERVER_ERROR` (generation failed / template not found)
-
----
-
-### Cross-module: PubSub publish is fire-and-forget
+### BR-CM-003: PubSub publish is fire-and-forget
 
 **Entities involved:** IDGenTemplate, PubSub  
-**Rule:** Template CREATE / UPDATE / DELETE operations publish events to their respective topics. If the PubSub backend is unavailable, the template operation still succeeds and the event is silently dropped (logged only).  
+**Rule:** Template CREATE, UPDATE, and DELETE operations publish events. If the PubSub backend is unavailable, the operation still succeeds and the event is silently dropped (logged).  
 **Violation response:** N/A (caller sees 200/201; failure is logged internally)
 
 ---
@@ -166,11 +132,10 @@
 
 | HTTP Status | Condition | Error Code |
 |---|---|---|
-| 400 | Charset range invalid (`A-1`, reversed range, empty charset) | `BAD_REQUEST` |
+| 400 | Charset range invalid; reversed or cross-class range; empty charset | `BAD_REQUEST` |
 | 400 | Padding length shorter than digit count of `sequence.start` | `BAD_REQUEST` |
 | 400 | Date format token uses unrecognised format string | `BAD_REQUEST` |
-| 400 | `version` query param supplied without `templateCode` on GET | `BAD_REQUEST` |
-| 400 | Field validation failure (bulk `count` out of range, missing required field) | `VALIDATION_ERROR` |
+| 400 | Field validation failure (missing required field) | `VALIDATION_ERROR` |
 | 400 | Missing required header (`X-Tenant-ID` or `X-User-ID`) | `MISSING_HEADER` |
 | 404 | Template or specific version not found | `NOT_FOUND` |
 | 409 | Template with same `templateCode` already exists for tenant | `CONFLICT` |

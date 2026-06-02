@@ -1,4 +1,5 @@
 # services/idgen/env_map.yaml
 # Maps ${VAR_NAME} tokens to their runtime values.
+# Used by seed.py to resolve seed_manifest.yaml entries before making HTTP calls.
 IDGEN_BILL_NUMBER_TEMPLATE_CODE: "BillNumber"
 IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE: "ReceiptNumber"
