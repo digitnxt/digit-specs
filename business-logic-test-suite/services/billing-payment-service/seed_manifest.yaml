@@ -5,39 +5,40 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /billing/v3/business-services/TEST-BS
+      path: /business-services/TESTBS
       expect_status: 200
     create:
       method: POST
-      path: /billing/v3/business-services
+      path: /business-services
       body:
-        code: TEST-BS
-        name: Test Business Service
-        allowedPaymentModes:
-          - CASH
-        billExpiryDays: 30
-        partialPaymentAllowed: false
-        isActive: true
-        effectiveFrom: 0
+        - code: TESTBS
+          name: Test Business Service
+          allowedPaymentModes:
+            - CASH
+          billExpiryDays: 30
+          partialPaymentAllowed: false
+          currency: INR
+          isActive: true
+          effectiveFrom: 0
 
   - id: SEED-002
-    description: An active TaxHead belonging to TEST-BS must exist before a Demand can be created; demand creation rejects unknown or cross-service tax heads.
+    description: An active TaxHead belonging to TESTBS must exist before a Demand can be created; demand creation rejects unknown or cross-service tax heads.
     service: self
     base_url_arg: --base-url
     check:
       method: GET
-      path: /billing/v3/tax-heads/TEST-TAX
+      path: /tax-heads/TESTTAX
       expect_status: 200
     create:
       method: POST
-      path: /billing/v3/tax-heads
+      path: /tax-heads
       body:
-        code: TEST-TAX
-        name: Test Tax Head
-        businessServiceCode: TEST-BS
-        order: 1
-        effectiveFrom: 0
-        isActive: true
+        - code: TESTTAX
+          name: Test Tax Head
+          businessServiceCode: TESTBS
+          order: 1
+          effectiveFrom: 0
+          isActive: true
 
   - id: SEED-003
     description: The IDGen bill-number template must exist in the IDGen service before any bill can be generated; bill generation rolls back if IDGen returns 404.
@@ -45,13 +46,13 @@ prerequisites:
     base_url_arg: --idgen-url
     check:
       method: GET
-      path: /idgen/v3/template
+      path: /template
       params:
         templateCode: "${IDGEN_BILL_NUMBER_TEMPLATE_CODE}"
-      expect_status: 200
+      expect_status: 201
     create:
       method: POST
-      path: /idgen/v3/template
+      path: /template
       body:
         templateCode: "${IDGEN_BILL_NUMBER_TEMPLATE_CODE}"
         config:
@@ -69,17 +70,41 @@ prerequisites:
     base_url_arg: --idgen-url
     check:
       method: GET
-      path: /idgen/v3/template
+      path: /template
       params:
         templateCode: "${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}"
-      expect_status: 200
+      expect_status: 201
     create:
       method: POST
-      path: /idgen/v3/template
+      path: /template
       body:
         templateCode: "${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}"
         config:
           template: "RCPT-{DATE:yyyymmdd}-{SEQ}"
+          sequence:
+            scope: DAILY
+            start: 1
+            padding:
+              length: 5
+              char: "0"
+
+  - id: SEED-005
+    description: The IDGen transaction-number template must exist in the IDGen service before any CASH payment can be created without a caller-supplied transactionNumber; payment creation rolls back if IDGen returns 404.
+    service: idgen
+    base_url_arg: --idgen-url
+    check:
+      method: GET
+      path: /template
+      params:
+        templateCode: "${IDGEN_TRANSACTION_NUMBER_TEMPLATE_CODE}"
+      expect_status: 201
+    create:
+      method: POST
+      path: /template
+      body:
+        templateCode: "${IDGEN_TRANSACTION_NUMBER_TEMPLATE_CODE}"
+        config:
+          template: "TXN-{DATE:yyyymmdd}-{SEQ}"
           sequence:
             scope: DAILY
             start: 1

@@ -5,11 +5,11 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /url-shortener/v3/config
+      path: /v3/config
       expect_status: 200
     create:
       method: POST
-      path: /url-shortener/v3/config
+      path: /v3/config
       body:
         shortKeyLength: 6
         maxShortKeyRetries: 10

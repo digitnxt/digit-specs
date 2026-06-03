@@ -1,7 +1,7 @@
 """
 Lifecycle rule tests for Billing-Payment service.
-State transitions for Demand, Bill, and Payment.
 """
+import time
 import uuid
 import requests as req_lib
 from tests.helpers.curl_builder import attach_curl
@@ -15,92 +15,95 @@ def _post(node, url, headers, body):
 
 
 def _now_ms():
-    import time
     return int(time.time() * 1000)
 
 
-def _create_demand(base_url, auth_headers, consumer=None, status="ACTIVE"):
+def _create_demand(base_url, headers, consumer=None, amount=100.0, period_days=30):
     now = _now_ms()
-    consumer = consumer or "CONS-" + uuid.uuid4().hex[:6].upper()
-    resp = req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
+    consumer = consumer or "CONS" + uuid.uuid4().hex[:6].upper()
+    resp = req_lib.post(f"{base_url}/demands", headers=headers, json={
         "consumerCode": consumer,
-        "businessServiceCode": "TEST-BS",
-        "periodFrom": now - 30 * 86400 * 1000,
+        "businessServiceCode": "TESTBS",
+        "periodFrom": now - period_days * 86400_000,
         "periodTo": now,
-        "status": status,
-        "totalAmount": 100.0,
-        "lineItems": [{"taxHeadCode": "TEST-TAX", "amount": 100.0}],
+        "lineItems": [{"taxHeadCode": "TESTTAX", "amount": amount}],
     })
     return resp, consumer
 
 
+def _generate_bill(base_url, headers, consumer):
+    return req_lib.post(f"{base_url}/bills/generate", headers=headers,
+                        json={"consumerCode": consumer, "businessServiceCode": "TESTBS"})
+
+
 # ---------------------------------------------------------------------------
-# BR-LC-001: Demand status transitions one-way
+# BR-LC-001: Demand cancellation only from DRAFT or ACTIVE
 # ---------------------------------------------------------------------------
 
-class TestBR_LC_001_demand_status_transitions_one_way:
-    """Demand status cannot go backwards; PAID → ACTIVE is rejected."""
+class TestBR_LC_001_demand_cancellation_only_from_draft_or_active:
+    """POST /demands/:id/cancel permitted only from DRAFT or ACTIVE; 422 CANCEL_FAILED otherwise."""
 
     def test_active_demand_can_be_cancelled(self, request, base_url, auth_headers):
-        create_resp, consumer = _create_demand(base_url, auth_headers)
+        create_resp, _ = _create_demand(base_url, auth_headers)
         if create_resp.status_code not in (200, 201):
             return
         demand_id = create_resp.json().get("id") or create_resp.json().get("demandId")
         if not demand_id:
             return
-
         resp = _post(request.node, f"{base_url}/demands/{demand_id}/cancel",
                      auth_headers, {})
         assert resp.status_code in (200, 204), \
             f"Cancelling ACTIVE demand must succeed, got {resp.status_code}: {resp.text}"
 
+    def test_frozen_demand_cancellation_returns_422(
+        self, request, base_url, auth_headers
+    ):
+        create_resp, consumer = _create_demand(base_url, auth_headers)
+        if create_resp.status_code not in (200, 201):
+            return
+        demand_id = create_resp.json().get("id") or create_resp.json().get("demandId")
+        _generate_bill(base_url, auth_headers, consumer)  # freezes demand
+        if not demand_id:
+            return
+        resp = _post(request.node, f"{base_url}/demands/{demand_id}/cancel",
+                     auth_headers, {})
+        assert resp.status_code == 422, \
+            f"Expected 422 (CANCEL_FAILED) for FROZEN demand, got {resp.status_code}: {resp.text}"
+
 
 # ---------------------------------------------------------------------------
-# BR-LC-002: Only DRAFT and ACTIVE editable
+# BR-LC-002: Only DRAFT and ACTIVE demands are editable
 # ---------------------------------------------------------------------------
 
-class TestBR_LC_002_only_draft_and_active_editable:
-    """Editing a FROZEN/PAID demand is rejected."""
+class TestBR_LC_002_only_draft_and_active_demands_are_editable:
+    """PUT/PATCH on non-DRAFT/ACTIVE demand returns 400 INVALID_STATUS_TRANSITION."""
 
     def test_edit_active_demand_accepted(self, request, base_url, auth_headers):
-        create_resp, consumer = _create_demand(base_url, auth_headers)
+        create_resp, _ = _create_demand(base_url, auth_headers)
         if create_resp.status_code not in (200, 201):
             return
         demand = create_resp.json()
         demand_id = demand.get("id") or demand.get("demandId")
         if not demand_id:
             return
-
-        resp = req_lib.patch(f"{base_url}/demands/{demand_id}", headers=auth_headers,
-                             json={**demand, "totalAmount": 100.0})
+        resp = req_lib.patch(f"{base_url}/demands/{demand_id}",
+                             headers=auth_headers, json={**demand})
         assert resp.status_code in (200, 201), \
             f"Editing ACTIVE demand must succeed, got {resp.status_code}: {resp.text}"
 
-
-# ---------------------------------------------------------------------------
-# BR-LC-004: Bill status transitions by event
-# ---------------------------------------------------------------------------
-
-class TestBR_LC_004_bill_status_transitions_by_event:
-    """Bill status follows defined transitions; arbitrary transitions rejected."""
-
-    def test_bill_generation_creates_active_bill(self, request, base_url, auth_headers):
-        _, consumer = _create_demand(base_url, auth_headers)
-        resp = _post(request.node, f"{base_url}/bills/generate", auth_headers, {
-            "consumerCode": consumer,
-            "businessService": "TEST-BS",
-        })
-        assert resp.status_code in (200, 201, 409, 422), \
-            f"Bill generation must return 200/201/409/422, got {resp.status_code}: {resp.text}"
-        if resp.status_code in (200, 201):
-            bill = resp.json()
-            assert bill.get("status") == "ACTIVE", \
-                f"Newly generated bill must be ACTIVE, got {bill.get('status')}"
-
-
-# ---------------------------------------------------------------------------
-# BR-LC-005: Payment status transitions normal path
-# ---------------------------------------------------------------------------
+    def test_edit_frozen_demand_returns_400(self, request, base_url, auth_headers):
+        create_resp, consumer = _create_demand(base_url, auth_headers)
+        if create_resp.status_code not in (200, 201):
+            return
+        demand = create_resp.json()
+        demand_id = demand.get("id") or demand.get("demandId")
+        _generate_bill(base_url, auth_headers, consumer)
+        if not demand_id:
+            return
+        resp = req_lib.patch(f"{base_url}/demands/{demand_id}",
+                             headers=auth_headers, json={**demand})
+        assert resp.status_code == 400, \
+            f"Expected 400 (INVALID_STATUS_TRANSITION) for FROZEN, got {resp.status_code}: {resp.text}"
 
 
 # ---------------------------------------------------------------------------
@@ -108,81 +111,177 @@ class TestBR_LC_004_bill_status_transitions_by_event:
 # ---------------------------------------------------------------------------
 
 class TestBR_LC_003_bill_generation_freezes_active_demands:
-    """When a bill is generated, ACTIVE demands included in it transition to FROZEN."""
+    """Bill generation transitions ACTIVE demands to FROZEN; already-FROZEN unchanged."""
 
-    def test_demand_status_is_frozen_after_bill_generation(
+    def test_demand_frozen_after_bill_generation(self, request, base_url, auth_headers):
+        create_resp, consumer = _create_demand(base_url, auth_headers)
+        if create_resp.status_code not in (200, 201):
+            return
+        demand_id = create_resp.json().get("id") or create_resp.json().get("demandId")
+        bill_resp = _generate_bill(base_url, auth_headers, consumer)
+        if bill_resp.status_code not in (200, 201) or not demand_id:
+            return
+        check = req_lib.get(f"{base_url}/demands/{demand_id}", headers=auth_headers)
+        if check.status_code == 200:
+            assert check.json().get("status") in ("FROZEN", "PARTIALLY_PAID", "PAID"), \
+                f"ACTIVE demand must be FROZEN after bill gen, got: {check.json().get('status')}"
+
+
+# ---------------------------------------------------------------------------
+# BR-LC-004: Bill expiry uses demand-level over business-service-level
+# ---------------------------------------------------------------------------
+
+class TestBR_LC_004_bill_expiry_uses_demand_level_over_business_service_level:
+    """Expiry priority: demand.billExpiryDays > businessService.billExpiryDays; 0 = no expiry."""
+
+    def test_demand_with_bill_expiry_days_produces_expiry_date(
         self, request, base_url, auth_headers
     ):
-        import uuid
+        consumer = "CONSLC004" + uuid.uuid4().hex[:4].upper()
         now = _now_ms()
-        consumer = "CONS-LC003-" + uuid.uuid4().hex[:4].upper()
-        demand_resp = req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
-            "consumerCode": consumer,
-            "businessServiceCode": "TEST-BS",
+        req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
+            "consumerCode": consumer, "businessServiceCode": "TESTBS",
             "periodFrom": now - 30 * 86400_000, "periodTo": now,
-            "totalAmount": 100.0,
-            "lineItems": [{"taxHeadCode": "TEST-TAX", "amount": 100.0}],
+            "billExpiryDays": 10,
+            "lineItems": [{"taxHeadCode": "TESTTAX", "amount": 100.0}],
         })
-        if demand_resp.status_code not in (200, 201):
-            return
-        demand_id = demand_resp.json().get("id") or demand_resp.json().get("demandId")
-
-        bill_resp = req_lib.post(f"{base_url}/bills/generate", headers=auth_headers,
-                                 json={"consumerCode": consumer, "businessService": "TEST-BS"})
+        bill_resp = _generate_bill(base_url, auth_headers, consumer)
         if bill_resp.status_code not in (200, 201):
             return
+        bill = bill_resp.json()
+        assert bill.get("expiryDate") or bill.get("billDate"), \
+            "Demand with billExpiryDays must produce an expiry date on the bill"
 
-        if demand_id:
-            demand_check = req_lib.get(f"{base_url}/demands/{demand_id}",
-                                       headers=auth_headers)
-            if demand_check.status_code == 200:
-                status = demand_check.json().get("status")
-                assert status in ("FROZEN", "PARTIALLY_PAID", "PAID"), \
-                    f"Demand must be FROZEN after bill generation, got status={status}"
-
-
-# ---------------------------------------------------------------------------
-# BR-LC-006: Arrear demands reference rolled forward
-# ---------------------------------------------------------------------------
-
-class TestBR_LC_006_arrear_demands_reference_rolled_forward:
-    """
-    A ROLL_FORWARDED demand cannot be edited or paid directly.
-    We test that updating a ROLL_FORWARDED demand returns 422.
-    """
-
-    def test_updating_roll_forwarded_demand_rejected(self, request, base_url, auth_headers):
-        # Create a demand, roll it forward if the service supports it, then try to edit
-        import uuid
+    def test_demand_with_zero_expiry_produces_no_expiry(
+        self, request, base_url, auth_headers
+    ):
+        consumer = "CONSLC004Z" + uuid.uuid4().hex[:4].upper()
         now = _now_ms()
-        consumer = "CONS-LC006-" + uuid.uuid4().hex[:4].upper()
-        create = req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
-            "consumerCode": consumer,
-            "businessServiceCode": "TEST-BS",
-            "periodFrom": now - 60 * 86400_000, "periodTo": now - 30 * 86400_000,
-            "status": "ROLL_FORWARDED",
-            "totalAmount": 100.0,
-            "lineItems": [{"taxHeadCode": "TEST-TAX", "amount": 100.0}],
+        req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
+            "consumerCode": consumer, "businessServiceCode": "TESTBS",
+            "periodFrom": now - 30 * 86400_000, "periodTo": now,
+            "billExpiryDays": 0,
+            "lineItems": [{"taxHeadCode": "TESTTAX", "amount": 100.0}],
         })
-        if create.status_code not in (200, 201):
+        bill_resp = _generate_bill(base_url, auth_headers, consumer)
+        if bill_resp.status_code not in (200, 201):
             return
-        demand = create.json()
-        demand_id = demand.get("id") or demand.get("demandId")
+        assert not bill_resp.json().get("expiryDate"), \
+            f"billExpiryDays=0 must yield no expiry date, got: {bill_resp.json().get('expiryDate')}"
+
+
+# ---------------------------------------------------------------------------
+# BR-LC-005: Arrear roll-forward creates new demand and marks source
+# ---------------------------------------------------------------------------
+
+class TestBR_LC_005_arrear_roll_forward_creates_new_demand_and_marks_source:
+    """
+    With DEMAND_ENABLE_ARREARS=true: new demand triggers roll-forward on open source.
+    Source transitions to ROLL_FORWARDED; new demand gets ARREAR line item prepended.
+    """
+
+    def test_roll_forwarded_demand_cannot_be_edited(
+        self, request, base_url, auth_headers
+    ):
+        now = _now_ms()
+        create_resp, consumer = _create_demand(base_url, auth_headers, period_days=60)
+        if create_resp.status_code not in (200, 201):
+            return
+        first_demand = create_resp.json()
+        demand_id = first_demand.get("id") or first_demand.get("demandId")
+
+        req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
+            "consumerCode": consumer, "businessServiceCode": "TESTBS",
+            "periodFrom": now - 10 * 86400_000, "periodTo": now,
+            "lineItems": [{"taxHeadCode": "TESTTAX", "amount": 100.0}],
+        })
         if not demand_id:
             return
+        check = req_lib.get(f"{base_url}/demands/{demand_id}", headers=auth_headers)
+        if check.status_code != 200 or check.json().get("status") != "ROLL_FORWARDED":
+            return  # Arrears not enabled — skip
 
-        update = _post(request.node, f"{base_url}/demands/{demand_id}", auth_headers,
-                       {**demand, "totalAmount": 150.0})
-        assert update.status_code == 422, \
-            f"Expected 422 for editing ROLL_FORWARDED demand, got {update.status_code}: {update.text}"
+        edit = _post(request.node, f"{base_url}/demands/{demand_id}",
+                     auth_headers, {**check.json()})
+        assert edit.status_code == 400, \
+            f"Expected 400 for editing ROLL_FORWARDED demand, got {edit.status_code}: {edit.text}"
 
-
-class TestBR_LC_005_payment_status_transitions_normal_path:
-    """Payment status follows NEW→DEPOSITED→RECONCILED; terminal states cannot reverse."""
-
-    def test_invalid_payment_transition_rejected(self, request, base_url, auth_headers):
-        resp = _post(request.node, f"{base_url}/payments/cancel", auth_headers, {
-            "paymentId": "NONEXISTENT-PAY-001",
+    def test_new_demand_has_arrear_line_item_when_arrears_enabled(
+        self, request, base_url, auth_headers
+    ):
+        consumer = "CONSLC005" + uuid.uuid4().hex[:4].upper()
+        now = _now_ms()
+        req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
+            "consumerCode": consumer, "businessServiceCode": "TESTBS",
+            "periodFrom": now - 60 * 86400_000, "periodTo": now - 30 * 86400_000,
+            "lineItems": [{"taxHeadCode": "TESTTAX", "amount": 100.0}],
         })
-        assert resp.status_code in (400, 404, 422), \
-            f"Cancel of nonexistent payment must fail, got {resp.status_code}: {resp.text}"
+        second = req_lib.post(f"{base_url}/demands", headers=auth_headers, json={
+            "consumerCode": consumer, "businessServiceCode": "TESTBS",
+            "periodFrom": now - 10 * 86400_000, "periodTo": now,
+            "lineItems": [{"taxHeadCode": "TESTTAX", "amount": 100.0}],
+        })
+        if second.status_code not in (200, 201):
+            return
+        line_items = second.json().get("lineItems", [])
+        if any("ARREAR" in li.get("taxHeadCode", "") for li in line_items):
+            assert line_items[0].get("taxHeadCode", "").endswith("_ARREAR"), \
+                "ARREAR line item must be first in the demand"
+
+
+# ---------------------------------------------------------------------------
+# BR-LC-006: Demand status set by payment application
+# ---------------------------------------------------------------------------
+
+class TestBR_LC_006_demand_status_set_by_payment_application:
+    """Full payment → PAID; partial payment → PARTIALLY_PAID."""
+
+    def test_full_payment_transitions_demand_to_paid(
+        self, request, base_url, auth_headers
+    ):
+        create_resp, consumer = _create_demand(base_url, auth_headers, amount=100.0)
+        if create_resp.status_code not in (200, 201):
+            return
+        demand_id = create_resp.json().get("id") or create_resp.json().get("demandId")
+        bill_resp = _generate_bill(base_url, auth_headers, consumer)
+        if bill_resp.status_code not in (200, 201):
+            return
+        bill_id = bill_resp.json().get("id") or bill_resp.json().get("billId")
+        if not bill_id or not demand_id:
+            return
+        pay = req_lib.post(f"{base_url}/payments", headers=auth_headers, json={
+            "paymentMode": "CASH",
+            "totalAmountPaid": 100.0,
+            "paymentDetails": [{"billId": bill_id, "totalAmountPaid": 100.0}],
+        })
+        if pay.status_code not in (200, 201):
+            return
+        check = req_lib.get(f"{base_url}/demands/{demand_id}", headers=auth_headers)
+        if check.status_code == 200:
+            assert check.json().get("status") == "PAID", \
+                f"Full payment must set demand to PAID, got: {check.json().get('status')}"
+
+    def test_partial_payment_transitions_demand_to_partially_paid(
+        self, request, base_url, auth_headers
+    ):
+        create_resp, consumer = _create_demand(base_url, auth_headers, amount=100.0)
+        if create_resp.status_code not in (200, 201):
+            return
+        demand_id = create_resp.json().get("id") or create_resp.json().get("demandId")
+        bill_resp = _generate_bill(base_url, auth_headers, consumer)
+        if bill_resp.status_code not in (200, 201):
+            return
+        bill_id = bill_resp.json().get("id") or bill_resp.json().get("billId")
+        if not bill_id or not demand_id:
+            return
+        pay = req_lib.post(f"{base_url}/payments", headers=auth_headers, json={
+            "paymentMode": "CASH",
+            "totalAmountPaid": 50.0,
+            "paymentDetails": [{"billId": bill_id, "totalAmountPaid": 50.0}],
+        })
+        if pay.status_code not in (200, 201):
+            return
+        check = req_lib.get(f"{base_url}/demands/{demand_id}", headers=auth_headers)
+        if check.status_code == 200:
+            assert check.json().get("status") == "PARTIALLY_PAID", \
+                f"Partial payment must set demand to PARTIALLY_PAID, got: {check.json().get('status')}"

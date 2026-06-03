@@ -10,10 +10,10 @@
 
 ---
 
-### BR-CF-002: Charset ranges must be valid byte ranges
+### BR-CF-002: Charset ranges must be ordered and class-homogeneous
 
 **Entities involved:** IDGenTemplateConfig (`random.charset`)  
-**Rule:** In `random.charset`, character ranges like `A-Z` or `0-9` must have start byte ≤ end byte. Ranges cannot cross character classes (e.g., `A-1` is rejected). An empty charset string is not allowed.  
+**Rule:** When `random.charset` is provided and non-empty, each range expression (e.g. `A-Z`, `0-9`) must have start byte ≤ end byte. Ranges that cross character classes (e.g. `A-1` mixing uppercase letters and digits) are rejected. An empty or omitted charset is valid — the service applies the default `A-Z0-9`.  
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
@@ -21,7 +21,15 @@
 ### BR-CF-003: Date format must match keyword list
 
 **Entities involved:** IDGenTemplateConfig, `{DATE:format}` token  
-**Rule:** The `{DATE:format}` token only accepts predefined format keywords (e.g., `yyyymmdd`, `yyyy-mm-dd`, `yyyy/mm/dd`). Free-form Go layout strings are not permitted.  
+**Rule:** The `{DATE:format}` token only accepts the following predefined keywords (case-insensitive). Free-form Go layout strings are not permitted.
+
+Basic numeric: `yyyymmdd` `ddmmyyyy` `mmddyyyy` `yymmdd` `ddmmyy` `mmddyy`  
+Dash-separated: `yyyy-mm-dd` `dd-mm-yyyy` `mm-dd-yyyy` `yy-mm-dd` `dd-mm-yy`  
+Slash-separated: `yyyy/mm/dd` `dd/mm/yyyy` `mm/dd/yyyy` `yy/mm/dd` `dd/mm/yy`  
+Dot-separated: `yyyy.mm.dd` `dd.mm.yyyy` `mm.dd.yyyy` `yy.mm.dd` `dd.mm.yy`  
+Month-Year: `mmyyyy` `mm-yyyy` `mm/yyyy` `mm.yyyy` `yyyy-mm` `yyyy/mm` `yyyy.mm`  
+Year only: `yyyy` `yy`
+
 **Violation response:** 400 — `BAD_REQUEST`
 
 ---
@@ -29,7 +37,7 @@
 ### BR-CF-004: Template variables validated at generation time
 
 **Entities involved:** IDGenTemplateConfig, GenerateIDRequest (`variables`)  
-**Rule:** Template syntax validity is determined at creation time. However, whether a required variable is present is checked at generation time — not at template creation time. A missing variable causes generation to fail.  
+**Rule:** Template syntax validity is determined at creation time. Whether a required variable is present is checked at generation time — not at template creation time. A missing variable causes generation to fail.  
 **Violation response:** 422 — `UNPROCESSABLE_ENTITY` (at generation time)
 
 ---
@@ -44,7 +52,15 @@
 
 ## Cross-Schema Rules
 
-### BR-CS-001: One PostgreSQL sequence per template per tenant
+### BR-CS-001: TemplateCode must exist before ID generation
+
+**Entities involved:** IDGenTemplate, GenerateIDRequest  
+**Rule:** Both `POST /v3/generate` and `POST /v3/generate/bulk` require the `templateCode` in the request to reference an existing template for the tenant. If no template exists for that code, generation is rejected with 404.  
+**Violation response:** 404 — `NOT_FOUND`
+
+---
+
+### BR-CS-002: One PostgreSQL sequence per template per tenant
 
 **Entities involved:** IDGenTemplate, IDGenSequenceLookup  
 **Rule:** A single PostgreSQL sequence is created per `(tenantid, templatecode)` pair at template creation time and is shared across all versions. A sequence creation failure prevents template creation.  
@@ -52,7 +68,7 @@
 
 ---
 
-### BR-CS-002: Sequence only dropped on last version delete
+### BR-CS-003: Sequence only dropped on last version delete
 
 **Entities involved:** IDGenTemplate, IDGenSequenceLookup  
 **Rule:** The PostgreSQL sequence and lookup row are only dropped when the last version of the template is deleted. Deleting a non-last version has no effect on the sequence.  
@@ -60,15 +76,15 @@
 
 ---
 
-### BR-CS-003: Global scope start cannot be updated
+### BR-CS-004: Global scope start cannot be updated
 
 **Entities involved:** IDGenTemplate (`sequence.scope`, `sequence.start`)  
 **Rule:** If a template uses `sequence.scope = GLOBAL` and an update attempts to change `sequence.start`, the update is rejected because the PostgreSQL sequence was already initialized with the original start value; retro-changing is not supported.  
-**Violation response:** 422 — `UNPROCESSABLE_ENTITY`
+**Violation response:** 400 — `BAD_REQUEST`
 
 ---
 
-### BR-CS-004: Scope reset rows deleted with last version
+### BR-CS-005: Scope reset rows deleted with last version
 
 **Entities involved:** IDGenTemplate, IDGenSequenceReset  
 **Rule:** All `idgen_sequence_resets` rows for a `(tenantid, templatecode)` pair are deleted when the last template version is deleted.  
@@ -104,23 +120,7 @@
 
 ## Cross-Module Rules
 
-### BR-CM-001: Billing depends on IDGen bill-number template
-
-**Entities involved:** IDGenTemplate, Billing service  
-**Rule:** The Billing service expects a template with `templateCode = ${IDGEN_BILL_NUMBER_TEMPLATE_CODE}` to be pre-seeded in IDGen before any bill can be generated. If the template is absent, Billing returns a generation-failed error and rolls back the bill. If IDGen is unreachable, Billing rolls back as well.  
-**Violation response:** 500 — `INTERNAL_SERVER_ERROR` (from Billing's perspective)
-
----
-
-### BR-CM-002: Billing depends on IDGen receipt-number template
-
-**Entities involved:** IDGenTemplate, Billing service  
-**Rule:** The Billing service expects a template with `templateCode = ${IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE}` to be pre-seeded in IDGen before any payment can be created. If the template is absent or IDGen is unreachable, Billing rolls back the entire payment.  
-**Violation response:** 500 — `INTERNAL_SERVER_ERROR` (from Billing's perspective)
-
----
-
-### BR-CM-003: PubSub publish is fire-and-forget
+### BR-CM-001: PubSub publish is fire-and-forget
 
 **Entities involved:** IDGenTemplate, PubSub  
 **Rule:** Template CREATE, UPDATE, and DELETE operations publish events. If the PubSub backend is unavailable, the operation still succeeds and the event is silently dropped (logged).  
@@ -137,7 +137,8 @@
 | 400 | Date format token uses unrecognised format string | `BAD_REQUEST` |
 | 400 | Field validation failure (missing required field) | `VALIDATION_ERROR` |
 | 400 | Missing required header (`X-Tenant-ID` or `X-User-ID`) | `MISSING_HEADER` |
-| 404 | Template or specific version not found | `NOT_FOUND` |
+| 404 | Template or specific version not found for `templateCode` | `NOT_FOUND` |
+| 404 | `templateCode` not found during `/generate` or `/generate/bulk` | `NOT_FOUND` |
 | 409 | Template with same `templateCode` already exists for tenant | `CONFLICT` |
 | 422 | GLOBAL scope `sequence.start` changed on update | `UNPROCESSABLE_ENTITY` |
 | 422 | Variable missing from `variables` map at generation time | `UNPROCESSABLE_ENTITY` |

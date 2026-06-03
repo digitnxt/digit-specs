@@ -1,4 +1,24 @@
-# No session-scoped prerequisites required for this service.
-# IDGen does not depend on any other service and does not require pre-existing
-# data to start. Templates are created by callers (e.g. Billing) as part of
-# their own deployment setup.
+prerequisites:
+  - id: SEED-001
+    description: A template must exist for the tenant before POST /v3/generate or POST /v3/generate/bulk can succeed; both endpoints return 404 if no template is found for the given templateCode (BR-CS-001).
+    service: self
+    base_url_arg: --base-url
+    check:
+      method: GET
+      path: /template
+      params:
+        templateCode: TEST-TEMPLATE
+      expect_status: 201
+    create:
+      method: POST
+      path: /template
+      body:
+        templateCode: TEST-TEMPLATE
+        config:
+          template: "TEST-{DATE:yyyymmdd}-{SEQ}"
+          sequence:
+            scope: DAILY
+            start: 1
+            padding:
+              length: 5
+              char: "0"

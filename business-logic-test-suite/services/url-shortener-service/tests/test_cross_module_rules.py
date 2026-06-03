@@ -21,7 +21,7 @@ class TestBR_CM_001_cache_fallthrough_is_transparent:
     """Cache miss falls through to DB without error; caller sees no difference."""
 
     def test_newly_created_url_resolves_successfully(self, request, base_url, auth_headers):
-        shorten = _post(request.node, f"{base_url}/short-url", auth_headers, {
+        shorten = _post(request.node, f"{base_url}/v3/short-url", auth_headers, {
             "url": "https://example.com/cm001-cache",
         })
         assert shorten.status_code == 201, f"Shorten failed: {shorten.text}"
@@ -49,7 +49,7 @@ class TestBR_CM_002_pubsub_publish_is_fire_and_forget:
     def test_url_creation_returns_201_independent_of_pubsub(
         self, request, base_url, auth_headers
     ):
-        resp = _post(request.node, f"{base_url}/short-url", auth_headers, {
+        resp = _post(request.node, f"{base_url}/v3/short-url", auth_headers, {
             "url": "https://example.com/cm002-pubsub",
         })
         assert resp.status_code == 201, \
@@ -69,6 +69,6 @@ class TestBR_CM_003_server_host_name_validated_at_startup:
     def test_service_is_reachable_indicating_valid_startup_config(
         self, request, base_url, auth_headers
     ):
-        resp = req_lib.get(f"{base_url}/config", headers=auth_headers)
+        resp = req_lib.get(f"{base_url}/v3/config", headers=auth_headers)
         assert resp.status_code in (200, 404), \
             f"Service must be reachable (valid SERVER_HOST_NAME at startup), got {resp.status_code}"

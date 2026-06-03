@@ -76,8 +76,6 @@ def pytest_addoption(parser):
     parser.addoption("--schema-token", action="store",
                      default=os.environ.get("SCHEMA_TOKEN", ""),
                      help="GitHub PAT for private $ref resolution")
-    parser.addoption("--billing-url",  action="store", default=None,
-                     help="Billing service URL (for cross-module IDGen dependency tests)")
 
 
 def pytest_configure(config):
@@ -115,7 +113,6 @@ def service_urls(request):
 
     return {
         "--base-url": request.config.getoption("--base-url").rstrip("/"),
-        "--billing-url": _get("--billing-url"),
     }
 
 
@@ -123,6 +120,42 @@ def service_urls(request):
 def provision_seeds(auth_headers, service_urls):
     from tests.helpers.seed import provision
     provision(auth_headers, service_urls)
+
+
+# ---------------------------------------------------------------------------
+# Collect per-test outcomes keyed by rule ID
+# ---------------------------------------------------------------------------
+
+_rule_outcomes: dict = {}
+
+
+def pytest_runtest_logreport(report) -> None:
+    """Capture pass/fail/error for every test, grouped by rule ID."""
+    if report.when != "call":
+        return
+    import re as _re
+    m = _re.search(r"TestBR_([A-Z]+)_(\d+)_", report.nodeid)
+    if not m:
+        return
+    rule_id = f"BR-{m.group(1)}-{m.group(2)}"
+    _rule_outcomes.setdefault(rule_id, []).append(report.outcome)
+
+
+# ---------------------------------------------------------------------------
+# Auto-generate rule coverage table after every test run
+# ---------------------------------------------------------------------------
+
+def pytest_sessionfinish(session, exitstatus) -> None:
+    """Write test_results.json then generate rule_coverage_table.md."""
+    import subprocess, sys, json, os as _os
+    results_path = _os.path.join(_SERVICE_ROOT, "reports", "test_results.json")
+    _os.makedirs(_os.path.dirname(results_path), exist_ok=True)
+    with open(results_path, "w") as _f:
+        json.dump(_rule_outcomes, _f)
+    subprocess.run(
+        [sys.executable, "generate_rule_coverage_table.py"],
+        cwd=_SERVICE_ROOT,
+    )
 
 
 # ---------------------------------------------------------------------------

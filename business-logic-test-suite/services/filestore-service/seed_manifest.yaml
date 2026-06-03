@@ -5,11 +5,11 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /filestore/v3/files/test/document-categories/test-doc
+      path: /document-categories/test-doc
       expect_status: 200
     create:
       method: POST
-      path: /filestore/v3/files/test/document-categories
+      path: /document-categories
       body:
         type: TEST
         code: test-doc

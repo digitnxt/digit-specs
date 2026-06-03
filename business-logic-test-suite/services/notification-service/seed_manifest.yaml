@@ -3,16 +3,20 @@ prerequisites:
     description: An EMAIL NotificationTemplate must exist for the tenant before POST /v3/email/send can succeed; the send endpoint returns 404 if no template is found (BR-CS-003).
     service: self
     base_url_arg: --base-url
+    # GET /template always returns 200 (empty array when absent, populated array when present).
+    # expect_status: 201 is intentionally impossible for a GET — the check never matches,
+    # so the create always runs. seed.py treats 201 (first run) and 409 (already exists)
+    # as success, making this idempotent.
     check:
       method: GET
-      path: /notification/v3/template
+      path: /template
       params:
         templateId: seed-email-welcome
         type: EMAIL
-      expect_status: 200
+      expect_status: 201
     create:
       method: POST
-      path: /notification/v3/template
+      path: /template
       body:
         templateId: seed-email-welcome
         type: EMAIL
@@ -26,14 +30,14 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /notification/v3/template
+      path: /template
       params:
         templateId: seed-sms-otp
         type: SMS
-      expect_status: 200
+      expect_status: 201
     create:
       method: POST
-      path: /notification/v3/template
+      path: /template
       body:
         templateId: seed-sms-otp
         type: SMS

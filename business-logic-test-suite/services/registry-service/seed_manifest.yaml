@@ -5,11 +5,11 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /registry/v3/schema/seed-schema
+      path: /schema/seed-schema
       expect_status: 200
     create:
       method: POST
-      path: /registry/v3/schema
+      path: /schema
       body:
         schemaCode: seed-schema
         definition:

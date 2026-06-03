@@ -13,6 +13,13 @@ def _post(node, url, headers, body):
     return req_lib.Session().send(p)
 
 
+def _put(node, url, headers, body):
+    r = req_lib.Request("PUT", url, headers=headers, json=body)
+    p = r.prepare()
+    attach_curl(node, p)
+    return req_lib.Session().send(p)
+
+
 def _tpl_id():
     return "br-lc-" + uuid.uuid4().hex[:8]
 
@@ -42,11 +49,10 @@ class TestBR_LC_001_updates_are_append_only_with_version_increment:
             "subject": "V1 Subject", "content": "Hello {{.Name}} from v1",
         })
         try:
-            update = _post(request.node, f"{base_url}/template", auth_headers, {
+            update = _put(request.node, f"{base_url}/template", auth_headers, {
                 "templateId": tid, "type": "EMAIL",
                 "subject": "V2 Subject", "content": "Hello {{.Name}} from v2",
             })
-            # PUT uses same endpoint; service determines it's an update
             assert update.status_code == 200, \
                 f"Expected 200 on update, got {update.status_code}: {update.text}"
         finally:

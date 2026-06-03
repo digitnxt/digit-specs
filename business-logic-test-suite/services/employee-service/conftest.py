@@ -1,97 +1,9 @@
 # services/employee-service/conftest.py
 import os
-import re
-import tempfile
 import pytest
-import requests as _http
 from tests.helpers.curl_builder import build_curl
 
 _SERVICE_ROOT    = os.path.dirname(__file__)
-_SCHEMA_ORIGINAL = os.path.join(_SERVICE_ROOT, "schema.yaml")
-_SCHEMA_RESOLVED = os.path.join(_SERVICE_ROOT, "schema.resolved.yaml")
-
-
-# ---------------------------------------------------------------------------
-# Private $ref resolution via GitHub Contents API
-# ---------------------------------------------------------------------------
-
-def _raw_url_to_api_url(raw_url: str) -> str:
-    suffix = raw_url[len("https://raw.githubusercontent.com/"):]
-    owner, repo, *rest = suffix.split("/")
-    rest_str = "/".join(rest)
-    if rest_str.startswith("refs/heads/") or rest_str.startswith("refs/tags/"):
-        parts    = rest_str.split("/")
-        ref      = "/".join(parts[:3])
-        filepath = "/".join(parts[3:])
-    else:
-        parts    = rest_str.split("/", 1)
-        ref      = parts[0]
-        filepath = parts[1] if len(parts) > 1 else ""
-    return f"https://api.github.com/repos/{owner}/{repo}/contents/{filepath}?ref={ref}"
-
-
-def _resolve_remote_refs(token: str) -> None:
-    with open(_SCHEMA_ORIGINAL) as f:
-        content = f.read()
-    raw_urls  = re.findall(r"https://raw\.githubusercontent\.com/[^\s'\"#]+", content)
-    base_urls = sorted({url.split("#")[0] for url in raw_urls})
-    if not base_urls:
-        return
-    tmpdir  = tempfile.mkdtemp(prefix="svc_spec_refs_")
-    headers = {
-        "Authorization":        f"Bearer {token}",
-        "Accept":               "application/vnd.github.raw+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    for raw_url in base_urls:
-        api_url = _raw_url_to_api_url(raw_url)
-        try:
-            resp = _http.get(api_url, headers=headers, timeout=15)
-            resp.raise_for_status()
-        except _http.exceptions.RequestException as exc:
-            raise RuntimeError(
-                f"Failed to fetch schema $ref.\n"
-                f"  Raw URL : {raw_url}\n"
-                f"  API URL : {api_url}\n"
-                f"  Error   : {exc}"
-            ) from exc
-        filename   = raw_url.rstrip("/").split("/")[-1]
-        local_path = os.path.join(tmpdir, filename)
-        with open(local_path, "w") as f:
-            f.write(resp.text)
-        content = content.replace(raw_url, local_path)
-    with open(_SCHEMA_RESOLVED, "w") as f:
-        f.write(content)
-
-
-# ---------------------------------------------------------------------------
-# pytest hooks
-# ---------------------------------------------------------------------------
-
-def pytest_addoption(parser):
-    parser.addoption("--base-url",     action="store", required=True,
-                     help="Base URL of the employee service under test")
-    parser.addoption("--api-token",    action="store", default="",
-                     help="Bearer token; encodes tenant identity via gateway")
-    parser.addoption("--schema-token", action="store",
-                     default=os.environ.get("SCHEMA_TOKEN", ""),
-                     help="GitHub PAT for private $ref resolution")
-    parser.addoption("--idgen-url",      action="store", default=None,
-                     help="IDGen service URL (for auto-code generation tests)")
-    parser.addoption("--individual-url",  action="store", default=None,
-                     help="Individual service URL (for individual-ID validation tests)")
-    parser.addoption("--boundary-url",    action="store", default=None,
-                     help="Boundary service URL (for jurisdiction relation validation tests)")
-
-
-def pytest_configure(config):
-    try:
-        token = config.getoption("--schema-token")
-    except ValueError:
-        token = os.environ.get("SCHEMA_TOKEN", "")
-    if token:
-        _resolve_remote_refs(token)
-
 
 # ---------------------------------------------------------------------------
 # Session-scoped fixtures
@@ -101,12 +13,10 @@ def pytest_configure(config):
 def base_url(request):
     return request.config.getoption("--base-url").rstrip("/")
 
-
 @pytest.fixture(scope="session")
 def auth_headers(request):
     token = request.config.getoption("--api-token")
     return {"Authorization": f"Bearer {token}"} if token else {}
-
 
 @pytest.fixture(scope="session")
 def service_urls(request):
@@ -124,12 +34,43 @@ def service_urls(request):
         "--boundary-url":   _get("--boundary-url"),
     }
 
-
 @pytest.fixture(scope="session", autouse=True)
 def provision_seeds(auth_headers, service_urls):
     from tests.helpers.seed import provision
     provision(auth_headers, service_urls)
 
+# ---------------------------------------------------------------------------
+# Collect per-test outcomes keyed by rule ID
+# ---------------------------------------------------------------------------
+
+_rule_outcomes: dict = {}
+
+def pytest_runtest_logreport(report) -> None:
+    """Capture pass/fail/error for every test, grouped by rule ID."""
+    if report.when != "call":
+        return
+    import re as _re
+    m = _re.search(r"TestBR_([A-Z]+)_(\d+)_", report.nodeid)
+    if not m:
+        return
+    rule_id = f"BR-{m.group(1)}-{m.group(2)}"
+    _rule_outcomes.setdefault(rule_id, []).append(report.outcome)
+
+# ---------------------------------------------------------------------------
+# Auto-generate rule coverage table after every test run
+# ---------------------------------------------------------------------------
+
+def pytest_sessionfinish(session, exitstatus) -> None:
+    """Write test_results.json then generate rule_coverage_table.md."""
+    import subprocess, sys, json, os as _os
+    results_path = _os.path.join(_SERVICE_ROOT, "reports", "test_results.json")
+    _os.makedirs(_os.path.dirname(results_path), exist_ok=True)
+    with open(results_path, "w") as _f:
+        json.dump(_rule_outcomes, _f)
+    subprocess.run(
+        [sys.executable, "generate_rule_coverage_table.py"],
+        cwd=_SERVICE_ROOT,
+    )
 
 # ---------------------------------------------------------------------------
 # cURL injection into pytest-html report

@@ -5,13 +5,13 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /boundary/v3/hierarchy
+      path: /hierarchy
       params:
         hierarchyType: ADMIN
       expect_status: 200
     create:
       method: POST
-      path: /boundary/v3/hierarchy
+      path: /hierarchy
       body:
         hierarchy:
           hierarchyType: ADMIN
@@ -32,13 +32,13 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /boundary/v3/boundaries
+      path: /boundaries
       params:
         codes: STATE_001
       expect_status: 200
     create:
       method: POST
-      path: /boundary/v3/boundaries
+      path: /boundaries
       body:
         boundary:
           - code: STATE_001

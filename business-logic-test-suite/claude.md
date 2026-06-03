@@ -263,6 +263,42 @@ def provision_seeds(auth_headers, service_urls):
 
 
 # ---------------------------------------------------------------------------
+# Collect per-test outcomes keyed by rule ID
+# ---------------------------------------------------------------------------
+
+_rule_outcomes: dict[str, list[str]] = {}
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """Capture pass/fail/error for every test, grouped by rule ID."""
+    if report.when != "call":
+        return
+    import re
+    m = re.search(r"TestBR_([A-Z]+)_(\d+)_", report.nodeid)
+    if not m:
+        return
+    rule_id = f"BR-{m.group(1)}-{m.group(2)}"
+    _rule_outcomes.setdefault(rule_id, []).append(report.outcome)
+
+
+# ---------------------------------------------------------------------------
+# Auto-generate rule coverage table after every test run
+# ---------------------------------------------------------------------------
+
+def pytest_sessionfinish(session, exitstatus) -> None:
+    """Write test_results.json then generate rule_coverage_table.md."""
+    import subprocess, json, os
+    results_path = os.path.join(_SERVICE_ROOT, "reports", "test_results.json")
+    os.makedirs(os.path.dirname(results_path), exist_ok=True)
+    with open(results_path, "w") as f:
+        json.dump(_rule_outcomes, f)
+    subprocess.run(
+        ["python", "generate_rule_coverage_table.py"],
+        cwd=_SERVICE_ROOT,
+    )
+
+
+# ---------------------------------------------------------------------------
 # cURL injection into pytest-html report
 # ---------------------------------------------------------------------------
 
@@ -492,7 +528,7 @@ def assert_error_schema(body, error_schema):
 ```ini
 [pytest]
 testpaths = tests
-addopts   = -v -p no:randomly
+addopts   = -v -p no:randomly --html=reports/business_logic.html --self-contained-html
 ```
 
 `-p no:randomly` is mandatory. Business logic tests share state on a single
@@ -1056,6 +1092,24 @@ IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE: "RECEIPT-NUMBER"
 Rule IDs live in `BUSINESS_RULES.md` headings — not in the spec.
 Expected heading format: `### BR-<CATEGORY>-<NNN>: <title>`
 
+The script reads two sources:
+- `BUSINESS_RULES.md` — to get all rule IDs and titles
+- `reports/test_results.json` — written by `pytest_sessionfinish` in `conftest.py`,
+  contains per-rule pass/fail outcomes from the live run
+
+The generated table has five columns:
+
+| Column | Meaning |
+|---|---|
+| Rule ID | BR-CF-001 etc |
+| Title | From BUSINESS_RULES.md heading |
+| Category | CF / CS / LC / CM |
+| Tests | ✅ test class exists · ❌ no test written |
+| Result | ✅ all passed · ⚠️ X/Y passed · ❌ all failed · — not run |
+
+If `test_results.json` is absent (manual run without pytest), the Result column
+is omitted and the table shows only test-class presence.
+
 ```python
 """
 Parses rule IDs from BUSINESS_RULES.md headings and cross-references them
@@ -1181,11 +1235,7 @@ jobs:
           pytest tests/ \
             --base-url=http://url-shortener:8098 \
             --api-token=${{ secrets.API_TOKEN }} \
-            --schema-token=${{ secrets.SCHEMA_TOKEN }} \
-            --html=reports/business_logic.html \
-            --self-contained-html
-      - working-directory: services/url-shortener
-        run: python generate_rule_coverage_table.py
+            --schema-token=${{ secrets.SCHEMA_TOKEN }}
       - uses: actions/upload-artifact@v3
         with:
           name: url-shortener-bl-report
@@ -1206,11 +1256,7 @@ jobs:
             --base-url=http://billing:8080 \
             --api-token=${{ secrets.API_TOKEN }} \
             --schema-token=${{ secrets.SCHEMA_TOKEN }} \
-            --idgen-url=http://idgen:8082 \
-            --html=reports/business_logic.html \
-            --self-contained-html
-      - working-directory: services/billing
-        run: python generate_rule_coverage_table.py
+            --idgen-url=http://idgen:8082
       - uses: actions/upload-artifact@v3
         with:
           name: billing-bl-report
@@ -1248,8 +1294,10 @@ access to the repo hosting shared spec components.
 15. `schema.resolved.yaml` is a build artifact — never commit it
 16. Never use `raw.githubusercontent.com` for private repos — always use
     the GitHub Contents API with `Accept: application/vnd.github.raw+json`
-17. Run `generate_rule_coverage_table.py` as a post-test step in CI;
-    upload the output alongside the HTML report
+17. `generate_rule_coverage_table.py` is triggered automatically via
+    `pytest_sessionfinish` in `conftest.py` — no manual post-test step needed.
+    Both `business_logic.html` and `rule_coverage_table.md` are written to
+    `reports/` and uploaded together as a single CI artifact
 18. `${VAR_NAME}` tokens in seed bodies are resolved from `env_map.yaml` first,
     then OS environment — never hardcode template codes or similar values
 19. Rule IDs live in `BUSINESS_RULES.md` headings as `### BR-<CATEGORY>-<NNN>: <title>`.

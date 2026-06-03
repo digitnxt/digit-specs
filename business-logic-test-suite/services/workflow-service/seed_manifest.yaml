@@ -5,11 +5,11 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /workflow/v3/process/code/TEST-PROCESS
+      path: /process/code/TEST-PROCESS
       expect_status: 200
     create:
       method: POST
-      path: /workflow/v3/process
+      path: /process
       body:
         name: Test Process
         code: TEST-PROCESS
@@ -22,11 +22,11 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /workflow/v3/process/TEST-PROCESS/state/SUBMITTED
+      path: /process/TEST-PROCESS/state/SUBMITTED
       expect_status: 200
     create:
       method: POST
-      path: /workflow/v3/process/TEST-PROCESS/state
+      path: /process/TEST-PROCESS/state
       body:
         code: SUBMITTED
         name: Submitted
@@ -39,11 +39,11 @@ prerequisites:
     base_url_arg: --base-url
     check:
       method: GET
-      path: /workflow/v3/process/TEST-PROCESS/state/APPROVED
+      path: /process/TEST-PROCESS/state/APPROVED
       expect_status: 200
     create:
       method: POST
-      path: /workflow/v3/process/TEST-PROCESS/state
+      path: /process/TEST-PROCESS/state
       body:
         code: APPROVED
         name: Approved

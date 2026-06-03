@@ -3,4 +3,6 @@
 # Used by seed.py to resolve seed_manifest.yaml entries before making HTTP calls.
 IDGEN_BILL_NUMBER_TEMPLATE_CODE: "BillNumber"
 IDGEN_RECEIPT_NUMBER_TEMPLATE_CODE: "ReceiptNumber"
+IDGEN_TRANSACTION_NUMBER_TEMPLATE_CODE: "TransactionNumber"
 BULK_BILL_GENERATION_PUBSUB_TOPIC: "bulk-bill-generator"
+BULK_BILL_GENERATION_DLQ_PUBSUB_TOPIC: "bulk-bill-generator-dlq"

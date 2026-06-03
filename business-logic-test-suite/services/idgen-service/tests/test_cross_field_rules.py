@@ -95,11 +95,12 @@ class TestBR_CF_001_padding_must_accommodate_sequence_start:
 
 
 # ---------------------------------------------------------------------------
-# BR-CF-002: Charset ranges must be valid byte ranges
+# BR-CF-002: Charset ranges must be ordered and class-homogeneous
 # ---------------------------------------------------------------------------
 
-class TestBR_CF_002_charset_ranges_must_be_valid_byte_ranges:
-    """Charset ranges like A-Z or 0-9 must not cross character classes."""
+class TestBR_CF_002_charset_ranges_must_be_ordered_and_class_homogeneous:
+    """Ranges must have start byte <= end byte and must not cross character classes.
+    Empty or omitted charset is valid — service applies default A-Z0-9."""
 
     def test_valid_alpha_range_accepted(self, request, base_url, auth_headers):
         code = _tpl_code()
@@ -108,6 +109,20 @@ class TestBR_CF_002_charset_ranges_must_be_valid_byte_ranges:
             "config": {
                 "template": "{RAND}",
                 "random": {"length": 4, "charset": "A-Z"},
+            },
+        })
+        try:
+            assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+        finally:
+            _delete_tpl(base_url, code, "v1", auth_headers)
+
+    def test_valid_alphanumeric_charset_accepted(self, request, base_url, auth_headers):
+        code = _tpl_code()
+        resp = _post(request.node, f"{base_url}/template", auth_headers, {
+            "templateCode": code,
+            "config": {
+                "template": "{RAND}",
+                "random": {"length": 6, "charset": "A-Z0-9"},
             },
         })
         try:
@@ -137,7 +152,8 @@ class TestBR_CF_002_charset_ranges_must_be_valid_byte_ranges:
         })
         assert resp.status_code == 400, f"Expected 400 for reversed range Z-A, got {resp.status_code}: {resp.text}"
 
-    def test_empty_charset_rejected(self, request, base_url, auth_headers):
+    def test_empty_charset_uses_default_and_is_accepted(self, request, base_url, auth_headers):
+        # Rule updated: empty charset is valid; service applies default A-Z0-9
         code = _tpl_code()
         resp = _post(request.node, f"{base_url}/template", auth_headers, {
             "templateCode": code,
@@ -146,7 +162,27 @@ class TestBR_CF_002_charset_ranges_must_be_valid_byte_ranges:
                 "random": {"length": 4, "charset": ""},
             },
         })
-        assert resp.status_code == 400, f"Expected 400 for empty charset, got {resp.status_code}: {resp.text}"
+        try:
+            assert resp.status_code == 201, \
+                f"Expected 201 for empty charset (uses default A-Z0-9), got {resp.status_code}: {resp.text}"
+        finally:
+            _delete_tpl(base_url, code, "v1", auth_headers)
+
+    def test_omitted_charset_uses_default_and_is_accepted(self, request, base_url, auth_headers):
+        # Omitting charset entirely is also valid — service uses default A-Z0-9
+        code = _tpl_code()
+        resp = _post(request.node, f"{base_url}/template", auth_headers, {
+            "templateCode": code,
+            "config": {
+                "template": "{RAND}",
+                "random": {"length": 4},
+            },
+        })
+        try:
+            assert resp.status_code == 201, \
+                f"Expected 201 for omitted charset (uses default A-Z0-9), got {resp.status_code}: {resp.text}"
+        finally:
+            _delete_tpl(base_url, code, "v1", auth_headers)
 
 
 # ---------------------------------------------------------------------------
@@ -154,9 +190,10 @@ class TestBR_CF_002_charset_ranges_must_be_valid_byte_ranges:
 # ---------------------------------------------------------------------------
 
 class TestBR_CF_003_date_format_must_match_keyword_list:
-    """The {DATE:format} token only accepts predefined format keywords."""
+    """The {DATE:format} token only accepts predefined keywords (case-insensitive).
+    Categories: basic numeric, dash/slash/dot-separated, month-year, year-only."""
 
-    def test_known_date_format_accepted(self, request, base_url, auth_headers):
+    def test_basic_numeric_format_accepted(self, request, base_url, auth_headers):
         code = _tpl_code()
         resp = _post(request.node, f"{base_url}/template", auth_headers, {
             "templateCode": code,
@@ -170,18 +207,79 @@ class TestBR_CF_003_date_format_must_match_keyword_list:
         finally:
             _delete_tpl(base_url, code, "v1", auth_headers)
 
-    def test_unknown_date_format_rejected(self, request, base_url, auth_headers):
+    def test_dash_separated_format_accepted(self, request, base_url, auth_headers):
         code = _tpl_code()
         resp = _post(request.node, f"{base_url}/template", auth_headers, {
             "templateCode": code,
             "config": {
-                "template": "{DATE:dd/MM/yyyy}-{SEQ}",
+                "template": "{DATE:yyyy-mm-dd}-{SEQ}",
                 "sequence": {"scope": "DAILY", "start": 1},
             },
         })
-        assert resp.status_code == 400, f"Expected 400 for unknown date format, got {resp.status_code}: {resp.text}"
+        try:
+            assert resp.status_code == 201, f"Expected 201 for dash-separated format, got {resp.status_code}: {resp.text}"
+        finally:
+            _delete_tpl(base_url, code, "v1", auth_headers)
+
+    def test_slash_separated_format_accepted(self, request, base_url, auth_headers):
+        code = _tpl_code()
+        resp = _post(request.node, f"{base_url}/template", auth_headers, {
+            "templateCode": code,
+            "config": {
+                "template": "{DATE:dd/mm/yyyy}-{SEQ}",
+                "sequence": {"scope": "DAILY", "start": 1},
+            },
+        })
+        try:
+            assert resp.status_code == 201, f"Expected 201 for slash-separated format, got {resp.status_code}: {resp.text}"
+        finally:
+            _delete_tpl(base_url, code, "v1", auth_headers)
+
+    def test_year_only_format_accepted(self, request, base_url, auth_headers):
+        code = _tpl_code()
+        resp = _post(request.node, f"{base_url}/template", auth_headers, {
+            "templateCode": code,
+            "config": {
+                "template": "{DATE:yyyy}-{SEQ}",
+                "sequence": {"scope": "YEARLY", "start": 1},
+            },
+        })
+        try:
+            assert resp.status_code == 201, f"Expected 201 for year-only format, got {resp.status_code}: {resp.text}"
+        finally:
+            _delete_tpl(base_url, code, "v1", auth_headers)
+
+    def test_format_matching_is_case_insensitive(self, request, base_url, auth_headers):
+        # Rule is case-insensitive: YYYYMMDD should match keyword yyyymmdd
+        code = _tpl_code()
+        resp = _post(request.node, f"{base_url}/template", auth_headers, {
+            "templateCode": code,
+            "config": {
+                "template": "{DATE:YYYYMMDD}-{SEQ}",
+                "sequence": {"scope": "DAILY", "start": 1},
+            },
+        })
+        try:
+            assert resp.status_code == 201, \
+                f"Expected 201 for uppercase keyword (case-insensitive), got {resp.status_code}: {resp.text}"
+        finally:
+            _delete_tpl(base_url, code, "v1", auth_headers)
+
+    def test_free_form_format_not_in_keyword_list_rejected(self, request, base_url, auth_headers):
+        # "day-month-year" is not in any keyword category
+        code = _tpl_code()
+        resp = _post(request.node, f"{base_url}/template", auth_headers, {
+            "templateCode": code,
+            "config": {
+                "template": "{DATE:day-month-year}-{SEQ}",
+                "sequence": {"scope": "DAILY", "start": 1},
+            },
+        })
+        assert resp.status_code == 400, \
+            f"Expected 400 for unknown format 'day-month-year', got {resp.status_code}: {resp.text}"
 
     def test_go_layout_string_rejected(self, request, base_url, auth_headers):
+        # Go layout "2006-01-02" is not a valid keyword
         code = _tpl_code()
         resp = _post(request.node, f"{base_url}/template", auth_headers, {
             "templateCode": code,
