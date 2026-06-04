@@ -104,30 +104,21 @@ paths:
                 $ref: '#/components/schemas/EmployeeCreateRequest'
             examples:
               fullEmployeeWithJurisdictions:
-                summary: Permanent employee with every field set, including jurisdictions
+                summary: Permanent employee with every field set, including a jurisdiction
                 value:
-                  - code: EMP-NBO-0042
-                    userId: usr-uuid-001
-                    individualId: ind-uuid-001
+                  - userId: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                    individualId: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
                     employeeType: PERMANENT
                     department: FINANCE
                     designation: ACCOUNTS_OFFICER
-                    dateOfAppointment: "2022-06-01T00:00:00.000Z"
-                    status: ACTIVE
+                    dateOfAppointment: "2025-01-01T10:00:00Z"
+                    status: EMPLOYED
                     isActive: true
                     jurisdictions:
                       - boundaryRelation:
-                          - code: WARD-NBO-001
-                            boundaryType: Ward
-                            hierarchyType: ADMIN
-                          - code: WARD-NBO-002
-                            boundaryType: Ward
-                            hierarchyType: ADMIN
-                        isActive: true
-                      - boundaryRelation:
-                          - code: BLOCK-NBO-005
-                            boundaryType: Block
-                            hierarchyType: ADMIN
+                          - code: STATE33d
+                            boundaryType: state
+                            hierarchyType: state-district-city
                         isActive: true
               singlePermanentEmployee:
                 summary: Single permanent employee with full fields
@@ -168,6 +159,38 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EmployeeResponse'
+              examples:
+                fullEmployeeWithJurisdictions:
+                  summary: Newly created employee, code auto-generated, with jurisdiction and audit fields populated
+                  value:
+                    - id: 50843605-23cb-4b6d-b246-6da77d172756
+                      code: EMP-PGG-00008
+                      userId: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                      individualId: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
+                      status: EMPLOYED
+                      employeeType: PERMANENT
+                      dateOfAppointment: "2025-01-01T10:00:00Z"
+                      department: FINANCE
+                      designation: ACCOUNTS_OFFICER
+                      isActive: true
+                      jurisdictions:
+                        - id: 538f4d95-da67-4b6e-a555-f1ba464a98aa
+                          employeeId: 50843605-23cb-4b6d-b246-6da77d172756
+                          boundaryRelation:
+                            - code: STATE33d
+                              boundaryType: state
+                              hierarchyType: state-district-city
+                          isActive: true
+                          auditDetail:
+                            createdBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                            modifiedBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                            createdTime: 1780478075753
+                            modifiedTime: 1780478075753
+                      auditDetail:
+                        createdBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                        modifiedBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                        createdTime: 1780478075749
+                        modifiedTime: 1780478075749
         '400':
           description: |
             Validation error — one or more employee records failed field-level
