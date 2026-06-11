@@ -1,6 +1,6 @@
 # Filestore Service: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `egov-filestore` (Spring Boot 3.4.5 / Java 17) · v2.9.3
+**Old:** `egov-filestore` (Spring Boot 3.4.5 / Java 17) · v2.9.3  
 **New:** `filestore` (Go 1.24+ / Gin + GORM) · DIGIT v3
 
 Both handle multi-tenant file uploads, presigned S3 URLs, retrieval, and deletion. v3.0 is a ground-up Go rewrite, not a port, adding document category management, a client-side presigned upload flow, and restricting the storage backend to S3/MinIO only. This document covers only **filestore-specific** changes (platform-wide enhancements common to all v3 services are excluded).

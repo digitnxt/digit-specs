@@ -1,6 +1,6 @@
 # URL Shortener Service: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `egov-url-shortening` (Spring Boot 3.4 / Java 17) · v2.9.3
+**Old:** `egov-url-shortening` (Spring Boot 3.4 / Java 17) · v2.9.3  
 **New:** `url-shortener` (Go 1.24+ / Gin + GORM) · DIGIT v3
 
 Both generate short URLs mapped to long URLs and resolve them via redirect. v3.0 is a ground-up Go rewrite, not a port, adding validity enforcement, full CRUD management APIs, bidirectional event publishing, and per-tenant Postgres schema isolation. This document covers only **url-shortener-specific** changes (platform-wide enhancements common to all v3 services are excluded).

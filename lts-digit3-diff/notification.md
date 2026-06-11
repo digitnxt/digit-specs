@@ -1,6 +1,6 @@
 # Notification Service: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `egov-notification-mail` + `egov-notification-sms` (Spring Boot 3.4.5 / Java 17) · v2.9.3
+**Old:** `egov-notification-mail` + `egov-notification-sms` (Spring Boot 3.4.5 / Java 17) · v2.9.3  
 **New:** `notification` + `template-config` (Go 1.22+ / Gin + GORM) · DIGIT v3
 
 Two independent stateless Kafka-consumer services (`egov-notification-mail` and `egov-notification-sms`) are merged into a single stateful Go service (`notification`) with a companion enrichment utility (`template-config`). The primary dispatch interface shifts from Kafka-only consumption to a REST HTTP API. v3 is a ground-up Go rewrite, not a port. This document covers only **notification-specific** changes (platform-wide enhancements common to all v3 services are excluded).

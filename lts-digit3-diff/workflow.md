@@ -1,6 +1,6 @@
 # Workflow Service: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `egov-workflow-v2` (Spring Boot 3.4 / Java 17) · v2.9.3
+**Old:** `egov-workflow-v2` (Spring Boot 3.4 / Java 17) · v2.9.3  
 **New:** `workflow` (Go 1.24+ / Gin + GORM) · DIGIT v3
 
 Both are generic, multi-tenant, config-driven state-machine engines that other modules register a workflow definition against and then drive via a transition API. v3 is a ground-up Go rewrite, not a port. This document covers only **workflow-specific** changes (platform-wide enhancements common to all v3 services are excluded).

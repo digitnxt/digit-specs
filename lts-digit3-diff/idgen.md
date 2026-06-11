@@ -1,6 +1,6 @@
 # IDGen Service: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `egov-idgen` (Spring Boot 3.4.5 / Java 17) · v2.9.3
+**Old:** `egov-idgen` (Spring Boot 3.4.5 / Java 17) · v2.9.3  
 **New:** `idgen` (Go 1.24+ / Gin + GORM) · DIGIT v3
 
 Both generate formatted, sequential, tenant-scoped IDs from named templates. v3.0 eliminates the MDMS dependency and dynamic PostgreSQL sequences, replacing them with self-owned format storage and an in-table sequence counter. v3 is a ground-up Go rewrite, not a port. This document covers only **idgen-specific** changes (platform-wide enhancements common to all v3 services are excluded).

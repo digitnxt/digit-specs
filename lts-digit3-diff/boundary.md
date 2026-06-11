@@ -1,6 +1,6 @@
 # Boundary Service: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `egov-boundary-service` (Spring Boot 3.2.2 / Java 17) · v2.9.3
+**Old:** `egov-boundary-service` (Spring Boot 3.2.2 / Java 17) · v2.9.3  
 **New:** `boundary` (Go 1.23+ / Gin + GORM) · DIGIT v3
 
 Both manage geographical boundary entities, hierarchy type definitions, and parent-child boundary relationships with multi-tenant isolation. v3.0 is a ground-up Go rewrite replacing the Kafka-persister pattern with direct DB writes and the eGov `RequestInfo` auth model with HTTP headers. This document covers only **boundary-specific** changes (platform-wide enhancements common to all v3 services are excluded).

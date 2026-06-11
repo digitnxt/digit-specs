@@ -1,6 +1,6 @@
 # Billing & Payments: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `billing-service` + `collection-services` (Spring Boot / Java 17) · v2.9.3
+**Old:** `billing-service` + `collection-services` (Spring Boot / Java 17) · v2.9.3  
 **New:** `billing` (Go 1.23+ / Gin + GORM) · DIGIT v3
 
 Two separate Spring Boot services (`billing-service` and `collection-services`) consolidated into a single Go/Gin service (`billing`). The merge eliminates inter-service HTTP calls for demand-to-payment linking and introduces REST-idiomatic verbs, per-tenant PostgreSQL schema separation, and full OpenTelemetry observability. v3 is a ground-up Go rewrite, not a port. This document covers only **billing-specific** changes (platform-wide enhancements common to all v3 services are excluded).

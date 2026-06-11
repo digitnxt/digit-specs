@@ -1,6 +1,6 @@
 # Localization Service: 2.9 (Java) → 3.0 (Go)
 
-**Old:** `egov-localization` (Spring Boot 3.4 / Java 17) · v2.9.3
+**Old:** `egov-localization` (Spring Boot 3.4 / Java 17) · v2.9.3  
 **New:** `localization` (Go 1.24+ / Gin + GORM) · DIGIT v3
 
 Both store and serve localized messages keyed by **tenant + module + locale + code**, with CRUD plus a tenant/locale-aware resolution layer. v3 is a ground-up Go rewrite, not a port. This document covers only **localization-specific** changes (platform-wide enhancements common to all v3 services are excluded).
