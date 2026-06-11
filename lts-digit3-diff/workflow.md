@@ -1,7 +1,7 @@
-# Workflow Service: v2 (Java) → v3 (Go) — Upgrade One-Pager
+# Workflow Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-workflow-v2` (Spring Boot 3.4 / Java 17) · v2.9.3 — `/home/mithun/Desktop/lts-digit-core/.../egov-workflow-v2`
-**New:** `workflow` (Go 1.22+ / Gin + GORM) · DIGIT v3 — `digit3/src/services/workflow`
+**New:** `workflow` (Go 1.24+ / Gin + GORM) · DIGIT v3 — `digit3/src/services/workflow`
 
 Both are generic, multi-tenant, config-driven state-machine engines that other modules register a workflow definition against and then drive via a transition API. v3 is a ground-up Go rewrite, not a port. This document covers only **workflow-specific** changes (platform-wide enhancements common to all v3 services are excluded).
 
@@ -11,7 +11,7 @@ Both are generic, multi-tenant, config-driven state-machine engines that other m
 
 | Aspect | v2 (Java) | v3 (Go) |
 |---|---|---|
-| Language / runtime | Java 17, Spring Boot 3.4.5 | Go 1.22+, idiomatic layered/hexagonal |
+| Language / runtime | Java 17, Spring Boot 3.4.5 | Go 1.24+, idiomatic layered/hexagonal |
 | Web | Spring MVC (Tomcat), port 8280, ctx `/egov-workflow-v2` | Gin, port 8080, ctx `/workflow` |
 | DB access | Raw `JdbcTemplate` + hand-built SQL | GORM (pgx v5) + raw SQL for hot paths |
 | State machine | Hand-coded state-graph traversal | `looplab/fsm` library |
@@ -48,27 +48,3 @@ v2 used a flat envelope-style API (`_create`/`_update`/`_search`/`_transition`/`
 Terminology shift: **BusinessService → Process**, **businessId → entityId**, **status (state uuid) → code-based state**; verbs now proper GET/PUT/DELETE instead of POST-only.
 
 ---
-
-## 4. DB Changes
-
-Complete schema redesign — table names dropped the `eg_wf_*` / `_v2` convention, and escalation config moved out of MDMS into a real table.
-
-| v2 table | v3 table | Key differences |
-|---|---|---|
-| `eg_wf_businessservice_v2` | `processes` | + `version`; UNIQUE(`tenant_id`,`code`) |
-| `eg_wf_state_v2` | `states` | `is_initial` replaces `isstartstate`; code-based identity |
-| `eg_wf_action_v2` | `actions` | `roles` now **JSONB** (was CSV string); + `assignee_check` bool |
-| `eg_wf_processinstance_v2` | `process_instances` | both append-only (one row per transition); v3 adds `is_latest` flag + partial unique index to mark the current row (v2 finds it via `max(lastmodifiedtime)` subquery); + `attributes` (JSONB); `documents`/`assignees` now JSONB columns (v2 had separate `eg_wf_document_v2` + `eg_wf_assignee_v2` child tables) |
-| `eg_wf_document_v2`, `eg_wf_assignee_v2` | *(folded into JSONB columns)* | No longer separate tables |
-| *(MDMS config)* | `escalation_configs` | Escalation now persisted: `state_code`, `escalation_action`, `state_sla_minutes`, `process_sla_minutes` |
-
-Other DB notes: audit columns store epoch-millis; `requestid` added to workflow tables; performance/partial indexes added (e.g. partial unique on `is_latest` to enforce one current row per entity). An early `attribute_validations` table was **dropped** in favor of `actions.roles` + `actions.assignee_check`.
-
----
-
-## 5. Migration Notes / Watch-outs
-
-- **Not wire-compatible**: clients must move from envelope POSTs to the `/v3` code-addressed REST API; payload keys rename (`businessService`→`processCode`, `businessId`→`entityId`).
-- **Escalation config moves out of MDMS** into the `escalation_configs` API/table — needs data migration.
-- **Roles model** changed from CSV string to JSONB array on `actions`.
-- **README is partially stale** (documents `/workflow/v1` UUID-based paths, Go 1.24, port 5432); the *code* is authoritative — `/v3`, code-based, go.mod `go 1.22.3`, default `DB_PORT=5433`.
