@@ -1,64 +1,66 @@
 # Filestore Service: 2.9 (Java) → 3.0 (Go)
 
-## Overview
-`filestore` is a multi-tenant file storage microservice handling uploads, presigned S3 URLs, file retrieval, deletion, and document category management. v3.0 is a full rewrite from Java/Spring Boot to Go/Gin, with a version-bumped API (`/v1` → `/v3`), breaking changes to tenant and auth headers, and S3 as the only supported backend.
+**Old:** `egov-filestore` (Spring Boot 3.4.5 / Java 17) · v2.9.3
+**New:** `filestore` (Go 1.24+ / Gin + GORM) · DIGIT v3
 
-## Tech stack
+Both handle multi-tenant file uploads, presigned S3 URLs, retrieval, and deletion. v3.0 is a ground-up Go rewrite, not a port, adding document category management, a client-side presigned upload flow, and restricting the storage backend to S3/MinIO only. This document covers only **filestore-specific** changes (platform-wide enhancements common to all v3 services are excluded).
 
-| | v2.9 | v3.0 |
+---
+
+## 1. Tech Stack & Architecture Changes
+
+| Aspect | v2 (Java) | v3 (Go) |
 |---|---|---|
-| Language | Java 17 | Go 1.24 |
-| Framework | Spring Boot 3.4.5 (Spring MVC) | Gin 1.10.1 |
-| ORM / DB access | Spring Data JPA / Hibernate + custom JDBC | GORM 1.30 (postgres) + sqlx for migration bootstrap |
-| Build | Maven (spring-boot-maven-plugin) | Go modules (`go.mod`) |
-| Key libs | Minio 8.6, AWS SDK S3 1.12, Azure Storage SDK 5.0, Apache Tika 3.2, Spring Kafka | minio-go v7, gabriel-vasile/mimetype, segmentio/kafka-go, go-redis, digit3 tracer |
+| Language / runtime | Java 17, Spring Boot 3.4.5 | Go 1.24, Gin 1.10.1 |
+| ORM / DB access | Spring Data JPA / Hibernate + custom JDBC | GORM 1.30 + sqlx for migration bootstrap |
+| Build | Maven | Go modules |
+| S3 client | Minio 8.6, AWS SDK S3 1.12, Azure Storage SDK 5.0 | minio-go v7 (S3/MinIO only) |
+| Storage backends | S3/MinIO + Azure Blob Storage | **S3/MinIO only** |
+| MIME detection | Apache Tika 3.2 (extension-based) | `gabriel-vasile/mimetype` (magic-byte content inspection) |
+| Tenant identification | `?tenantId=` query param | `X-Tenant-Id` HTTP header (breaking change for all callers) |
+| Auth / user context | DIGIT `RequestInfo` JSON form field | `X-User-Id` HTTP header |
+| Event model | Spring Kafka | digit3/tracer/pubsub (Kafka or Redis Streams via `PUBSUB_TYPE`) |
 
-## API changes
+---
+
+## 2. Features Added in v3
+
+- **Document category management:** every upload requires a matching active `DocumentCategory` record; static `allowed.formats.map` property replaced by DB-driven validation. Full CRUD with optimistic locking via `POST/GET /document-categories` and `GET|PUT|DELETE /document-categories/:docCode`.
+- **Magic-byte MIME detection:** `gabriel-vasile/mimetype` validates actual file content, not just extension, preventing extension spoofing.
+- **Concurrent multi-file upload:** goroutines per file (`sync.WaitGroup`) replace sequential v2.9 upload.
+- **Client-side presigned upload flow:** `POST /upload-url` generates a presigned S3 PUT URL; `POST /confirm-upload` finalizes after the client uploads directly to S3 — no proxying through the service.
+- **File deletion:** `DELETE /{fileStoreId}` removes the S3 object and DB row; v2.9 had no equivalent.
+- **Separate read/write S3 buckets:** `S3_BUCKET` for writes, `S3_READ_BUCKET` for reads, supporting cross-bucket replication topologies.
+
+> Carried over (parity): multi-file upload, presigned download URLs, multi-tenancy.
+
+**Behavior changes to watch:** Azure Blob Storage support removed. Malware scan events (`egov.malware.file-scan-request` Kafka topic, off by default in v2.9) have no v3.0 equivalent. Presigned download URL expiry reduced from 24 hours (configurable) to 1 hour (fixed).
+
+---
+
+## 3. API Changes
 
 Base path changes from `/filestore/v1/files` to `/filestore/v3/files`.
 
-**Changed**
-- `POST /upload` — `tenantId` moved from query param to `X-Tenant-Id` header; `requestInfo` form field replaced by `X-User-Id` header; module now validated against `DocumentCategory` DB record
-- `GET /{fileStoreId}` — `fileStoreId` moved from query param (`?fileStoreId=`) to path param
-- `GET /download-urls` (was `/url`) — `fileStoreIds` changes from repeated list param to comma-separated single param; presigned URL expiry reduced from 24 hours to 1 hour
+| Concern | v2 endpoint(s) | v3 endpoint(s) |
+|---|---|---|
+| Upload file | `POST /filestore/v1/files/upload` (`tenantId` query param; `requestInfo` form field) | `POST /filestore/v3/files/upload` (`X-Tenant-Id` header; `X-User-Id` header; module validated against `DocumentCategory`) |
+| Fetch file | `GET /filestore/v1/files/{fileStoreId}` (query param `?fileStoreId=`) | `GET /filestore/v3/files/{fileStoreId}` (path param) |
+| Download URLs | `GET /filestore/v1/files/url` (repeated `fileStoreIds` list param; 24-hour expiry) | `GET /filestore/v3/files/download-urls` (comma-separated single param; 1-hour expiry) |
+| Delete file | *(none)* | `DELETE /filestore/v3/files/{fileStoreId}` |
+| Presigned upload | *(none)* | `POST /filestore/v3/files/upload-url` + `POST /filestore/v3/files/confirm-upload` |
+| Document categories | *(none)* | `POST/GET /filestore/v3/files/document-categories`, `GET|PUT|DELETE /filestore/v3/files/document-categories/:docCode` |
+| DB migration | *(none)* | `POST /internal/migrate` |
 
-**Added**
-- `DELETE /{fileStoreId}` — removes file from S3 and deletes DB metadata
-- `POST /upload-url` — generates presigned S3 PUT URL for client-side direct upload; validates against document category
-- `POST /confirm-upload` — verifies presigned upload completed; returns `VALID`/`INVALID`; cleans up DB record if S3 object missing
-- `POST /document-categories` / `GET /document-categories` / `GET|PUT|DELETE /document-categories/:docCode` — full CRUD for document category management with optimistic locking
-- `POST /internal/migrate` — triggers per-tenant Flyway schema migration
+---
 
-**Removed**
-- `tenantId` as a query parameter — all callers must switch to `X-Tenant-Id` header
-- DIGIT `RequestInfo` form field — replaced by `X-User-Id` header
+## 4. DB Changes
 
-## Core logic & feature changes
+| v2 table | v3 table | Key differences |
+|---|---|---|
+| `eg_filestoremap` | `eg_filestoremap_v2` | `requestid TEXT` added; 7 query indexes added; original table not dropped |
+| *(none)* | `eg_doc_metadata_v2` | New document category table: `allowedFormats` JSONB, `minSize`/`maxSize`, `isSensitive`, `version` (optimistic lock); 3 indexes |
 
-- **Upload validation now DB-driven:** every upload requires a matching active `DocumentCategory` record; v2.9 used a static `allowed.formats.map` property. Missing category = rejected upload.
-- **Magic-byte MIME detection:** `gabriel-vasile/mimetype` validates actual file content, not just extension, preventing extension spoofing; replaces Apache Tika.
-- **Concurrent multi-file upload:** v3.0 fans out a goroutine per file (`sync.WaitGroup`); v2.9 uploaded sequentially.
-- **Presigned upload flow (new):** client can now upload directly to S3 without proxying through the service, then call `/confirm-upload` to finalize.
-- **Presigned download URL expiry:** reduced from 24 hours (configurable) to 1 hour (fixed).
-- **File deletion (new):** removes S3 object then DB row; no soft-delete.
-- **Malware scan events removed:** v2.9 published `egov.malware.file-scan-request` Kafka events (off by default); no equivalent in v3.0.
-- **Azure Blob Storage removed:** v3.0 is S3/MinIO-only.
-- **Config source:** Spring `application.properties` / `@Value` → environment variables only.
-- **PubSub abstraction:** Spring Kafka → digit3/tracer/pubsub supporting Kafka or Redis Streams (`PUBSUB_TYPE` env var).
+Other DB notes: migration tooling changed from Spring Flyway auto-integration (history table `egov_filestore_schema_version`) to external Flyway binary via `db/migrate.sh` (history table `filestore_schema`). Per-tenant schema routing available via digit3/tenant-migration; Flyway runs per schema on tenant creation events or `/internal/migrate`.
 
-## DB / schema changes
-
-- **Table renamed:** `eg_filestoremap` → `eg_filestoremap_v2`; old table not dropped — may coexist in the same DB.
-- **Audit column naming:** snake_case (`createdby`, `lastmodifiedtime`) → camelCase quoted identifiers (`"createdBy"`, `"modifiedTime"`) in both tables; breaks any direct SQL relying on column names.
-- **New column:** `requestid TEXT` added to `eg_filestoremap_v2`.
-- **New table:** `eg_doc_metadata_v2` — stores document categories with `allowedFormats` JSONB, `minSize`/`maxSize`, `isSensitive`, `version` (optimistic lock), camelCase audit columns.
-- **Indexes added:** v2.9 had no explicit query indexes; v3.0 adds 7 indexes on `eg_filestoremap_v2` and 3 on `eg_doc_metadata_v2`.
-- **Migration tooling:** Spring Flyway auto-integration (history table: `egov_filestore_schema_version`) → external Flyway binary via `db/migrate.sh` (history table: `filestore_schema`).
-- **Per-tenant schemas (optional):** digit3/tenant-migration enables per-tenant schema routing; Flyway runs per schema on tenant creation events or `/internal/migrate`.
-
-## Notable architectural changes
-
-- **Runtime rewrite:** Java 17/JVM + embedded Tomcat → Go 1.24 + net/http; eliminates JVM startup overhead; goroutine concurrency replaces thread-pool model.
-- **Tenant identification is a breaking change:** `?tenantId=` query param → `X-Tenant-Id` HTTP header on every request; all existing API callers must update.
-- **Auth/user context model changed:** DIGIT `RequestInfo` JSON wrapper fully removed; only `X-User-Id` header used for audit.
-- **Separate read/write S3 buckets:** `S3_BUCKET` for writes, `S3_READ_BUCKET` for reads; supports cross-bucket replication topologies.
+---
