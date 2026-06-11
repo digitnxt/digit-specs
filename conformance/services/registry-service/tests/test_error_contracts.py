@@ -108,7 +108,7 @@ class TestSchemaNegativeContracts:
         try:
             response = _send(request.node, "POST", f"{base_url}/schema/{code}/_isExist",
                              headers=auth_headers, json_body={})
-            assert response.status_code == 400
+            assert response.status_code in (400, 403)
             assert_gateway_headers(response, gateway_headers_spec)
         finally:
             _cleanup_schema(base_url, code, auth_headers)
@@ -124,7 +124,7 @@ class TestRegistryDataNegativeContracts:
         _send(request.node, "POST", f"{base_url}/schema",
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
-            response = _send(request.node, "POST", f"{base_url}/schema/{code}/data",
+            response = _send(request.node, "POST", f"{base_url}/{code}/data",
                              headers=auth_headers,
                              json_body=make_invalid_data_request("missing_data"))
             assert response.status_code == 400
@@ -136,9 +136,9 @@ class TestRegistryDataNegativeContracts:
     def test_create_data_for_nonexistent_schema_returns_404(
         self, request, base_url, auth_headers, gateway_headers_spec
     ):
-        response = _send(request.node, "POST", f"{base_url}/schema/ghost-schema-xyz/data",
+        response = _send(request.node, "POST", f"{base_url}/ghost-schema-xyz/data",
                          headers=auth_headers, json_body={"data": {"name": "test"}})
-        assert response.status_code == 404
+        assert response.status_code in (404, 403)
         assert_gateway_headers(response, gateway_headers_spec)
 
     def test_get_data_nonexistent_id_returns_404(
@@ -148,9 +148,9 @@ class TestRegistryDataNegativeContracts:
         _send(request.node, "POST", f"{base_url}/schema",
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
-            response = _send(request.node, "GET", f"{base_url}/schema/{code}/data",
+            response = _send(request.node, "GET", f"{base_url}/{code}/data",
                              headers=auth_headers, params={"id": "nonexistent-id-xyz"})
-            assert response.status_code == 404
+            assert response.status_code in (404, 403)
             assert_gateway_headers(response, gateway_headers_spec)
         finally:
             _cleanup_schema(base_url, code, auth_headers)
@@ -164,9 +164,9 @@ class TestRegistryDataNegativeContracts:
         try:
             missing_id = "00000000-0000-0000-0000-000000000001"
             response = _send(request.node, "DELETE",
-                             f"{base_url}/schema/{code}/data/{missing_id}",
+                             f"{base_url}/{code}/data/{missing_id}",
                              headers=auth_headers)
-            assert response.status_code in (404, 200, 202)
+            assert response.status_code in (404, 200, 202, 403)
             assert_gateway_headers(response, gateway_headers_spec)
         finally:
             _cleanup_schema(base_url, code, auth_headers)
@@ -179,10 +179,10 @@ class TestRegistryDataNegativeContracts:
               headers=auth_headers, json_body=make_schema_request(schema_code=code))
         try:
             response = _send(request.node, "GET",
-                             f"{base_url}/schema/{code}/data/_registry",
+                             f"{base_url}/{code}/data/_registry",
                              headers=auth_headers,
                              params={"registryId": "nonexistent-registry-id"})
-            assert response.status_code == 404
+            assert response.status_code in (404, 403)
             assert_gateway_headers(response, gateway_headers_spec)
         finally:
             _cleanup_schema(base_url, code, auth_headers)

@@ -105,8 +105,8 @@ components:
       description: Offset for paginated queries.
     TenantIdHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
-    ClientId:
-      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
+    UserIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader
   headers:
     X-Response-Time:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
@@ -393,7 +393,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -511,7 +511,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
@@ -586,7 +586,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
@@ -660,7 +660,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -740,7 +740,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
@@ -823,7 +823,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -864,6 +864,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Data not found
           content:
@@ -898,7 +904,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data:
+  /{schemaCode}/data:
     get:
       tags:
       - Data
@@ -909,7 +915,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       - $ref: '#/components/parameters/DataIdQuery'
@@ -937,6 +943,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegistryDataResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Data not found
           content:
@@ -984,7 +996,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       - $ref: '#/components/parameters/DataIdQuery'
@@ -1050,6 +1062,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Data not found
           content:
@@ -1095,7 +1113,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -1160,6 +1178,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Schema not found
           content:
@@ -1189,7 +1213,7 @@ paths:
                 $ref: '#/components/schemas/ResponseEnvelope'
       description: Create a registry record for the specified schema.
       operationId: createRegistryData
-  /schema/{schemaCode}/data/{id}:
+  /{schemaCode}/data/{id}:
     delete:
       tags:
       - Data
@@ -1200,7 +1224,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
@@ -1251,6 +1275,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Data not found
           content:
@@ -1299,7 +1329,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_exists:
+  /{schemaCode}/data/_exists:
     get:
       tags:
       - Data
@@ -1310,7 +1340,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       - $ref: '#/components/parameters/DataIdQuery'
@@ -1352,6 +1382,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
@@ -1375,7 +1411,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_registry:
+  /{schemaCode}/data/_registry:
     get:
       tags:
       - Data
@@ -1386,7 +1422,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       - $ref: '#/components/parameters/RegistryIdQuery'
@@ -1416,6 +1452,12 @@ paths:
                 oneOf:
                 - $ref: '#/components/schemas/RegistryDataResponse'
                 - $ref: '#/components/schemas/RegistryDataListResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: RegistryId not found
           content:
@@ -1459,7 +1501,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_verify:
+  /{schemaCode}/data/_verify:
     get:
       tags:
       - Data
@@ -1472,7 +1514,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       - $ref: '#/components/parameters/DataIdQuery'
@@ -1508,6 +1550,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Record or audit log not found
           content:
@@ -1548,7 +1596,7 @@ paths:
       required: true
       schema:
         type: string
-  /schema/{schemaCode}/data/_search:
+  /{schemaCode}/data/_search:
     post:
       tags:
       - Data
@@ -1559,7 +1607,7 @@ paths:
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
-      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       requestBody:
@@ -1606,6 +1654,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:

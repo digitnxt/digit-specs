@@ -2,7 +2,6 @@ import uuid
 
 
 def make_process_payload(**overrides):
-    """Minimal valid ProcessCreate payload. Required: name, code."""
     base = {
         "name": "Test Process",
         "code": f"TEST-PROC-{uuid.uuid4().hex[:6].upper()}",
@@ -14,7 +13,6 @@ def make_process_payload(**overrides):
 
 
 def make_state_payload(**overrides):
-    """Minimal valid StateCreate payload. Required: code, name."""
     base = {
         "code": f"STATE-{uuid.uuid4().hex[:6].upper()}",
         "name": "Test State",
@@ -28,7 +26,6 @@ def make_state_payload(**overrides):
 
 
 def make_action_payload(next_state_code, **overrides):
-    """Minimal valid ActionCreate payload. Required: name, nextState."""
     base = {
         "name": f"action-{uuid.uuid4().hex[:6]}",
         "label": "Test Action",
@@ -38,7 +35,6 @@ def make_action_payload(next_state_code, **overrides):
 
 
 def make_escalation_payload(state_code, escalation_action, **overrides):
-    """Minimal valid EscalationConfigCreate payload. Required: stateCode, escalationAction."""
     base = {
         "stateCode": state_code,
         "escalationAction": escalation_action,
@@ -48,12 +44,11 @@ def make_escalation_payload(state_code, escalation_action, **overrides):
     return {**base, **overrides}
 
 
-def make_transition_payload(process_id, entity_id, **overrides):
-    """Minimal valid TransitionRequest payload. Required: processId, entityId."""
+def make_transition_payload(process_code, entity_id, action="INITIATE", **overrides):
     base = {
-        "processId": process_id,
+        "processCode": process_code,
         "entityId": entity_id,
-        "init": True,
+        "action": action,
     }
     return {**base, **overrides}
 
@@ -70,7 +65,8 @@ def make_invalid_process_payload(strategy="missing_required"):
 def make_invalid_transition_payload(strategy="missing_required"):
     strategies = {
         "missing_required": {},
-        "missing_entity_id": {"processId": str(uuid.uuid4())},
-        "missing_process_id": {"entityId": "entity-001"},
+        "missing_entity_id": {"processCode": "PROC-001", "action": "INITIATE"},
+        "missing_process_code": {"entityId": "entity-001", "action": "INITIATE"},
+        "missing_action": {"processCode": "PROC-001", "entityId": "entity-001"},
     }
     return strategies.get(strategy, {})

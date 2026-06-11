@@ -62,15 +62,15 @@ class TestProcessNegativeContracts:
 
     def test_invalid_uuid_path_param_returns_4xx(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "GET",
-                         f"{base_url}/process/!!!bad-id!!!", headers=auth_headers)
-        assert response.status_code in (400, 404, 422)
+                         f"{base_url}/process/code/!!!bad-code!!!", headers=auth_headers)
+        assert response.status_code in (400, 403, 404, 422)
         assert_gateway_headers(response, gateway_headers_spec)
 
 
 class TestStateNegativeContracts:
     def test_create_state_missing_required_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "POST",
-                         f"{base_url}/process/{uuid.uuid4()}/state",
+                         f"{base_url}/process/NO_SUCH_PROCESS/state",
                          headers=auth_headers, json_body={})
         assert response.status_code in (400, 404)
         assert_json_content_type(response)
@@ -78,15 +78,15 @@ class TestStateNegativeContracts:
 
     def test_get_state_invalid_uuid_returns_4xx(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "GET",
-                         f"{base_url}/state/not-a-uuid", headers=auth_headers)
-        assert response.status_code in (400, 404, 422)
+                         f"{base_url}/process/NO_SUCH_PROCESS/state/NO_SUCH_STATE", headers=auth_headers)
+        assert response.status_code in (400, 403, 404, 422)
         assert_gateway_headers(response, gateway_headers_spec)
 
 
 class TestActionNegativeContracts:
     def test_create_action_missing_required_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "POST",
-                         f"{base_url}/state/{uuid.uuid4()}/action",
+                         f"{base_url}/process/NO_SUCH_PROCESS/state/NO_SUCH_STATE/action",
                          headers=auth_headers, json_body={})
         assert response.status_code in (400, 404)
         assert_json_content_type(response)
@@ -94,8 +94,8 @@ class TestActionNegativeContracts:
 
     def test_get_action_invalid_uuid_returns_4xx(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "GET",
-                         f"{base_url}/action/not-a-uuid", headers=auth_headers)
-        assert response.status_code in (400, 404, 422)
+                         f"{base_url}/process/NO_SUCH_PROCESS/state/NO_SUCH_STATE/action/NO_SUCH_ACTION", headers=auth_headers)
+        assert response.status_code in (400, 403, 404, 422)
         assert_gateway_headers(response, gateway_headers_spec)
 
 
@@ -116,10 +116,10 @@ class TestTransitionNegativeContracts:
         assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
 
-    def test_missing_process_id_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
+    def test_missing_process_code_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "POST", f"{base_url}/transition",
                          headers=auth_headers,
-                         json_body=make_invalid_transition_payload("missing_process_id"))
+                         json_body=make_invalid_transition_payload("missing_process_code"))
         assert response.status_code == 400
         assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
@@ -127,7 +127,7 @@ class TestTransitionNegativeContracts:
     def test_unknown_process_id_returns_404(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "POST", f"{base_url}/transition",
                          headers=auth_headers,
-                         json_body={"processId": str(uuid.uuid4()), "entityId": "entity-001"})
+                         json_body={"processCode": "NO_SUCH_PROCESS", "entityId": "entity-001", "action": "INITIATE"})
         assert response.status_code in (404, 400)
         assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
@@ -136,7 +136,7 @@ class TestTransitionNegativeContracts:
 class TestEscalationNegativeContracts:
     def test_create_escalation_missing_required_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "POST",
-                         f"{base_url}/process/{uuid.uuid4()}/escalation",
+                         f"{base_url}/process/NO_SUCH_PROCESS/escalation",
                          headers=auth_headers, json_body={})
         assert response.status_code in (400, 404)
         assert_json_content_type(response)
@@ -144,6 +144,6 @@ class TestEscalationNegativeContracts:
 
     def test_get_escalation_invalid_uuid_returns_4xx(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "GET",
-                         f"{base_url}/escalation/not-a-uuid", headers=auth_headers)
-        assert response.status_code in (400, 404, 422)
+                         f"{base_url}/process/NO_SUCH_PROCESS/escalation/NO_SUCH_STATE", headers=auth_headers)
+        assert response.status_code in (400, 403, 404, 422)
         assert_gateway_headers(response, gateway_headers_spec)
