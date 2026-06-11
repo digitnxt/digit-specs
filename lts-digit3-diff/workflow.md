@@ -48,3 +48,19 @@ v2 used a flat envelope-style API (`_create`/`_update`/`_search`/`_transition`/`
 Terminology shift: **BusinessService → Process**, **businessId → entityId**, **status (state uuid) → code-based state**; verbs now proper GET/PUT/DELETE instead of POST-only.
 
 ---
+## 4. DB Changes
+
+Complete schema redesign — table names dropped the `eg_wf_*` / `_v2` convention, and escalation config moved out of MDMS into a real table.
+
+| v2 table | v3 table | Key differences |
+|---|---|---|
+| `eg_wf_businessservice_v2` | `processes` | + `version`; UNIQUE(`tenant_id`,`code`) |
+| `eg_wf_state_v2` | `states` | `is_initial` replaces `isstartstate`; code-based identity |
+| `eg_wf_action_v2` | `actions` | `roles` now **JSONB** (was CSV string); + `assignee_check` bool |
+| `eg_wf_processinstance_v2` | `process_instances` | both append-only (one row per transition); v3 adds `is_latest` flag + partial unique index to mark the current row (v2 finds it via `max(lastmodifiedtime)` subquery); + `attributes` (JSONB); `documents`/`assignees` now JSONB columns (v2 had separate `eg_wf_document_v2` + `eg_wf_assignee_v2` child tables) |
+| `eg_wf_document_v2`, `eg_wf_assignee_v2` | *(folded into JSONB columns)* | No longer separate tables |
+| *(MDMS config)* | `escalation_configs` | Escalation now persisted: `state_code`, `escalation_action`, `state_sla_minutes`, `process_sla_minutes` |
+
+Other DB notes: audit columns store epoch-millis; `requestid` added to workflow tables; performance/partial indexes added (e.g. partial unique on `is_latest` to enforce one current row per entity). An early `attribute_validations` table was **dropped** in favor of `actions.roles` + `actions.assignee_check`.
+
+---
