@@ -17,17 +17,17 @@ servers:
 components:
   parameters:
     RequestIdHeader:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/RequestIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
     CorrelationIdHeader:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
     UserAgentHeader:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/UserAgentHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
     ForwardedForHeader:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
     ClientSecret:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/ClientSecret
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
     TimeStamp:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/TimeStamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -104,26 +104,26 @@ components:
         default: 0
       description: Offset for paginated queries.
     TenantIdHeader:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
     UserIdHeader:
-      $ref: ./../../../v3.0.0/common.yaml#/components/parameters/UserIdHeader
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader
   headers:
     X-Response-Time:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Response-Time
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
     X-Response-Timestamp:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
     X-Request-ID:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Request-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
     X-Correlation-ID:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Correlation-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
     X-Tenant-ID:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Tenant-ID
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
     X-Rate-Limit:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Rate-Limit
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
     X-Rate-Limit-Remaining:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
     X-Rate-Limit-Reset:
-      $ref: ./../../../v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
     Retry-After:
       description: Seconds to wait before retrying.
       schema:
@@ -223,7 +223,7 @@ components:
           - gin
           description: Postgres index method; btree if omitted.
     AuditDetail:
-      $ref: ./../../../v3.0.0/common.yaml#/components/schemas/AuditDetail
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
     DataRequest:
       type: object
       required:
@@ -370,10 +370,10 @@ components:
       required:
       - value
     Error:
-      $ref: ./../../../v3.0.0/common.yaml#/components/schemas/Error
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
   securitySchemes:
     BearerAuth:
-      $ref: ./../../../v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
 tags:
 - name: Schema
   description: Schema management APIs

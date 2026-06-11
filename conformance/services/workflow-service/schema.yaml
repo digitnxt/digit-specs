@@ -205,6 +205,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProcessDefinitionDetail'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: |
             Validation error — metadata, state, or action fields failed;
@@ -283,6 +295,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProcessDefinitionListResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Bad request — invalid query parameters.
           content:
@@ -334,6 +358,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProcessDefinitionDetail'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process not found.
           content:
@@ -397,6 +439,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProcessDefinitionDetail'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -462,6 +516,24 @@ paths:
                   deleted:
                     type: boolean
                     example: true
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process not found.
           content:
@@ -526,6 +598,18 @@ paths:
                   version: { type: string }
                   sla: { type: integer, format: int64 }
                   auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error
           content:
@@ -592,6 +676,18 @@ paths:
                     version: { type: string }
                     sla: { type: integer, format: int64 }
                     auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error
           content:
@@ -645,6 +741,24 @@ paths:
                   version: { type: string }
                   sla: { type: integer, format: int64 }
                   auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process not found
           content:
@@ -702,6 +816,24 @@ paths:
                   version: { type: string }
                   sla: { type: integer, format: int64 }
                   auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process not found
           content:
@@ -748,6 +880,24 @@ paths:
                 type: object
                 properties:
                   deleted: { type: boolean, example: true }
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process not found
           content:
@@ -831,6 +981,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/State'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -893,6 +1055,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/State'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process not found.
           content:
@@ -943,6 +1123,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/State'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process or state not found.
           content:
@@ -996,6 +1194,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/State'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -1060,6 +1270,24 @@ paths:
                   deleted:
                     type: boolean
                     example: true
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process or state not found.
           content:
@@ -1137,6 +1365,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Action'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -1197,6 +1437,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Action'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process or state not found.
           content:
@@ -1248,6 +1506,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Action'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process, state, or action not found.
           content:
@@ -1302,6 +1578,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Action'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -1358,6 +1646,24 @@ paths:
                   deleted:
                     type: boolean
                     example: true
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process, state, or action not found.
           content:
@@ -1428,6 +1734,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EscalationConfig'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -1488,6 +1806,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EscalationConfig'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process not found.
           content:
@@ -1538,6 +1874,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EscalationConfig'
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process, state, or escalation config not found.
           content:
@@ -1591,6 +1945,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EscalationConfig'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -1647,6 +2013,24 @@ paths:
                   deleted:
                     type: boolean
                     example: true
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Process, state, or escalation config not found.
           content:
@@ -1730,6 +2114,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransitionResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Validation error.
           content:
@@ -1864,6 +2254,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProcessInstanceListResponse'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Bad request — invalid query parameters.
           content:
@@ -1942,6 +2338,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EscalationResult'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Bad request.
           content:
@@ -2025,6 +2433,18 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ProcessInstance'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Bad request.
           content:
@@ -2048,28 +2468,28 @@ components:
 
   securitySchemes:
     BearerAuth:
-      $ref: './../../../v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
 
   parameters:
 
     # ── Common platform headers ───────────────────────────────────────────────────
 
     RequestIdHeader:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
     CorrelationIdHeader:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
     UserIdHeader:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/UserIdHeader'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader'
     ClientSecret:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/ClientSecret'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
     TimeStamp:
-      $ref: './../../../v3.0.0/common.yaml#/components/parameters/TimeStamp'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
 
     UserId:
       name: X-User-ID
@@ -2141,28 +2561,28 @@ components:
 
   headers:
     X-Response-Time:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Response-Time'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
     X-Response-Timestamp:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
     X-Request-ID:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Request-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
     X-Correlation-ID:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
     X-Tenant-ID:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
     X-Rate-Limit:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
     X-Rate-Limit-Remaining:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
     X-Rate-Limit-Reset:
-      $ref: './../../../v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
 
   schemas:
 
     # ── Common refs ──────────────────────────────────────────────────────────────
 
     ErrorObject:
-      $ref: './../../../v3.0.0/common.yaml#/components/schemas/Error'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
 
     ErrorResponse:
       oneOf:
@@ -2175,7 +2595,7 @@ components:
       $ref: '#/components/schemas/ErrorObject'
 
     AuditDetail:
-      $ref: './../../../v3.0.0/common.yaml#/components/schemas/AuditDetail'
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
 
     # ── Input schemas ─────────────────────────────────────────────────────────────
 
@@ -2705,6 +3125,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Document'
+          nullable: true
           description: Documents attached to this transition.
         assigner:
           type: string
@@ -2714,6 +3135,7 @@ components:
           type: array
           items:
             type: string
+          nullable: true
           description: User IDs of officers assigned to process the next state.
         attributes:
           type: object
@@ -2756,6 +3178,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Document'
+          nullable: true
         assigner:
           type: string
           description: User ID of the assigner.
@@ -2763,6 +3186,7 @@ components:
           type: array
           items:
             type: string
+          nullable: true
           description: User IDs of the assigned officers.
         currentState:
           type: string
@@ -2814,11 +3238,13 @@ components:
           type: array
           items:
             type: string
+          nullable: true
           description: User IDs assigned at the time of this transition.
         documents:
           type: array
           items:
             $ref: '#/components/schemas/Document'
+          nullable: true
           description: Documents attached at the time of this transition.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
@@ -2860,6 +3286,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Document'
+          nullable: true
           description: Documents attached at the last transition.
         assigner:
           type: string
@@ -2868,6 +3295,7 @@ components:
           type: array
           items:
             type: string
+          nullable: true
           description: User IDs currently assigned to this process instance.
         currentState:
           type: string

@@ -20,14 +20,6 @@ def _safe_header_value(value):
 @schema.parametrize()
 @settings(suppress_health_check=[HealthCheck.filter_too_much])
 def test_all_endpoints_conform(case: Case, request, base_url, auth_headers, gateway_headers_spec):
-    # Temporary skip: historical rows in shared tenant have empty auditDetails fields.
-    if (case.method, case.path) in {
-        ("GET", "/schema"),
-        ("GET", "/schema/{schemaCode}"),
-        ("PUT", "/schema/{schemaCode}"),
-    }:
-        pytest.skip("Skipped due to historical empty auditDetails in existing tenant data")
-
     # Avoid transport-level failures from fuzzed non-encodable header values.
     # Keep this suite focused on API behavior by sending only stable test headers.
     case.headers = {}
