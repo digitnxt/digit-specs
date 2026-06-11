@@ -1,4 +1,4 @@
-# Localization Service: v2 (Java) → v3 (Go) — Upgrade One-Pager
+# Localization Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-localization` (Spring Boot 3.4 / Java 17) · v2.9.3 — `/home/mithun/Desktop/lts-digit-core/.../egov-localization`
 **New:** `localization` (Go 1.24+ / Gin + GORM) · DIGIT v3 — `digit3/src/services/localization`
