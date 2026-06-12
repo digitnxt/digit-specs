@@ -1,15 +1,15 @@
 # Localization Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-localization` (Spring Boot 3.4 / Java 17) · v2.9.3  
-**New:** `localization` (Go 1.24+ / Gin + GORM) · DIGIT v3
+**New:** `localization` (Go 1.24+ / Gin + GORM) · DIGIT 3.0
 
-Both store and serve localized messages keyed by **tenant + module + locale + code**, with CRUD plus a tenant/locale-aware resolution layer. v3 is a ground-up Go rewrite, not a port. This document covers only **localization-specific** changes (platform-wide enhancements common to all v3 services are excluded).
+Both store and serve localized messages keyed by **tenant + module + locale + code**, with CRUD plus a tenant/locale-aware resolution layer. 3.0 is a ground-up Go rewrite, not a port. This document covers only **localization-specific** changes (platform-wide enhancements common to all 3.0 services are excluded).
 
 ---
 
 ## 1. Tech Stack & Architecture Changes
 
-| Aspect | v2 (Java) | v3 (Go) |
+| Aspect | 2.9 (Java) | 3.0 (Go) |
 |---|---|---|
 | Language / runtime | Java 17, Spring Boot 3.4.5 | Go 1.24+, idiomatic hexagonal (ports & adapters) |
 | Web | Spring MVC (Tomcat), port 8087, ctx `/localization` | Gin, REST port 8080, ctx `/localization` |
@@ -21,25 +21,25 @@ Both store and serve localized messages keyed by **tenant + module + locale + co
 
 ---
 
-## 2. Features Added in v3
+## 2. Features Added in 3.0
 
 - **gRPC API** alongside REST — all operations (search, create, update, upsert, delete, bust-cache, find-missing) exposed over gRPC with optional reflection (`api/proto/localization/v1/localization.proto`).
 - **Find-missing-messages** (net-new): `POST /v3/messages/missing` reports, per module, which `code`s are missing for which locales. Backed by an in-memory `tenant → module → code → [locales]` map loaded at startup and updated on writes. REST variant accepts an optional `locales[]` filter.
-- **First-class upsert with DB-native semantics**: `INSERT ... ON CONFLICT (tenant_id, locale, module, code) DO UPDATE`, with in-batch dedup to avoid Postgres conflict errors. (v2 upsert was an app-level split into new-vs-existing.)
+- **First-class upsert with DB-native semantics**: `INSERT ... ON CONFLICT (tenant_id, locale, module, code) DO UPDATE`, with in-batch dedup to avoid Postgres conflict errors. (2.9 upsert was an app-level split into new-vs-existing.)
 - **UUID as a stable external identifier**: update and delete now address rows by `uuid` (query-param UUIDs for delete) rather than by reconstructing the composite business key.
 - **Batched bulk operations**: create/upsert run in batches of 100; full cache warm-up loads in batches of 1000.
 
 > Carried over (parity): tenant + module + locale + code business key, Redis read-through caching with write invalidation, `cache-bust` endpoint, multi-tenancy.
 
-**Behavior changes to watch:** v2 did **hierarchical tenant override** (`mh.panvel` → `mh` → `default`) plus a **fallback to `en_IN`/`default`** for missing codes. The v3 search path resolves directly on the exact tenant/module/locale (no documented hierarchy walk or English fallback in the resolution code) — confirm whether that fallback behavior is required and preserved.
+**Behavior changes to watch:** 2.9 did **hierarchical tenant override** (`mh.panvel` → `mh` → `default`) plus a **fallback to `en_IN`/`default`** for missing codes. The 3.0 search path resolves directly on the exact tenant/module/locale (no documented hierarchy walk or English fallback in the resolution code) — confirm whether that fallback behavior is required and preserved.
 
 ---
 
 ## 3. API Changes
 
-v2 exposed versioned, underscore-verb POST endpoints under `/messages`. v3 uses a **REST-verb model under `/v3`** plus a parallel gRPC surface.
+2.9 exposed versioned, underscore-verb POST endpoints under `/messages`. 3.0 uses a **REST-verb model under `/v3`** plus a parallel gRPC surface.
 
-| Concern | v2 endpoint(s) | v3 endpoint(s) |
+| Concern | 2.9 endpoint(s) | 3.0 endpoint(s) |
 |---|---|---|
 | Search | `GET /messages`, `POST /messages/v1/_search` (query params), `POST /messages/v2/_search` (JSON body) | `GET /v3/messages` (params: `module`, `locale`, `codes`, `limit`, `offset`) |
 | Create | `POST /messages/v1/_create` | `POST /v3/messages` (insert-only; conflict → 409) |

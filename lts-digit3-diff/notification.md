@@ -1,15 +1,15 @@
 # Notification Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-notification-mail` + `egov-notification-sms` (Spring Boot 3.4.5 / Java 17) · v2.9.3  
-**New:** `notification` + `template-config` (Go 1.22+ / Gin + GORM) · DIGIT v3
+**New:** `notification` + `template-config` (Go 1.22+ / Gin + GORM) · DIGIT 3.0
 
-Two independent stateless Kafka-consumer services (`egov-notification-mail` and `egov-notification-sms`) are merged into a single stateful Go service (`notification`) with a companion enrichment utility (`template-config`). The primary dispatch interface shifts from Kafka-only consumption to a REST HTTP API. v3 is a ground-up Go rewrite, not a port. This document covers only **notification-specific** changes (platform-wide enhancements common to all v3 services are excluded).
+Two independent stateless Kafka-consumer services (`egov-notification-mail` and `egov-notification-sms`) are merged into a single stateful Go service (`notification`) with a companion enrichment utility (`template-config`). The primary dispatch interface shifts from Kafka-only consumption to a REST HTTP API. 3.0 is a ground-up Go rewrite, not a port. This document covers only **notification-specific** changes (platform-wide enhancements common to all 3.0 services are excluded).
 
 ---
 
 ## 1. Tech Stack & Architecture Changes
 
-| Aspect | v2 (Java) | v3 (Go) |
+| Aspect | 2.9 (Java) | 3.0 (Go) |
 |---|---|---|
 | Language / runtime | Java 17, Spring Boot 3.4.5 | Go 1.22, Gin 1.10.1 |
 | Services | Two separate stateless services (mail + sms) | One stateful service (`notification`) + utility service (`template-config`) |
@@ -21,7 +21,7 @@ Two independent stateless Kafka-consumer services (`egov-notification-mail` and 
 
 ---
 
-## 2. Features Added in v3
+## 2. Features Added in 3.0
 
 - **Versioned template management:** templates stored in Postgres as immutable versioned records (EMAIL or SMS); full CRUD via `POST/GET/PUT/DELETE /notification/v3/template`.
 - **HTTP send endpoints:** `POST /notification/v3/email/send` and `POST /notification/v3/sms/send` replace Kafka-only dispatch; callers pass `templateId` + `payload` instead of inline rendered content.
@@ -40,7 +40,7 @@ Two independent stateless Kafka-consumer services (`egov-notification-mail` and 
 
 v2.9 had no REST API (dispatch was Kafka-only). v3.0 introduces HTTP-primary endpoints alongside retained async Kafka/Redis consumption.
 
-| Concern | v2 endpoint(s) | v3 endpoint(s) |
+| Concern | 2.9 endpoint(s) | 3.0 endpoint(s) |
 |---|---|---|
 | Send email | Kafka topic `notification-email` | `POST /notification/v3/email/send` (+ Kafka retained as secondary) |
 | Send SMS | Kafka topic `notification-sms` | `POST /notification/v3/sms/send` (+ Kafka retained as secondary) |
@@ -58,7 +58,7 @@ All routes require `X-Tenant-ID` header. Send endpoints accept `templateId` + `p
 
 v2.9 had no database. v3.0 introduces two new Postgres tables, one per service.
 
-| v2 table | v3 table | Key differences |
+| 2.9 table | 3.0 table | Key differences |
 |---|---|---|
 | *(none — stateless)* | `notification_template` | UUID PK; UNIQUE on `(tenantid, templateid, version)`; stores versioned immutable EMAIL/SMS templates |
 | *(none — stateless)* | `template_config` | UUID PK; UNIQUE on `(tenantid, templateid, version)`; `fieldmapping` and `apimapping` JSONB for payload enrichment |

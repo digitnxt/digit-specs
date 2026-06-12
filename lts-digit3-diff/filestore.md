@@ -1,15 +1,15 @@
 # Filestore Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-filestore` (Spring Boot 3.4.5 / Java 17) · v2.9.3  
-**New:** `filestore` (Go 1.24+ / Gin + GORM) · DIGIT v3
+**New:** `filestore` (Go 1.24+ / Gin + GORM) · DIGIT 3.0
 
-Both handle multi-tenant file uploads, presigned S3 URLs, retrieval, and deletion. v3.0 is a ground-up Go rewrite, not a port, adding document category management, a client-side presigned upload flow, and restricting the storage backend to S3/MinIO only. This document covers only **filestore-specific** changes (platform-wide enhancements common to all v3 services are excluded).
+Both handle multi-tenant file uploads, presigned S3 URLs, retrieval, and deletion. v3.0 is a ground-up Go rewrite, not a port, adding document category management, a client-side presigned upload flow, and restricting the storage backend to S3/MinIO only. This document covers only **filestore-specific** changes (platform-wide enhancements common to all 3.0 services are excluded).
 
 ---
 
 ## 1. Tech Stack & Architecture Changes
 
-| Aspect | v2 (Java) | v3 (Go) |
+| Aspect | 2.9 (Java) | 3.0 (Go) |
 |---|---|---|
 | Language / runtime | Java 17, Spring Boot 3.4.5 | Go 1.24, Gin 1.10.1 |
 | ORM / DB access | Spring Data JPA / Hibernate + custom JDBC | GORM 1.30 + sqlx for migration bootstrap |
@@ -23,7 +23,7 @@ Both handle multi-tenant file uploads, presigned S3 URLs, retrieval, and deletio
 
 ---
 
-## 2. Features Added in v3
+## 2. Features Added in 3.0
 
 - **Document category management:** every upload requires a matching active `DocumentCategory` record; static `allowed.formats.map` property replaced by DB-driven validation. Full CRUD with optimistic locking via `POST/GET /document-categories` and `GET|PUT|DELETE /document-categories/:docCode`.
 - **Magic-byte MIME detection:** `gabriel-vasile/mimetype` validates actual file content, not just extension, preventing extension spoofing.
@@ -42,7 +42,7 @@ Both handle multi-tenant file uploads, presigned S3 URLs, retrieval, and deletio
 
 Base path changes from `/filestore/v1/files` to `/filestore/v3/files`.
 
-| Concern | v2 endpoint(s) | v3 endpoint(s) |
+| Concern | 2.9 endpoint(s) | 3.0 endpoint(s) |
 |---|---|---|
 | Upload file | `POST /filestore/v1/files/upload` (`tenantId` query param; `requestInfo` form field) | `POST /filestore/v3/files/upload` (`X-Tenant-Id` header; `X-User-Id` header; module validated against `DocumentCategory`) |
 | Fetch file | `GET /filestore/v1/files/{fileStoreId}` (query param `?fileStoreId=`) | `GET /filestore/v3/files/{fileStoreId}` (path param) |
@@ -56,7 +56,7 @@ Base path changes from `/filestore/v1/files` to `/filestore/v3/files`.
 
 ## 4. DB Changes
 
-| v2 table | v3 table | Key differences |
+| 2.9 table | 3.0 table | Key differences |
 |---|---|---|
 | `eg_filestoremap` | `eg_filestoremap_v2` | `requestid TEXT` added; 7 query indexes added; original table not dropped |
 | *(none)* | `eg_doc_metadata_v2` | New document category table: `allowedFormats` JSONB, `minSize`/`maxSize`, `isSensitive`, `version` (optimistic lock); 3 indexes |

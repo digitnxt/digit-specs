@@ -1,15 +1,15 @@
 # IDGen Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-idgen` (Spring Boot 3.4.5 / Java 17) · v2.9.3  
-**New:** `idgen` (Go 1.24+ / Gin + GORM) · DIGIT v3
+**New:** `idgen` (Go 1.24+ / Gin + GORM) · DIGIT 3.0
 
-Both generate formatted, sequential, tenant-scoped IDs from named templates. v3.0 eliminates the MDMS dependency and dynamic PostgreSQL sequences, replacing them with self-owned format storage and an in-table sequence counter. v3 is a ground-up Go rewrite, not a port. This document covers only **idgen-specific** changes (platform-wide enhancements common to all v3 services are excluded).
+Both generate formatted, sequential, tenant-scoped IDs from named templates. v3.0 eliminates the MDMS dependency and dynamic PostgreSQL sequences, replacing them with self-owned format storage and an in-table sequence counter. 3.0 is a ground-up Go rewrite, not a port. This document covers only **idgen-specific** changes (platform-wide enhancements common to all 3.0 services are excluded).
 
 ---
 
 ## 1. Tech Stack & Architecture Changes
 
-| Aspect | v2 (Java) | v3 (Go) |
+| Aspect | 2.9 (Java) | 3.0 (Go) |
 |---|---|---|
 | Language / runtime | Java 17, Spring Boot 3.4.5 | Go 1.24, Gin |
 | ORM / DB access | Spring Data JPA / Hibernate + custom QueryBuilder | GORM + raw SQL for sequence ops |
@@ -21,7 +21,7 @@ Both generate formatted, sequential, tenant-scoped IDs from named templates. v3.
 
 ---
 
-## 2. Features Added in v3
+## 2. Features Added in 3.0
 
 - **Self-owned format templates:** format stored in `idgen_templates`; MDMS dependency eliminated. Full CRUD via `GET/POST /idgen/v3/id/format` and `GET/PUT/DELETE /idgen/v3/id/format/:id`.
 - **Automatic scoped resets:** per-generate boundary check (DAILY/MONTHLY/YEARLY) resets counter transparently when the boundary is crossed; v2.9 had no reset mechanism. Manual override via `POST /idgen/v3/id/sequence/reset`.
@@ -38,7 +38,7 @@ Both generate formatted, sequential, tenant-scoped IDs from named templates. v3.
 
 ## 3. API Changes
 
-| Concern | v2 endpoint(s) | v3 endpoint(s) |
+| Concern | 2.9 endpoint(s) | 3.0 endpoint(s) |
 |---|---|---|
 | Generate IDs | `POST /egov-idgen/id/_generate` (inline `format` in body; `RequestInfo`/`ResponseInfo` envelope) | `POST /idgen/v3/id/_generate` (`X-Tenant-Id`/`X-User-Id` headers; format must be pre-registered; no envelope) |
 | Format template CRUD | *(fetched from MDMS per call)* | `GET/POST /idgen/v3/id/format`, `GET/PUT/DELETE /idgen/v3/id/format/:id` |
@@ -52,7 +52,7 @@ Both generate formatted, sequential, tenant-scoped IDs from named templates. v3.
 
 v2.9 used a single `id_generator` table plus one dynamically created PostgreSQL sequence per `(idName, tenantId)`. v3.0 replaces this with three normalized tables.
 
-| v2 table | v3 table | Key differences |
+| 2.9 table | 3.0 table | Key differences |
 |---|---|---|
 | `id_generator` | `idgen_templates` | UUID PK; UNIQUE on `(tenant, name)`; stores format string; replaces MDMS as format source |
 | *(per-name PostgreSQL sequences)* | `idgen_sequence_lookup` | UUID PK; FK to template; `currentValue` BIGINT; `resetPeriod` ENUM (NONE/DAILY/MONTHLY/YEARLY); `lastResetAt`; removes DDL privilege requirement |

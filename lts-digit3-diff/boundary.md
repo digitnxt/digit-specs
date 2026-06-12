@@ -1,15 +1,15 @@
 # Boundary Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-boundary-service` (Spring Boot 3.2.2 / Java 17) · v2.9.3  
-**New:** `boundary` (Go 1.23+ / Gin + GORM) · DIGIT v3
+**New:** `boundary` (Go 1.23+ / Gin + GORM) · DIGIT 3.0
 
-Both manage geographical boundary entities, hierarchy type definitions, and parent-child boundary relationships with multi-tenant isolation. v3.0 is a ground-up Go rewrite replacing the Kafka-persister pattern with direct DB writes and the eGov `RequestInfo` auth model with HTTP headers. This document covers only **boundary-specific** changes (platform-wide enhancements common to all v3 services are excluded).
+Both manage geographical boundary entities, hierarchy type definitions, and parent-child boundary relationships with multi-tenant isolation. v3.0 is a ground-up Go rewrite replacing the Kafka-persister pattern with direct DB writes and the eGov `RequestInfo` auth model with HTTP headers. This document covers only **boundary-specific** changes (platform-wide enhancements common to all 3.0 services are excluded).
 
 ---
 
 ## 1. Tech Stack & Architecture Changes
 
-| Aspect | v2 (Java) | v3 (Go) |
+| Aspect | 2.9 (Java) | 3.0 (Go) |
 |---|---|---|
 | Language / runtime | Java 17, Spring Boot 3.2.2 | Go 1.23 (toolchain 1.24), Gin v1.10.1 |
 | ORM / DB access | Spring JDBC (`JdbcTemplate` + manual row mappers) | GORM v1.25 |
@@ -22,7 +22,7 @@ Both manage geographical boundary entities, hierarchy type definitions, and pare
 
 ---
 
-## 2. Features Added in v3
+## 2. Features Added in 3.0
 
 - **Geometry validation:** GeoJSON type and coordinate structure validated at handler and service layers before persisting. v2.9 stored raw JSONB with no validation.
 - **Update endpoints:** `PUT /boundary/v3/hierarchy/:id` (boundary type list updateable; `hierarchyType` field immutable) and `PUT /boundary/v3/relationship/:id` (`code` field immutable, enforced at handler).
@@ -39,7 +39,7 @@ Both manage geographical boundary entities, hierarchy type definitions, and pare
 
 Context path changes from `/boundary-service` to `/boundary`; routes versioned under `/v3`. Auth moved from `RequestInfo` JSON body to `X-Tenant-Id`, `X-User-ID`, `X-Request-Id` headers; `ResponseInfo` envelope removed.
 
-| Concern | v2 endpoint(s) | v3 endpoint(s) |
+| Concern | 2.9 endpoint(s) | 3.0 endpoint(s) |
 |---|---|---|
 | Boundary search | `POST /boundary-service/boundary/_search` | `GET /boundary/v3/boundaries` (`codes` query param required) |
 | Boundary create | `POST /boundary-service/boundary/_create` | `POST /boundary/v3/boundaries` (returns 201; `code` required; geometry validated) |
@@ -59,7 +59,7 @@ Context path changes from `/boundary-service` to `/boundary`; routes versioned u
 
 All three tables renamed with `_v1` suffix; original tables not dropped.
 
-| v2 table | v3 table | Key differences |
+| 2.9 table | 3.0 table | Key differences |
 |---|---|---|
 | `boundary` | `boundary_v1` | `id` type changed `VARCHAR(64)` → `UUID` (migration `V20260413170000`); `requestid TEXT` added |
 | `boundary_hierarchy` | `boundary_hierarchy_v1` | `id` type changed `VARCHAR(64)` → `UUID`; `requestid TEXT` added |

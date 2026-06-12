@@ -1,15 +1,15 @@
 # URL Shortener Service: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `egov-url-shortening` (Spring Boot 3.4 / Java 17) · v2.9.3  
-**New:** `url-shortener` (Go 1.24+ / Gin + GORM) · DIGIT v3
+**New:** `url-shortener` (Go 1.24+ / Gin + GORM) · DIGIT 3.0
 
-Both generate short URLs mapped to long URLs and resolve them via redirect. v3.0 is a ground-up Go rewrite, not a port, adding validity enforcement, full CRUD management APIs, bidirectional event publishing, and per-tenant Postgres schema isolation. This document covers only **url-shortener-specific** changes (platform-wide enhancements common to all v3 services are excluded).
+Both generate short URLs mapped to long URLs and resolve them via redirect. v3.0 is a ground-up Go rewrite, not a port, adding validity enforcement, full CRUD management APIs, bidirectional event publishing, and per-tenant Postgres schema isolation. This document covers only **url-shortener-specific** changes (platform-wide enhancements common to all 3.0 services are excluded).
 
 ---
 
 ## 1. Tech Stack & Architecture Changes
 
-| Aspect | v2 (Java) | v3 (Go) |
+| Aspect | 2.9 (Java) | 3.0 (Go) |
 |---|---|---|
 | Language / runtime | Java 17, Spring Boot 3.4 | Go 1.24, Gin |
 | ORM / DB access | JdbcTemplate (raw JDBC) | GORM + OTel instrumentation |
@@ -22,7 +22,7 @@ Both generate short URLs mapped to long URLs and resolve them via redirect. v3.0
 
 ---
 
-## 2. Features Added in v3
+## 2. Features Added in 3.0
 
 - **Validity enforcement:** expiry window validated on create; expired keys rejected at resolve time. v2.9 stored `validityInDays` but never checked it.
 - **Cryptographically random key generation:** base62 with configurable key length and collision-retry loop, replacing deterministic Hashids keyed to a DB sequence.
@@ -41,7 +41,7 @@ Both generate short URLs mapped to long URLs and resolve them via redirect. v3.0
 
 v2.9 had a minimal two-endpoint surface. v3.0 adds a full CRUD and per-tenant config surface under `/url-shortener/v3`.
 
-| Concern | v2 endpoint(s) | v3 endpoint(s) |
+| Concern | 2.9 endpoint(s) | 3.0 endpoint(s) |
 |---|---|---|
 | Create short URL | `POST /egov-url-shortening/shortener` (returns plain string) | `POST /url-shortener/v3/short-url` (returns JSON object; enforces validity window) |
 | Redirect / resolve | `GET /egov-url-shortening/{id}` (HTTP 302) | `GET /url-shortener/:key` (HTTP 307; rejects expired keys) |
@@ -55,7 +55,7 @@ v2.9 had a minimal two-endpoint surface. v3.0 adds a full CRUD and per-tenant co
 
 ## 4. DB Changes
 
-| v2 table | v3 table | Key differences |
+| 2.9 table | 3.0 table | Key differences |
 |---|---|---|
 | `eg_url_shortener` | `url_shortener` | UUID PK replaces VARCHAR PK; separate `key` VARCHAR UNIQUE column; `url` widened from VARCHAR(1024) to TEXT; `valid_from`/`valid_to` TIMESTAMP added and actively enforced; full audit columns added |
 | *(none)* | `url_config` | New per-tenant configuration table (key length, allowed domains, default validity) |

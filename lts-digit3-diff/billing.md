@@ -1,15 +1,15 @@
 # Billing & Payments: 2.9 (Java) → 3.0 (Go)
 
 **Old:** `billing-service` + `collection-services` (Spring Boot / Java 17) · v2.9.3  
-**New:** `billing` (Go 1.23+ / Gin + GORM) · DIGIT v3
+**New:** `billing` (Go 1.23+ / Gin + GORM) · DIGIT 3.0
 
-Two separate Spring Boot services (`billing-service` and `collection-services`) consolidated into a single Go/Gin service (`billing`). The merge eliminates inter-service HTTP calls for demand-to-payment linking and introduces REST-idiomatic verbs, per-tenant PostgreSQL schema separation, and full OpenTelemetry observability. v3 is a ground-up Go rewrite, not a port. This document covers only **billing-specific** changes (platform-wide enhancements common to all v3 services are excluded).
+Two separate Spring Boot services (`billing-service` and `collection-services`) consolidated into a single Go/Gin service (`billing`). The merge eliminates inter-service HTTP calls for demand-to-payment linking and introduces REST-idiomatic verbs, per-tenant PostgreSQL schema separation, and full OpenTelemetry observability. 3.0 is a ground-up Go rewrite, not a port. This document covers only **billing-specific** changes (platform-wide enhancements common to all 3.0 services are excluded).
 
 ---
 
 ## 1. Tech Stack & Architecture Changes
 
-| Aspect | v2 (Java) | v3 (Go) |
+| Aspect | 2.9 (Java) | 3.0 (Go) |
 |---|---|---|
 | Language / runtime | Java 17, Spring Boot | Go 1.23, Gin v1.10 |
 | Services | Two separate services (`billing-service` + `collection-services`) | Single binary; domain separation enforced by Go packages |
@@ -21,7 +21,7 @@ Two separate Spring Boot services (`billing-service` and `collection-services`) 
 
 ---
 
-## 2. Features Added in v3
+## 2. Features Added in 3.0
 
 - **Demand lifecycle extensions:** `FROZEN` state with explicit `POST /v3/demands/:id/freeze` and `POST /v3/demands/:id/cancel` HTTP actions; optimistic locking via `version` column prevents lost updates.
 - **GiST exclusion constraint:** enforces non-overlapping active/frozen/paid billing periods at the database level (was application-code only in v2.9).
@@ -42,7 +42,7 @@ Two separate Spring Boot services (`billing-service` and `collection-services`) 
 
 Context path changes: `/billing-service` and `/collection-services` → `/billing/v3/`. All endpoints use `X-Tenant-ID` and `X-User-ID` headers; the `RequestInfo` JSON wrapper is removed.
 
-| Concern | v2 endpoint(s) | v3 endpoint(s) |
+| Concern | 2.9 endpoint(s) | 3.0 endpoint(s) |
 |---|---|---|
 | Bill search | `POST /billing-service/v2/billV2/_search` | `GET /billing/v3/bills` |
 | Bill generate | `POST /billing-service/v2/billV2/_generate` | `POST /billing/v3/bills/generate` |
@@ -63,7 +63,7 @@ Context path changes: `/billing-service` and `/collection-services` → `/billin
 
 ## 4. DB Changes
 
-| v2 table | v3 table | Key differences |
+| 2.9 table | 3.0 table | Key differences |
 |---|---|---|
 | Demand tables | (same names, restructured) | UUID PKs replace sequences (`seq_egbs_demand`, etc.); `arrear_demand_ids` JSONB; `version` column for optimistic locking; GiST exclusion constraint on billing periods |
 | Bill tables | (same names, restructured) | UUID PKs replace sequences (`seq_egbs_bill`); `requestid TEXT` added |
