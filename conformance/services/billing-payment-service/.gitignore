@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.hypothesis/
+reports/
+schema.resolved.yaml
+.DS_Store

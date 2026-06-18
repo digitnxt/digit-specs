@@ -1,0 +1,1687 @@
+openapi: 3.0.3
+info:
+  title: Registry Service
+  version: 3.0.0
+  description: 'Comprehensive OpenAPI contract for the Registry Service as implemented
+    in `src/services/registry`.
+
+    The service manages schema lifecycle and schema-bound registry records for multi-tenant
+    clients, including sync and async persistence modes.
+
+    '
+servers:
+- url: https://api.example.com/registry/v3
+  description: Production server
+- url: https://staging-api.example.com/registry/v3
+  description: Staging server
+components:
+  parameters:
+    RequestIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
+    CorrelationIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
+    UserAgentHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
+    ForwardedForHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
+    ClientSecret:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
+    TimeStamp:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Idempotency key for safe retries of create, update, and delete
+        operations.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    DataIdQuery:
+      name: id
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      description: Either the UUID of the version row or the stable registryId.
+    RegistryIdQuery:
+      name: registryId
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      description: Stable registry identifier shared across versions of a record.
+    HistoryQuery:
+      name: history
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+      description: When true, returns every version for a registryId instead of just
+        the latest.
+    SchemaCodePath:
+      name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Schema code that uniquely identifies the schema definition.
+    RecordIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: UUID of a registry data row or registryId for delete operations.
+    SchemaVersionQuery:
+      name: version
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+      description: Specific schema version to retrieve.
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 100
+      description: Maximum number of rows to return.
+    OffsetQuery:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Offset for paginated queries.
+    TenantIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+    UserIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader
+  headers:
+    X-Response-Time:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
+    X-Response-Timestamp:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
+    X-Request-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
+    X-Correlation-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
+    X-Tenant-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
+    X-Rate-Limit:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
+    X-Rate-Limit-Remaining:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
+    X-Rate-Limit-Reset:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
+    Retry-After:
+      description: Seconds to wait before retrying.
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    SchemaRequest:
+      type: object
+      required:
+      - schemaCode
+      - definition
+      properties:
+        schemaCode:
+          type: string
+          minLength: 1
+        definition:
+          type: object
+          additionalProperties: true
+          description: JSON Schema Draft 2020-12 definition for the data payload.
+        x-unique:
+          type: array
+          description: List of unique constraints; each entry is an array of one or
+            more dot-notation field paths that must be unique together among active
+            records.
+          items:
+            type: array
+            minItems: 1
+            items:
+              type: string
+        x-ref-schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefSchema'
+        x-indexes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaIndex'
+    Schema:
+      allOf:
+      - $ref: '#/components/schemas/SchemaRequest'
+      - type: object
+        required:
+        - id
+        - version
+        - isLatest
+        - isActive
+        - auditDetails
+        properties:
+          id:
+            type: string
+            format: uuid
+          version:
+            type: integer
+            minimum: 1
+          isLatest:
+            type: boolean
+          isActive:
+            type: boolean
+          auditDetails:
+            $ref: '#/components/schemas/AuditDetail'
+    RefSchema:
+      type: object
+      required:
+      - fieldPath
+      - schemaCode
+      properties:
+        fieldPath:
+          type: string
+          description: Dot-notation path inside the data payload containing the reference.
+        schemaCode:
+          type: string
+          description: Referenced schema whose data must contain the foreign value.
+        refField:
+          type: string
+          description: Optional field path in the referenced schema (defaults to registryId).
+        external:
+          type: boolean
+          description: When true, validate the reference via an external registry
+            service.
+        registry:
+          type: string
+          description: Discovery key identifying the target registry for external
+            validation. Defaults to schemaCode when omitted.
+    SchemaIndex:
+      type: object
+      required:
+      - fieldPath
+      properties:
+        name:
+          type: string
+        fieldPath:
+          type: string
+        method:
+          type: string
+          enum:
+          - btree
+          - gin
+          description: Postgres index method; btree if omitted.
+    AuditDetail:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
+    DataRequest:
+      type: object
+      required:
+      - data
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          description: Required for updates to ensure optimistic locking.
+        data:
+          type: object
+          additionalProperties: true
+          description: Arbitrary JSON payload validated by the schema definition.
+    RegistryData:
+      type: object
+      required:
+      - id
+      - registryId
+      - schemaCode
+      - schemaVersion
+      - version
+      - data
+      - isActive
+      - effectiveFrom
+      - auditDetails
+      properties:
+        id:
+          type: string
+          format: uuid
+        registryId:
+          type: string
+        schemaCode:
+          type: string
+        schemaVersion:
+          type: integer
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+        isActive:
+          type: boolean
+        effectiveFrom:
+          type: string
+          format: date-time
+        effectiveTo:
+          type: string
+          format: date-time
+          nullable: true
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    SearchRequest:
+      type: object
+      properties:
+        filters:
+          type: object
+          additionalProperties: {}
+          description: Equality filters applied using data->>'key'.
+        contains:
+          type: object
+          additionalProperties: {}
+          description: JSON containment predicates applied with data @> value.
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+    ExistsResponse:
+      type: object
+      required:
+      - exists
+      properties:
+        exists:
+          type: boolean
+    VerificationResponse:
+      allOf:
+      - $ref: '#/components/schemas/ResponseEnvelope'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              valid:
+                type: boolean
+    ResponseEnvelope:
+      oneOf:
+      - type: object
+        properties:
+          data:
+            description: Payload returned on success; varies by endpoint.
+      - type: array
+        items:
+          $ref: '#/components/schemas/Error'
+    SchemaResponse:
+      allOf:
+      - $ref: '#/components/schemas/ResponseEnvelope'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/Schema'
+    SchemaListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ResponseEnvelope'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/Schema'
+    RegistryDataResponse:
+      allOf:
+      - $ref: '#/components/schemas/ResponseEnvelope'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/RegistryData'
+    RegistryDataListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ResponseEnvelope'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/components/schemas/RegistryData'
+    ExistsEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/ResponseEnvelope'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ExistsResponse'
+    IsExistRequest:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Field path or column to test (registryId by default).
+        value:
+          type: string
+          minLength: 1
+          description: Value to verify.
+      required:
+      - value
+    Error:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
+  securitySchemes:
+    BearerAuth:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
+tags:
+- name: Schema
+  description: Schema management APIs
+- name: Data
+  description: Registry data APIs
+paths:
+  /schema:
+    post:
+      tags:
+      - Schema
+      summary: Create schema
+      description: Creates the first version of a schema for the tenant and provisions
+        the backing data table.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaRequest'
+            example:
+              schemaCode: trade-license
+              definition:
+                $schema: https://json-schema.org/draft/2020-12/schema
+                type: object
+                properties:
+                  applicantId:
+                    type: string
+                  businessName:
+                    type: string
+                  tradeType:
+                    type: string
+                  address:
+                    type: object
+                    properties:
+                      city:
+                        type: string
+                      pincode:
+                        type: string
+                    required:
+                    - city
+                required:
+                - applicantId
+                - businessName
+                - tradeType
+              x-unique:
+              - - businessName
+              - - applicantId
+                - tradeType
+              x-ref-schema:
+              - fieldPath: applicantId
+                schemaCode: individual
+                refField: registryId
+                external: true
+                registry: individual-registry
+              x-indexes:
+              - name: idx_trade_type
+                fieldPath: tradeType
+                method: btree
+      responses:
+        '201':
+          description: Schema created
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Schema already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      operationId: createSchema
+    get:
+      tags:
+      - Schema
+      summary: List schemas
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Schemas for the tenant
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaListResponse'
+        '500':
+          description: Failure listing schemas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Schema not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs GET on /registry/v3/schema.
+      operationId: searchSchemas
+  /schema/{schemaCode}:
+    get:
+      tags:
+      - Schema
+      summary: Get schema
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Schema definition
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs GET on /registry/v3/schema/{schemaCode}.
+      operationId: getSchemaByCode
+    put:
+      tags:
+      - Schema
+      summary: Update schema
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaRequest'
+      responses:
+        '200':
+          description: Schema updated or unchanged
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Schema not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs PUT on /registry/v3/schema/{schemaCode}.
+      operationId: updateSchemaByCode
+    delete:
+      tags:
+      - Schema
+      summary: Delete schema
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Schema deleted
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs DELETE on /registry/v3/schema/{schemaCode}.
+      operationId: deleteSchemaByCode
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+  /schema/{schemaCode}/_isExist:
+    post:
+      tags:
+      - Schema
+      summary: Check existence by field
+      description: Validates whether a record exists for the given tenant and field
+        value; used for cross-registry reference checks.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IsExistRequest'
+      responses:
+        '200':
+          description: Existence flag
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExistsEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      operationId: checkSchemaValueExists
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+  /{schemaCode}/data:
+    get:
+      tags:
+      - Data
+      summary: Get registry data
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
+      responses:
+        '200':
+          description: Registry data
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryDataResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs GET on /registry/v3/schema/{schemaCode}/data.
+      operationId: fetchRegistryData
+    put:
+      tags:
+      - Data
+      summary: Update registry data
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataRequest'
+      responses:
+        '202':
+          description: Data update accepted for asynchronous processing when async
+            mode is enabled.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '200':
+          description: Registry data updated
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryDataResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs PUT on /registry/v3/schema/{schemaCode}/data.
+      operationId: updateRegistryData
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags:
+      - Data
+      summary: Create registry data
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataRequest'
+      responses:
+        '202':
+          description: Data persistence accepted for asynchronous processing when
+            async mode is enabled.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '201':
+          description: Registry data created
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryDataResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Schema not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Create a registry record for the specified schema.
+      operationId: createRegistryData
+  /{schemaCode}/data/{id}:
+    delete:
+      tags:
+      - Data
+      summary: Delete registry data
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '202':
+          description: Data deletion accepted for asynchronous processing when async
+            mode is enabled.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '200':
+          description: Record deleted (soft)
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs DELETE on /registry/v3/schema/{schemaCode}/data/{id}.
+      operationId: deleteRegistryDataById
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  /{schemaCode}/data/_exists:
+    get:
+      tags:
+      - Data
+      summary: Check record existence
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
+      responses:
+        '200':
+          description: Existence flag
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExistsEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs GET on /registry/v3/schema/{schemaCode}/data/_exists.
+      operationId: checkRegistryDataExists
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+  /{schemaCode}/data/_registry:
+    get:
+      tags:
+      - Data
+      summary: Get registry history by registryId
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/RegistryIdQuery'
+      responses:
+        '200':
+          description: Latest record or history
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/RegistryDataResponse'
+                - $ref: '#/components/schemas/RegistryDataListResponse'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: RegistryId not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs GET on /registry/v3/schema/{schemaCode}/data/_registry.
+      operationId: fetchRegistryDataByRegistryId
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+  /{schemaCode}/data/_verify:
+    get:
+      tags:
+      - Data
+      summary: Verify registry data signature
+      description: Validates the stored audit signature for the specified record UUID
+        (`id`) or stable `registryId`.
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/DataIdQuery'
+      responses:
+        '200':
+          description: Verification status
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Record or audit log not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '501':
+          description: Signature verification is not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      operationId: verifyRegistryData
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+  /{schemaCode}/data/_search:
+    post:
+      tags:
+      - Data
+      summary: Search registry data
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Matching records
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryDataListResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEnvelope'
+      description: Performs POST on /registry/v3/schema/{schemaCode}/data/_search.
+      operationId: searchRegistryData
+    parameters:
+    - name: schemaCode
+      in: path
+      required: true
+      schema:
+        type: string
+security:
+- BearerAuth: []
