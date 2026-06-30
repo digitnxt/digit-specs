@@ -18,7 +18,7 @@ info:
 
     '
 servers:
-- url: /filestore/v3/files
+- url: /filestore/v3
   description: FileStore API
 security:
 - BearerAuth: []
@@ -506,7 +506,7 @@ paths:
       schema:
         type: string
         pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-  /upload:
+  /files/upload:
     post:
       summary: Upload file directly
       operationId: directUpload
@@ -598,9 +598,10 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: "Performs POST on /upload. This endpoint uses a verb-based path (/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
     parameters: []
-  /metadata:
+  /files/metadata:
     get:
       summary: Get file metadata by fileStoreId
+      deprecated: true
       operationId: getMetadata
       tags:
       - FileStore
@@ -691,9 +692,10 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs GET on /metadata.
     parameters: []
-  /tag:
+  /files/tag:
     get:
       summary: Get files by tag
+      deprecated: true
       operationId: getFilesByTag
       tags:
       - FileStore
@@ -736,7 +738,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FilesByTagResponse'
+                $ref: '#/components/schemas/FileSearchResponse'
         '400':
           description: Bad request
           content:
@@ -784,7 +786,114 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs GET on /tag.
     parameters: []
-  /upload-url:
+  /files:
+    get:
+      summary: Search files by tag, ownerIds, and/or fileStoreIds
+      operationId: searchFiles
+      tags:
+      - FileStore
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: tag
+        in: query
+        required: false
+        description: Filter by tag
+        schema:
+          type: string
+          minLength: 1
+      - name: ownerIds
+        in: query
+        required: false
+        description: Comma-separated list of owner UUIDs. Matches files owned by any of these users (OR semantics within this param).
+        schema:
+          type: string
+          minLength: 1
+      - name: fileStoreIds
+        in: query
+        required: false
+        description: Comma-separated list of fileStoreIds to look up directly. When provided, returns signed download URLs for exactly these files.
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Files matching the given filters, including signed download URLs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileSearchResponse'
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Bad request — at least one of tag, ownerIds, or fileStoreIds must be provided
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+      description: "Performs GET on /files. Supports filtering by tag and/or ownerIds (combined with AND semantics across filters), or direct lookup by a known set of fileStoreIds. At least one of tag, ownerIds, or fileStoreIds must be supplied."
+    parameters: []
+  /files/upload-url:
     post:
       summary: Generate signed URL for file upload
       operationId: generateUploadUrl
@@ -876,7 +985,7 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs POST on /upload-url.
     parameters: []
-  /confirm-upload:
+  /files/confirm-upload:
     post:
       summary: Confirm file upload using fileStoreId
       operationId: confirmUpload
@@ -968,7 +1077,7 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: "Performs POST on /confirm-upload. This endpoint uses a verb-based path (/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
     parameters: []
-  /download-urls:
+  /files/download-urls:
     get:
       summary: Generate signed download URLs for given fileStoreIds
       operationId: getDownloadUrls
@@ -1061,7 +1170,7 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs GET on /download-urls.
     parameters: []
-  /{fileStoreId}:
+  /files/{fileStoreId}:
     get:
       summary: Download file by fileStoreId (for direct download only)
       operationId: downloadFile
@@ -1337,6 +1446,12 @@ components:
           minLength: 2
           maxLength: 64
           readOnly: true
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
     StorageResponse:
       type: object
       properties:
@@ -1366,6 +1481,12 @@ components:
           description: Tag to associate with uploaded files
           minLength: 1
           maxLength: 128
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
         auditDetail:
           readOnly: true
           allOf:
@@ -1398,6 +1519,12 @@ components:
           description: Tag to associate with the file
           minLength: 1
           maxLength: 128
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
         auditDetail:
           readOnly: true
           allOf:
@@ -1499,7 +1626,13 @@ components:
           minLength: 2
           maxLength: 64
           readOnly: true
-    FilesByTagResponse:
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
+    FileSearchResponse:
       type: object
       properties:
         files:
@@ -1532,6 +1665,12 @@ components:
           description: Tag associated with the file
           minLength: 1
           maxLength: 128
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
     DocumentCategory:
       type: object
       required:
