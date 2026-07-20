@@ -12,7 +12,7 @@ import (
 // fields stay optional.
 func maxLen(field, value string, max int) error {
 	if len(value) > max {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   field,
 			"message": fmt.Sprintf("%s must not exceed %d characters", field, max),
 		})
@@ -34,7 +34,7 @@ func checkPattern(field, value, tenantRegex string, baseline *regexp.Regexp, bas
 	if tenantRegex != "" {
 		if re, err := regexp.Compile(tenantRegex); err == nil {
 			if !re.MatchString(value) {
-				return common.ErrValidation.WithParams(map[string]interface{}{
+				return common.ErrValidation.WithContext(map[string]interface{}{
 					"field":   field,
 					"value":   value,
 					"message": field + " does not match the configured pattern for this tenant",
@@ -46,7 +46,7 @@ func checkPattern(field, value, tenantRegex string, baseline *regexp.Regexp, bas
 		// fall back to the platform baseline rather than silently accepting.
 	}
 	if !baseline.MatchString(value) {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   field,
 			"value":   value,
 			"message": baselineMsg,

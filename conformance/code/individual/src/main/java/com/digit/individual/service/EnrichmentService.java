@@ -2,11 +2,14 @@ package com.digit.individual.service;
 
 import com.digit.individual.client.IdgenClient;
 import com.digit.individual.config.IndividualProperties;
+import com.digit.individual.constants.ErrorCodes;
 import com.digit.individual.model.Address;
 import com.digit.individual.model.Document;
 import com.digit.individual.model.Identifier;
 import com.digit.individual.model.Individual;
 import com.digit.individual.model.RequestContext;
+import org.digit.tracer.model.CustomException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -46,7 +49,15 @@ public class EnrichmentService {
         // individualId via IDGen (readOnly per spec).
         Map<String, String> customVars = new HashMap<>();
         customVars.put("ORG", ind.getTenantId());
-        List<String> ids = idgenClient.generateIds(ind.getTenantId(), config.getFormat(), 1, customVars);
+        List<String> ids;
+        try {
+            ids = idgenClient.generateIds(ind.getTenantId(), config.getFormat(), 1, customVars);
+        } catch (RuntimeException e) {
+            // idgen is a downstream dependency — surface as DOWNSTREAM_ERROR (502) with the specific
+            // cause, not the tracer's generic 500 catch-all. Mirrors Go enrichment_service.
+            throw new CustomException(ErrorCodes.DOWNSTREAM,
+                    "failed to generate individualId: " + e.getMessage(), HttpStatus.BAD_GATEWAY);
+        }
         if (!ids.isEmpty()) {
             ind.setIndividualId(ids.get(0));
         } else {

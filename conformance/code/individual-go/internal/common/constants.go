@@ -15,6 +15,8 @@ const (
 
 	ErrorRowVersionMismatch = "ROW_VERSION_MISMATCH"
 	ErrorDatabase           = "DATABASE_ERROR"
+	ErrorDownstream         = "DOWNSTREAM_ERROR" // a dependency call (e.g. idgen) failed → 502
+	ErrorInternal           = "INTERNAL_ERROR"   // catch-all for unclassified errors → 500
 	ErrorFailedToHash       = "FAILED_TO_HASH"
 	ErrorEncryption         = "ENCRYPTION_ERROR"
 	ErrorDecryption         = "DECRYPTION_ERROR"

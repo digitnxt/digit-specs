@@ -63,7 +63,7 @@ func (s *encryptionService) EncryptIndividual(ctx context.Context, individual *m
 		encrypted, err := s.vaultClient.Encrypt(ctx, plaintext, individual.TenantID)
 		if err != nil {
 			log.Error().Err(err).Ctx(ctx).Str("individualID", individual.ID).Str("field", "mobileNumber").Msg("vault encrypt failed")
-			return common.ErrEncryption.WithParams(map[string]interface{}{
+			return common.ErrEncryption.WithContext(map[string]interface{}{
 				"field": "mobileNumber",
 				"error": err.Error(),
 			})
@@ -92,7 +92,7 @@ func (s *encryptionService) EncryptIndividual(ctx context.Context, individual *m
 					Str("individualID", individual.ID).
 					Str("identifierType", individual.Identifiers[i].IdentifierType).
 					Msg("vault encrypt failed on identifier")
-				return common.ErrEncryption.WithParams(map[string]interface{}{
+				return common.ErrEncryption.WithContext(map[string]interface{}{
 					"field": "identifierId",
 					"type":  individual.Identifiers[i].IdentifierType,
 				})
@@ -115,7 +115,7 @@ func (s *encryptionService) DecryptIndividual(ctx context.Context, individual *m
 		decrypted, err := s.vaultClient.Decrypt(ctx, individual.MobileNumber, individual.TenantID)
 		if err != nil {
 			log.Error().Err(err).Ctx(ctx).Str("individualID", individual.ID).Str("field", "mobileNumber").Msg("vault decrypt failed")
-			return common.ErrDecryption.WithParams(map[string]interface{}{
+			return common.ErrDecryption.WithContext(map[string]interface{}{
 				"field": "mobileNumber",
 			})
 		}
@@ -139,7 +139,7 @@ func (s *encryptionService) DecryptIndividual(ctx context.Context, individual *m
 					Str("individualID", individual.ID).
 					Str("identifierType", individual.Identifiers[i].IdentifierType).
 					Msg("vault decrypt failed on identifier")
-				return common.ErrDecryption.WithParams(map[string]interface{}{
+				return common.ErrDecryption.WithContext(map[string]interface{}{
 					"field": "identifierId",
 					"type":  individual.Identifiers[i].IdentifierType,
 				})

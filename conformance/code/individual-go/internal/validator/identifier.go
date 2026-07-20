@@ -20,20 +20,20 @@ func (v *individualValidator) validateIdentifiers(identifiers []models.Identifie
 		prefix := fmt.Sprintf("identifiers[%d]", i)
 
 		if id.IdentifierType == "" {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   prefix + ".identifierType",
 				"message": "identifierType is required",
 			})
 		}
 		if !isValidIdentifierType(id.IdentifierType) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   prefix + ".identifierType",
 				"value":   id.IdentifierType,
 				"message": "identifierType must be one of NATIONAL_ID, AADHAAR, PASSPORT, VOTER_ID, PAN, DRIVING_LICENSE, SYSTEM_GENERATED",
 			})
 		}
 		if seen[id.IdentifierType] {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "identifiers",
 				"message": "duplicate identifierType: " + id.IdentifierType,
 			})
@@ -41,7 +41,7 @@ func (v *individualValidator) validateIdentifiers(identifiers []models.Identifie
 		seen[id.IdentifierType] = true
 
 		if id.IdentifierID == "" {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   prefix + ".identifierId",
 				"message": "identifierId is required",
 			})

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"individual/internal/clients"
 	"individual/internal/common"
@@ -45,7 +44,11 @@ func (s *enrichmentService) EnrichForCreate(ctx context.Context, individual *mod
 	ids, err := s.idgenClient.GenerateIDs(ctx, individual.TenantID, s.config.Format, 1, customVars)
 	if err != nil {
 		log.Error().Err(err).Ctx(ctx).Str("tenantID", individual.TenantID).Msg("IDGen failed to generate individualId")
-		return fmt.Errorf("failed to generate individual ID: %w", err)
+		// idgen is a downstream dependency — surface as DOWNSTREAM_ERROR (502) with the
+		// specific cause, not the generic DATABASE_ERROR/500 catch-all.
+		return common.ErrDownstream.WithContext(map[string]interface{}{
+			"message": "failed to generate individualId: " + err.Error(),
+		})
 	}
 	if len(ids) > 0 {
 		individual.IndividualID = ids[0]

@@ -16,19 +16,19 @@ import (
 //   - gender:    required
 func (v *individualValidator) validateRequiredFields(individual *models.Individual) error {
 	if individual.GivenName == "" {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "givenName",
 			"message": "givenName is required",
 		})
 	}
 	if individual.TenantID == "" {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "tenantId",
 			"message": "tenantId is required (from X-Tenant-ID header)",
 		})
 	}
 	if strings.TrimSpace(individual.Gender) == "" {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "gender",
 			"message": "gender is required",
 		})
@@ -64,7 +64,7 @@ func (v *individualValidator) validateFormats(individual *models.Individual, cfg
 			return err
 		}
 		if !emailRegex.MatchString(individual.Email) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "email",
 				"value":   individual.Email,
 				"message": "email must be a valid email address, e.g. name@example.com",
@@ -73,7 +73,7 @@ func (v *individualValidator) validateFormats(individual *models.Individual, cfg
 	}
 
 	if individual.Gender != "" && !isValidGender(individual.Gender) {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "gender",
 			"value":   individual.Gender,
 			"message": "gender must be MALE, FEMALE, or OTHER",
@@ -130,7 +130,7 @@ func (v *individualValidator) validateFormats(individual *models.Individual, cfg
 	}
 
 	if individual.Age != nil && (*individual.Age < 0 || *individual.Age > maxAgeYears) {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "age",
 			"value":   *individual.Age,
 			"message": "age must be between 0 and 150",
@@ -142,14 +142,14 @@ func (v *individualValidator) validateFormats(individual *models.Individual, cfg
 	if individual.DateOfBirth != nil && !individual.DateOfBirth.IsZero() {
 		now := time.Now()
 		if individual.DateOfBirth.After(now) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "dateOfBirth",
 				"value":   individual.DateOfBirth.Format("2006-01-02"),
 				"message": "dateOfBirth must not be in the future",
 			})
 		}
 		if individual.DateOfBirth.Before(now.AddDate(-maxAgeYears, 0, 0)) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "dateOfBirth",
 				"value":   individual.DateOfBirth.Format("2006-01-02"),
 				"message": "dateOfBirth must not be more than 150 years in the past",
@@ -165,33 +165,33 @@ func validateAdditionalAttributes(attrs models.JSONB) error {
 		return nil
 	}
 	if len(attrs) > maxAdditionalAttributes {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "additionalAttributes",
 			"message": "additionalAttributes must contain at most 50 entries",
 		})
 	}
 	for key, val := range attrs {
 		if len(key) > attrKeyMaxLen {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "additionalAttributes." + key,
 				"message": "additionalAttributes key must not exceed 128 characters",
 			})
 		}
 		if !additionalAttrKeyRegex.MatchString(key) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "additionalAttributes." + key,
 				"message": "additionalAttributes keys must match ^[a-zA-Z0-9_.-]+$",
 			})
 		}
 		s, ok := val.(string)
 		if !ok {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "additionalAttributes." + key,
 				"message": "additionalAttributes values must be strings",
 			})
 		}
 		if len(s) > attrValueMaxLen {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "additionalAttributes." + key,
 				"message": "additionalAttributes value must not exceed 1024 characters",
 			})
@@ -212,20 +212,20 @@ func validateAdditionalAttributes(attrs models.JSONB) error {
 // validateFormats.
 func (v *individualValidator) validateBusinessRules(ctx context.Context, individual *models.Individual, cfg *models.Config, isCreate bool) error {
 	if individual.MobileNumber == "" && individual.Email == "" {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "mobileNumber/email",
 			"message": "at least one of mobileNumber or email is required",
 		})
 	}
 
 	if len(individual.Addresses) > maxAddresses {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "address",
 			"message": "address must contain at most 16 entries",
 		})
 	}
 	if len(individual.Identifiers) > maxIdentifiers {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "identifiers",
 			"message": "identifiers must contain at most 16 entries",
 		})
@@ -300,7 +300,7 @@ func (v *individualValidator) applyUniquenessCriteria(ctx context.Context, indiv
 		switch strings.ToLower(field) {
 		case "mobilenumber":
 			if existing := v.mobileDuplicate(ctx, individual); existing != nil && (isCreate || existing.ID != individual.ID) {
-				return common.ErrUniqueEntity.WithParams(map[string]interface{}{
+				return common.ErrUniqueEntity.WithContext(map[string]interface{}{
 					"field":   "mobileNumber",
 					"message": "mobileNumber already exists for this tenant",
 				})
@@ -310,7 +310,7 @@ func (v *individualValidator) applyUniquenessCriteria(ctx context.Context, indiv
 				continue
 			}
 			if existing, _ := v.repo.FindByName(ctx, individual.GivenName, individual.FamilyName, individual.TenantID); existing != nil && (isCreate || existing.ID != individual.ID) {
-				return common.ErrUniqueEntity.WithParams(map[string]interface{}{
+				return common.ErrUniqueEntity.WithContext(map[string]interface{}{
 					"field":   "name",
 					"message": "name already exists for this tenant",
 				})

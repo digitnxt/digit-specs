@@ -24,7 +24,7 @@ func (v *individualValidator) ValidateConfig(cfg *models.Config) error {
 	}
 	if cfg.MobileRegex != "" {
 		if _, err := regexp.Compile(cfg.MobileRegex); err != nil {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "mobileRegex",
 				"message": "mobileRegex is not a valid regular expression: " + err.Error(),
 			})
@@ -36,7 +36,7 @@ func (v *individualValidator) ValidateConfig(cfg *models.Config) error {
 	}
 	if cfg.NameRegex != "" {
 		if _, err := regexp.Compile(cfg.NameRegex); err != nil {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "nameRegex",
 				"message": "nameRegex is not a valid regular expression: " + err.Error(),
 			})
@@ -46,20 +46,20 @@ func (v *individualValidator) ValidateConfig(cfg *models.Config) error {
 	if len(cfg.UniquenessCriteria) > 0 {
 		var raw []string
 		if err := json.Unmarshal(cfg.UniquenessCriteria, &raw); err != nil {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "uniquenessCriteria",
 				"message": "uniquenessCriteria must be a JSON array of strings",
 			})
 		}
 		if len(raw) > maxUniquenessCriteria {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "uniquenessCriteria",
 				"message": "uniquenessCriteria must contain at most 2 entries",
 			})
 		}
 		for _, field := range raw {
 			if !supportedUniquenessCriteria[field] {
-				return common.ErrValidation.WithParams(map[string]interface{}{
+				return common.ErrValidation.WithContext(map[string]interface{}{
 					"field":   "uniquenessCriteria",
 					"message": "unsupported value \"" + field + "\"; supported values are [mobileNumber, name]",
 				})

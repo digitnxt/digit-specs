@@ -209,6 +209,16 @@ class TestCreateValidationErrors:
         _assert_error_body(response)
         assert_gateway_headers(response, gateway_headers_spec)
 
+    def test_unknown_field_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
+        """Create decoder uses DisallowUnknownFields — an unknown body field → 400.
+        (Sending server-managed/immutable fields like tenantId also hits this.)"""
+        body = make_individual(unexpectedField="nope")
+        response = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=body)
+        assert response.status_code == 400, f"got {response.status_code}: {response.text}"
+        _assert_error_body(response)
+        assert_gateway_headers(response, gateway_headers_spec)
+
 
 # ── 404 — Not-found errors ────────────────────────────────────────────────────
 
@@ -222,10 +232,12 @@ class TestNotFoundErrors:
         assert_gateway_headers(response, gateway_headers_spec)
 
     def test_update_nonexistent_individual_returns_404(self, request, base_url, auth_headers, gateway_headers_spec):
+        # PUT validates `version` (required, ≥1) BEFORE the row-exists check, so
+        # a version must be supplied to reach the 404 — omitting it returns 400.
         response = _send(request.node, "PUT",
                          f"{base_url}/individuals/{uuid.uuid4()}",
                          headers=auth_headers,
-                         json_body=make_individual_update())
+                         json_body=make_individual_update(version=1))
         assert response.status_code == 404
         _assert_error_body(response)
         assert_gateway_headers(response, gateway_headers_spec)
@@ -235,6 +247,22 @@ class TestNotFoundErrors:
                          f"{base_url}/individuals/{uuid.uuid4()}",
                          headers=auth_headers)
         assert response.status_code == 404
+        _assert_error_body(response)
+        assert_gateway_headers(response, gateway_headers_spec)
+
+
+# ── 400 — Update validation (version required) ────────────────────────────────
+
+class TestUpdateValidationErrors:
+    def test_update_missing_version_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
+        """PUT requires `version` (≥1). The validator checks it before the
+        row-exists check, so a random id with no version → 400, not 404."""
+        body = make_individual_update()
+        body.pop("version", None)
+        response = _send(request.node, "PUT",
+                         f"{base_url}/individuals/{uuid.uuid4()}",
+                         headers=auth_headers, json_body=body)
+        assert response.status_code == 400, f"got {response.status_code}: {response.text}"
         _assert_error_body(response)
         assert_gateway_headers(response, gateway_headers_spec)
 

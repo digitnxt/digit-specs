@@ -15,6 +15,7 @@ import requests as req_lib
 from tests.helpers.curl_builder import attach_curl
 from tests.helpers.validators import (
     assert_gateway_headers,
+    assert_service_response_headers,
     assert_json_content_type,
     assert_individual_shape,
     assert_individual_search_response,
@@ -59,6 +60,7 @@ class TestIndividualCreateContract:
         try:
             assert response.status_code == 201, f"create failed: {response.text}"
             assert_json_content_type(response)
+            assert_service_response_headers(response)
             assert_gateway_headers(response, gateway_headers_spec)
             ind = response.json()
             assert_individual_shape(ind)
@@ -157,6 +159,7 @@ class TestIndividualSearchContract:
                          headers=auth_headers)
         assert response.status_code == 200, f"search failed: {response.text}"
         assert_json_content_type(response)
+        assert_service_response_headers(response)
         assert_gateway_headers(response, gateway_headers_spec)
         assert_individual_search_response(response.json())
 
@@ -200,6 +203,7 @@ class TestIndividualExistsContract:
         assert response.status_code == 200, \
             f"exists check should return 200 even on no-match, got {response.status_code}: {response.text}"
         assert_json_content_type(response)
+        assert_service_response_headers(response)
         assert_gateway_headers(response, gateway_headers_spec)
         body = response.json()
         assert_exists_response(body)
@@ -238,6 +242,7 @@ class TestIndividualGetByIdContract:
                              headers=auth_headers)
             assert response.status_code == 200, f"get failed: {response.text}"
             assert_json_content_type(response)
+            assert_service_response_headers(response)
             assert_gateway_headers(response, gateway_headers_spec)
             ind = response.json()
             assert_individual_shape(ind)
@@ -273,6 +278,7 @@ class TestIndividualUpdateContract:
                              headers=auth_headers, json_body=update_body)
             assert response.status_code == 200, f"update failed: {response.text}"
             assert_json_content_type(response)
+            assert_service_response_headers(response)
             assert_gateway_headers(response, gateway_headers_spec)
             ind = response.json()
             assert_individual_shape(ind)
@@ -302,6 +308,7 @@ class TestIndividualDeleteContract:
                          f"{base_url}/individuals/{ind_id}",
                          headers=auth_headers)
         assert response.status_code == 204, f"delete failed: {response.status_code} {response.text}"
+        assert_service_response_headers(response)
         assert_gateway_headers(response, gateway_headers_spec)
         # 204 has no body — don't try to parse JSON.
 
@@ -336,6 +343,7 @@ class TestConfigUpsertContract:
         assert response.status_code in (200, 201), \
             f"upsert config status must be 200 or 201, got {response.status_code}: {response.text}"
         assert_json_content_type(response)
+        assert_service_response_headers(response)
         assert_gateway_headers(response, gateway_headers_spec)
         assert_config_response(response.json())
 
@@ -372,5 +380,6 @@ class TestConfigGetContract:
                          headers=auth_headers)
         assert response.status_code == 200, f"get config failed: {response.text}"
         assert_json_content_type(response)
+        assert_service_response_headers(response)
         assert_gateway_headers(response, gateway_headers_spec)
         assert_config_response(response.json())

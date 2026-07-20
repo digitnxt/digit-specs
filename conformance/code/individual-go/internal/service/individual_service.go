@@ -90,7 +90,7 @@ func (s *individualService) CreateIndividual(ctx context.Context, individual *mo
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "persist failed")
 		tracerobs.RecordError(ctx, "create_individual_db_error", "individual-service")
-		return nil, common.ErrDatabase.WithParams(map[string]interface{}{
+		return nil, common.ErrDatabase.WithContext(map[string]interface{}{
 			"operation": "create",
 			"error":     err.Error(),
 		})
@@ -134,7 +134,7 @@ func (s *individualService) UpdateIndividual(ctx context.Context, individual *mo
 	if existing == nil {
 		log.Info().Ctx(ctx).Str("individualID", individual.ID).Msg("update individual: target not found")
 		span.SetStatus(codes.Error, "individual not found")
-		return nil, common.ErrNonExistentEntity.WithParams(map[string]interface{}{
+		return nil, common.ErrNonExistentEntity.WithContext(map[string]interface{}{
 			"id": individual.ID,
 		})
 	}
@@ -150,7 +150,7 @@ func (s *individualService) UpdateIndividual(ctx context.Context, individual *mo
 			Int("providedVersion", individual.RowVersion).
 			Msg("update individual: version mismatch")
 		span.SetStatus(codes.Error, "row version mismatch")
-		return nil, common.ErrRowVersionMismatch.WithParams(map[string]interface{}{
+		return nil, common.ErrRowVersionMismatch.WithContext(map[string]interface{}{
 			"expected": existing.RowVersion,
 			"provided": individual.RowVersion,
 		})
@@ -209,7 +209,7 @@ func (s *individualService) UpdateIndividual(ctx context.Context, individual *mo
 			// and our write — same outcome as a stale client version.
 			log.Warn().Ctx(ctx).Str("individualID", individual.ID).Msg("update individual: version conflict on write")
 			span.SetStatus(codes.Error, "row version mismatch")
-			return nil, common.ErrRowVersionMismatch.WithParams(map[string]interface{}{
+			return nil, common.ErrRowVersionMismatch.WithContext(map[string]interface{}{
 				"id": individual.ID,
 			})
 		}
@@ -221,7 +221,7 @@ func (s *individualService) UpdateIndividual(ctx context.Context, individual *mo
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "persist failed")
 		tracerobs.RecordError(ctx, "update_individual_db_error", "individual-service")
-		return nil, common.ErrDatabase.WithParams(map[string]interface{}{
+		return nil, common.ErrDatabase.WithContext(map[string]interface{}{
 			"operation": "update",
 			"error":     err.Error(),
 		})
@@ -273,7 +273,7 @@ func (s *individualService) DeleteIndividual(ctx context.Context, individual *mo
 	if existing == nil {
 		log.Info().Ctx(ctx).Str("individualID", individual.ID).Msg("delete individual: target not found")
 		span.SetStatus(codes.Error, "individual not found")
-		return nil, common.ErrNonExistentEntity.WithParams(map[string]interface{}{
+		return nil, common.ErrNonExistentEntity.WithContext(map[string]interface{}{
 			"id": individual.ID,
 		})
 	}
@@ -291,7 +291,7 @@ func (s *individualService) DeleteIndividual(ctx context.Context, individual *mo
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "persist failed")
 		tracerobs.RecordError(ctx, "delete_individual_db_error", "individual-service")
-		return nil, common.ErrDatabase.WithParams(map[string]interface{}{
+		return nil, common.ErrDatabase.WithContext(map[string]interface{}{
 			"operation": "delete",
 			"error":     err.Error(),
 		})
@@ -333,7 +333,7 @@ func (s *individualService) SearchIndividuals(ctx context.Context, request *mode
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "failed to hash mobile number")
 				tracerobs.RecordError(ctx, "search_individual_hash_error", "individual-service")
-				return nil, 0, common.ErrFailedToHash.WithParams(map[string]interface{}{"error": err.Error()})
+				return nil, 0, common.ErrFailedToHash.WithContext(map[string]interface{}{"error": err.Error()})
 			}
 			hashed = append(hashed, h)
 		}
@@ -359,7 +359,7 @@ func (s *individualService) SearchIndividuals(ctx context.Context, request *mode
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "repo search failed")
 		tracerobs.RecordError(ctx, "search_individual_db_error", "individual-service")
-		return nil, 0, common.ErrDatabase.WithParams(map[string]interface{}{
+		return nil, 0, common.ErrDatabase.WithContext(map[string]interface{}{
 			"operation": "search",
 			"error":     err.Error(),
 		})
@@ -398,7 +398,7 @@ func (s *individualService) IndividualExists(ctx context.Context, criteria *mode
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "failed to hash mobile number")
 				tracerobs.RecordError(ctx, "exists_individual_hash_error", "individual-service")
-				return false, common.ErrFailedToHash.WithParams(map[string]interface{}{"error": err.Error()})
+				return false, common.ErrFailedToHash.WithContext(map[string]interface{}{"error": err.Error()})
 			}
 			hashed = append(hashed, h)
 		}
@@ -411,7 +411,7 @@ func (s *individualService) IndividualExists(ctx context.Context, criteria *mode
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "repo exists failed")
 		tracerobs.RecordError(ctx, "exists_individual_db_error", "individual-service")
-		return false, common.ErrDatabase.WithParams(map[string]interface{}{
+		return false, common.ErrDatabase.WithContext(map[string]interface{}{
 			"operation": "exists",
 			"error":     err.Error(),
 		})
@@ -460,7 +460,7 @@ func reconcileChildren(individual, existing *models.Individual) error {
 	// B15: a supplied child id must belong to this individual.
 	for i := range individual.Identifiers {
 		if id := individual.Identifiers[i].ID; id != "" && !identIDs[id] {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "identifiers",
 				"message": "identifier id does not belong to this individual: " + id,
 			})
@@ -468,7 +468,7 @@ func reconcileChildren(individual, existing *models.Individual) error {
 	}
 	for i := range individual.Addresses {
 		if id := individual.Addresses[i].ID; id != "" && !addrIDs[id] {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "address",
 				"message": "address id does not belong to this individual: " + id,
 			})
@@ -476,7 +476,7 @@ func reconcileChildren(individual, existing *models.Individual) error {
 	}
 	for i := range individual.Documents {
 		if id := individual.Documents[i].ID; id != "" && !docIDs[id] {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   "documents",
 				"message": "document id does not belong to this individual: " + id,
 			})

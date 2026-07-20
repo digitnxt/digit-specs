@@ -333,7 +333,8 @@ func (h *IndividualHandler) HealthCheck(c *gin.Context) {
 func handleServiceError(c *gin.Context, err error) {
 	customErr, ok := err.(*common.CustomError)
 	if !ok {
-		sendError(c, http.StatusInternalServerError, common.ErrorDatabase, "Internal server error")
+		// Unclassified error — this is a genuine internal fault, not a DB error.
+		sendError(c, http.StatusInternalServerError, common.ErrorInternal, "Internal server error")
 		return
 	}
 
@@ -352,35 +353,22 @@ func handleServiceError(c *gin.Context, err error) {
 		// DUPLICATE_ERROR (Postgres 23505) is detected and typed in the repository layer now,
 		// so the handler only maps the code → 409 (no error-string inspection here).
 		httpStatus = http.StatusConflict
+	case common.ErrorDownstream:
+		// A dependency (e.g. idgen) failed — not the client's fault.
+		httpStatus = http.StatusBadGateway
 	case common.ErrorDatabase:
 		httpStatus = http.StatusInternalServerError
 	}
 
-	// Create models.Error with optional description and params from CustomError
+	// Wire Error carries code/message/description only — no params (matching the
+	// platform contract and Java individual). Caller-specific detail is already
+	// promoted into message via CustomError.WithContext.
 	apiError := models.Error{
 		Code:    customErr.Code,
 		Message: message,
 	}
-
 	if customErr.Description != "" {
 		apiError.Description = customErr.Description
-	}
-
-	// Pass params through as a structured map so clients can branch on
-	// individual keys (e.g. params.field) instead of having to string-split
-	// "field: givenName". See bug.md #12. The internal "error" key is
-	// stripped — it's used only for the duplicate-key detection above.
-	if len(customErr.Params) > 0 {
-		out := make(map[string]interface{}, len(customErr.Params))
-		for k, v := range customErr.Params {
-			if k == "error" {
-				continue
-			}
-			out[k] = v
-		}
-		if len(out) > 0 {
-			apiError.Params = out
-		}
 	}
 
 	c.JSON(httpStatus, []models.Error{apiError})

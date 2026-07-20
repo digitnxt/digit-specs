@@ -58,7 +58,7 @@ func (s *configService) Upsert(ctx context.Context, reqCtx *models.RequestContex
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to get existing config")
 		tracerobs.RecordError(ctx, "config_upsert_get_error", "individual-service")
-		return nil, false, common.ErrDatabase.WithParams(map[string]interface{}{
+		return nil, false, common.ErrDatabase.WithContext(map[string]interface{}{
 			"operation": "config-get",
 			"error":     err.Error(),
 		})
@@ -78,7 +78,7 @@ func (s *configService) Upsert(ctx context.Context, reqCtx *models.RequestContex
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "failed to insert config")
 			tracerobs.RecordError(ctx, "config_insert_error", "individual-service")
-			return nil, false, common.ErrDatabase.WithParams(map[string]interface{}{
+			return nil, false, common.ErrDatabase.WithContext(map[string]interface{}{
 				"operation": "config-insert",
 				"error":     err.Error(),
 			})
@@ -96,7 +96,7 @@ func (s *configService) Upsert(ctx context.Context, reqCtx *models.RequestContex
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "failed to update config")
 			tracerobs.RecordError(ctx, "config_update_error", "individual-service")
-			return nil, false, common.ErrDatabase.WithParams(map[string]interface{}{
+			return nil, false, common.ErrDatabase.WithContext(map[string]interface{}{
 				"operation": "config-update",
 				"error":     err.Error(),
 			})

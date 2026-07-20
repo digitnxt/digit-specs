@@ -6,14 +6,14 @@ import (
 )
 
 // CustomError is the service-layer error type carried up to handlers, which
-// translate it into the spec-shaped HTTP response (status + Error envelope).
-// Code drives status mapping; Description and Params surface as response
-// fields when set.
+// translate it into the spec-shaped HTTP response (status + []Error envelope).
+// Code drives status mapping; Message/Description surface on the response.
+// The wire Error carries no `params` — matching the platform Error contract
+// and the Java individual service.
 type CustomError struct {
 	Code        string
 	Message     string
 	Description string
-	Params      map[string]interface{}
 }
 
 func (e *CustomError) Error() string {
@@ -21,26 +21,26 @@ func (e *CustomError) Error() string {
 }
 
 // newCustomError builds a CustomError. Unexported because the predefined
-// errors below are the only legitimate constructors — callers should pick
-// one and chain .WithParams(...) for context.
+// errors below are the only legitimate constructors — callers pick one and
+// chain .WithContext(...) to specialise the message.
 func newCustomError(code, message, description string) *CustomError {
 	return &CustomError{
 		Code:        code,
 		Message:     message,
 		Description: description,
-		Params:      make(map[string]interface{}),
 	}
 }
 
-// WithParams attaches contextual key/values that surface on the API response
-// as a string-array under `params`.
-func (e *CustomError) WithParams(params map[string]interface{}) *CustomError {
-	return &CustomError{
-		Code:        e.Code,
-		Message:     e.Message,
-		Description: e.Description,
-		Params:      params,
+// WithContext returns a copy of the error, promoting a "message" entry (when
+// present) to the top-level Message so the caller-specific text surfaces on the
+// response. Other keys are call-site context only — they are NOT emitted on the
+// wire (error responses carry code/message/description, never params).
+func (e *CustomError) WithContext(ctx map[string]interface{}) *CustomError {
+	ne := &CustomError{Code: e.Code, Message: e.Message, Description: e.Description}
+	if m, ok := ctx["message"].(string); ok && m != "" {
+		ne.Message = m
 	}
+	return ne
 }
 
 // Predefined errors. Only the codes the service actually emits live here;
@@ -82,6 +82,23 @@ var (
 		ErrorDatabase,
 		"Database error",
 		"An error occurred while accessing the database",
+	)
+
+	// ErrDownstream is a dependency-call failure (e.g. idgen). Mapped to 502 —
+	// not the client's fault. Chain .WithContext({"message": ...}) with the
+	// specific cause.
+	ErrDownstream = newCustomError(
+		ErrorDownstream,
+		"Downstream service error",
+		"A dependency call failed",
+	)
+
+	// ErrInternal is the catch-all for unclassified errors → 500. Used by the
+	// handler when it receives a non-CustomError.
+	ErrInternal = newCustomError(
+		ErrorInternal,
+		"Internal server error",
+		"An unexpected error occurred",
 	)
 
 	ErrFailedToHash = newCustomError(

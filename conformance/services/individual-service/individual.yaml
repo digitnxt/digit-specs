@@ -225,16 +225,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -320,16 +310,6 @@ paths:
                 $ref: '#/components/schemas/IndividualSearchResponse'
         '400':
           description: Bad request — invalid or unknown query parameters.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
           content:
             application/json:
               schema:
@@ -432,16 +412,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -495,9 +465,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Individual'
         '400':
-          description: |
-            Bad request — invalid UUID in path, missing required header,
-            or unknown query parameter.
+          description: Invalid path UUID or missing required header.
           content:
             application/json:
               schema:
@@ -506,16 +474,6 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found or soft-deleted.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
           content:
             application/json:
               schema:
@@ -654,16 +612,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -704,9 +652,7 @@ paths:
         - $ref: '#/components/parameters/IndividualIdPath'
       responses:
         '204':
-          description: |
-            Individual soft-deleted. No response body — the record has been
-            marked inactive (`isActive: false`) but data is retained.
+          description: Individual soft-deleted (no content).
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -717,8 +663,7 @@ paths:
             X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
         '400':
-          description: |
-            Bad request — invalid UUID in path or missing required header.
+          description: Invalid path UUID or missing required header.
           content:
             application/json:
               schema:
@@ -727,16 +672,6 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found or already deleted.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
           content:
             application/json:
               schema:
@@ -773,7 +708,7 @@ paths:
         - `nameRegex`, if provided, must be a valid Java regular expression
           enforced server-side on `Individual.givenName` for this tenant.
         - `uniquenessCriteria` accepts `mobileNumber` and/or `name`; any other
-          value is silently ignored.
+          value is rejected with `400`.
         - Returns `201` when config is created for the first time for the tenant.
         - Returns `200` when an existing config is updated.
 
@@ -850,16 +785,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -903,7 +828,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConfigResponse'
         '400':
-          description: Bad request — missing required header or invalid query parameter.
+          description: Missing required header (X-Tenant-ID).
           content:
             application/json:
               schema:
@@ -912,16 +837,6 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: No configuration found for this tenant.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '401':
-          description: |
-            Unauthorized — bearer token missing or invalid
-            (enforced by the API gateway before requests reach the service).
           content:
             application/json:
               schema:
@@ -945,94 +860,28 @@ components:
 
   securitySchemes:
     BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
 
   parameters:
 
     # ── Common platform headers ───────────────────────────────────────────────────
 
     RequestIdHeader:
-      name: X-Request-ID
-      in: header
-      required: false
-      description: Unique identifier for tracking each request. Helps in debugging logs.
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-        example: req-12345-abcd
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
     CorrelationIdHeader:
-      name: X-Correlation-ID
-      in: header
-      required: false
-      description: Used for distributed tracing across multiple services.
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-        example: corr-67890-xyz
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
     UserAgentHeader:
-      name: User-Agent
-      in: header
-      required: false
-      description: Identifies the client making the request (browser, mobile app, etc.).
-      schema:
-        type: string
-        minLength: 5
-        maxLength: 64
-        example: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      description: Identifies the tenant making the request. Required in multi-tenant systems.
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-        example: tenant-xyz
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
     ForwardedForHeader:
-      name: X-Forwarded-For
-      in: header
-      required: false
-      description: Client IP address (used for tracing in load-balanced environments).
-      schema:
-        type: string
-        minLength: 2
-        maxLength: 64
-        example: 192.168.1.1
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
     ClientId:
-      name: X-Client-Id
-      in: header
-      required: false
-      description: Unique identifier assigned to the client making the request.
-      schema:
-        type: string
-        minLength: 3
-        maxLength: 100
-        example: User-Admin-Client
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
     ClientSecret:
-      name: X-Client-Secret
-      in: header
-      required: false
-      description: Secret key used to authenticate the client making the request.
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 256
-        example: s3cr3tK3y123
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
     TimeStamp:
-      name: X-Time-Stamp
-      in: header
-      required: false
-      description: Epoch timestamp (in milliseconds) indicating when the request was made.
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
-        example: 1712830200000
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
 
     UserIdHeader:
       name: X-User-ID
@@ -1180,109 +1029,31 @@ components:
 
   headers:
     X-Response-Time:
-      description: Total time taken to process the request (in milliseconds).
-      schema:
-        type: integer
-        minimum: 0
-        example: 132
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
     X-Response-Timestamp:
-      description: Server-side timestamp (epoch milliseconds) when the response was generated.
-      schema:
-        type: integer
-        minimum: 1000000000000
-        maximum: 9999999999999
-        example: 1712830212345
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
     X-Request-ID:
-      description: Echoes the `X-Request-ID` from the request for tracking and correlation.
-      schema:
-        type: string
-        example: req-12345-abcd
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
     X-Correlation-ID:
-      description: Echoes the `X-Correlation-ID` to trace the request across services.
-      schema:
-        type: string
-        example: corr-67890-xyz
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
     X-Tenant-ID:
-      description: Echoes the `X-Tenant-ID` from the request, confirming tenant scope.
-      schema:
-        type: string
-        example: tenant-xyz
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
     X-Rate-Limit:
-      description: Indicates the maximum number of allowed requests in a given timeframe.
-      schema:
-        type: integer
-        minimum: 1
-        example: 1000
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
     X-Rate-Limit-Remaining:
-      description: Indicates the remaining number of requests in the current rate limit window.
-      schema:
-        type: integer
-        minimum: 0
-        example: 999
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
     X-Rate-Limit-Reset:
-      description: Indicates the time (in UTC epoch seconds) when the rate limit will reset.
-      schema:
-        type: integer
-        minimum: 0
-        example: 1701237890
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
 
   schemas:
 
     # ── Common refs ──────────────────────────────────────────────────────────────
 
     Error:
-      type: object
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: string
-          description: Module-specific error code.
-          example: User.NotFound
-        message:
-          type: string
-          description: Readable error message.
-          example: User not found.
-        description:
-          type: string
-          description: Optional long description for debugging.
-        params:
-          description: |
-            Optional contextual metadata for the error. The service emits
-            this as either:
-            - an object keyed by field/parameter (e.g.
-              `{"field":"size","tag":"max"}` for validation errors,
-              `{"entity":"Individual","id":"..."}` for not-found errors), or
-            - an array of string placeholders for templated messages.
-            Clients should treat it as opaque JSON.
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
 
     AuditDetail:
-      type: object
-      description: Contains audit details, tracking record creation, modification, and deletion events.
-      properties:
-        createdBy:
-          type: string
-          description: UUID of the user or system that created the record.
-          example: 550e8400-e29b-41d4-a716-446655440000
-          minLength: 2
-          maxLength: 64
-        createdTime:
-          type: integer
-          format: int64
-          description: Timestamp (epoch milliseconds) when the record was created.
-          example: 1701234567890
-        modifiedBy:
-          type: string
-          description: UUID of the user or system that updated the record.
-          example: 550e8400-e29b-41d4-a716-446655440000
-          minLength: 2
-          maxLength: 64
-        modifiedTime:
-          type: integer
-          format: int64
-          description: Timestamp (epoch milliseconds) when the record was last modified.
-          example: 1701237890123
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
 
     # ── Layer 1 — Individual Registry schemas ─────────────────────────────────────
 
@@ -1828,11 +1599,11 @@ components:
           example: '^[A-Za-z ]+$'
         uniquenessCriteria:
           type: array
-          maxItems: 8
+          maxItems: 2
           description: |
             Fields to enforce as unique per tenant across all individuals.
-            Recognised values: `mobileNumber`, `name`. Unknown values are
-            silently ignored. Violations on create/update return `409`.
+            Recognised values: `mobileNumber`, `name`. Any other value is
+            rejected with `400`. Violations on create/update return `409`.
           items:
             type: string
           example: [mobileNumber, name]
@@ -1840,7 +1611,7 @@ components:
         - tenantId is resolved from Bearer token; not accepted in the body.
         - mobileRegex must be a valid Java regex if non-empty; invalid returns 400.
         - nameRegex must be a valid Java regex if non-empty; invalid returns 400.
-        - uniquenessCriteria values outside [mobileNumber, name] are silently ignored.
+        - uniquenessCriteria values outside [mobileNumber, name] are rejected with 400.
         - Returns 201 on first-time creation for the tenant, 200 on subsequent updates.
 
     ConfigResponse:

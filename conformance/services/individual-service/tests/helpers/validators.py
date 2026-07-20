@@ -21,7 +21,12 @@ ADDRESS_TYPE_VALUES = {"PERMANENT", "CORRESPONDENCE"}
 
 UNIQUENESS_CRITERIA_VALUES = {"mobileNumber", "name"}
 
-SERVICE_RESPONSE_HEADERS = ["X-Response-Time", "X-Request-ID"]
+# Headers Kong adds to every proxied 2xx response, verified against a live
+# gateway response. These are gateway-injected — the individual service itself
+# only sets X-Request-Id — so they are only meaningful when the suite runs
+# through Kong (the intended target).
+KONG_RESPONSE_HEADERS = ["X-Response-Time", "X-Response-Timestamp",
+                         "X-Tenant-ID", "X-User-ID", "X-Kong-Request-Id"]
 
 
 # ── Generic helpers ───────────────────────────────────────────────────────────
@@ -49,8 +54,15 @@ def assert_gateway_headers(response, gateway_headers_spec):
 
 
 def assert_service_response_headers(response):
-    for h in SERVICE_RESPONSE_HEADERS:
-        assert h in response.headers, f"Expected service header '{h}' missing"
+    """Assert the headers Kong adds to every proxied 2xx response.
+
+    X-Response-Time is a string with a unit suffix (e.g. "19.00ms");
+    X-Response-Timestamp is epoch millis (numeric).
+    """
+    for h in KONG_RESPONSE_HEADERS:
+        assert h in response.headers, f"Expected gateway response header '{h}' missing"
+    ts = response.headers["X-Response-Timestamp"]
+    assert ts.isdigit(), f"X-Response-Timestamp should be epoch millis, got: '{ts}'"
 
 
 def assert_json_content_type(response):
@@ -215,12 +227,3 @@ def assert_config_response(body):
                 f"uniquenessCriteria item '{item}' not in {UNIQUENESS_CRITERIA_VALUES}"
     if "version" in body and body["version"] is not None:
         assert isinstance(body["version"], int), "version must be integer"
-
-
-# ── Soft-delete response validator ────────────────────────────────────────────
-
-def assert_delete_response(body):
-    """Validate DELETE /individuals/{id} response: {deleted: true}."""
-    assert_required_fields(body, ["deleted"])
-    assert body["deleted"] is True, \
-        f"deleted must be true on successful soft-delete, got {body['deleted']!r}"

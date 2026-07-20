@@ -5,12 +5,16 @@ import schemathesis.openapi
 from tests.helpers.curl_builder import build_curl
 
 GATEWAY_HEADER_PROFILES = {
+    # Kong is the production gateway. These are the headers Kong itself adds to
+    # every proxied response (verified against a live employee-search response).
+    # Rate-limit headers are only emitted when the rate-limiting plugin is
+    # enabled on the route, so they are marked optional to avoid false failures.
     "kong": {
-        "X-RateLimit-Limit-Minute":     {"required": True,  "type": int},
-        "X-RateLimit-Remaining-Minute": {"required": True,  "type": int},
         "X-Kong-Request-Id":            {"required": True,  "type": str},
         "X-Kong-Upstream-Latency":      {"required": False, "type": int},
         "X-Kong-Proxy-Latency":         {"required": False, "type": int},
+        "X-RateLimit-Limit-Minute":     {"required": False, "type": int},
+        "X-RateLimit-Remaining-Minute": {"required": False, "type": int},
     },
     "aws": {
         "x-amzn-RequestId":               {"required": True,  "type": str},
@@ -39,6 +43,15 @@ def base_url(request):
 
 @pytest.fixture(scope="session")
 def auth_headers(request):
+    """
+    Headers sent on every authenticated request.
+
+    The suite targets the full path through Kong. Kong authenticates the Bearer
+    token and injects X-Tenant-ID / X-User-ID into the upstream request (and
+    echoes them back on the response), so the client only needs to send the
+    token. X-Tenant-ID is still sent when provided so the suite can also be run
+    against a Kong route configured to trust a caller-supplied tenant.
+    """
     token = request.config.getoption("--api-token")
     tenant = request.config.getoption("--tenant-id")
     headers = {}

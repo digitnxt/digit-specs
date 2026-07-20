@@ -55,7 +55,7 @@ func (v *individualValidator) ValidateCreate(ctx context.Context, individual *mo
 // PUT semantics: the full representation must be sent; required fields are re-validated.
 func (v *individualValidator) ValidateUpdate(ctx context.Context, individual *models.Individual) error {
 	if individual.ID == "" {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "id",
 			"message": "id is required for update",
 		})
@@ -64,7 +64,7 @@ func (v *individualValidator) ValidateUpdate(ctx context.Context, individual *mo
 	// version is required on update: individual is an optimistic-concurrency API,
 	// so every PUT must carry the version it is based on (valid versions are >= 1).
 	if individual.RowVersion <= 0 {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "version",
 			"message": "version is required for update",
 		})
@@ -76,7 +76,7 @@ func (v *individualValidator) ValidateUpdate(ctx context.Context, individual *mo
 
 	existing, err := v.repo.FindByID(ctx, individual.ID, individual.TenantID)
 	if err != nil || existing == nil {
-		return common.ErrNonExistentEntity.WithParams(map[string]interface{}{
+		return common.ErrNonExistentEntity.WithContext(map[string]interface{}{
 			"entity": "Individual",
 			"id":     individual.ID,
 		})
@@ -85,7 +85,7 @@ func (v *individualValidator) ValidateUpdate(ctx context.Context, individual *mo
 	// Optimistic-concurrency fast-fail: version is required (checked above) and
 	// must match the current row.
 	if existing.RowVersion != individual.RowVersion {
-		return common.ErrRowVersionMismatch.WithParams(map[string]interface{}{
+		return common.ErrRowVersionMismatch.WithContext(map[string]interface{}{
 			"expected": existing.RowVersion,
 			"provided": individual.RowVersion,
 		})
@@ -101,7 +101,7 @@ func (v *individualValidator) ValidateUpdate(ctx context.Context, individual *mo
 // ValidateDelete checks the row exists and is currently active.
 func (v *individualValidator) ValidateDelete(ctx context.Context, individual *models.Individual) error {
 	if individual.ID == "" {
-		return common.ErrValidation.WithParams(map[string]interface{}{
+		return common.ErrValidation.WithContext(map[string]interface{}{
 			"field":   "id",
 			"message": "id is required for delete",
 		})
@@ -109,7 +109,7 @@ func (v *individualValidator) ValidateDelete(ctx context.Context, individual *mo
 
 	existing, err := v.repo.FindByID(ctx, individual.ID, individual.TenantID)
 	if err != nil || existing == nil || !existing.Active {
-		return common.ErrNonExistentEntity.WithParams(map[string]interface{}{
+		return common.ErrNonExistentEntity.WithContext(map[string]interface{}{
 			"entity": "Individual",
 			"id":     individual.ID,
 		})

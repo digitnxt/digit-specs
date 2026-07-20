@@ -22,10 +22,6 @@ func BindingErrors(err error) []models.Error {
 			out = append(out, models.Error{
 				Code:    ErrorValidation,
 				Message: fmt.Sprintf("field '%s' failed '%s' validation", fe.Field(), fe.Tag()),
-				Params: map[string]interface{}{
-					"field": fe.Field(),
-					"tag":   fe.Tag(),
-				},
 			})
 		}
 		return out

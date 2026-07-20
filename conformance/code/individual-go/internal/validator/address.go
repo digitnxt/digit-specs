@@ -21,14 +21,14 @@ func (v *individualValidator) validateAddresses(addresses []models.Address) erro
 		prefix := fmt.Sprintf("address[%d]", i)
 
 		if a.DoorNo == "" && a.Street == "" && a.Landmark == "" && a.City == "" {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   prefix,
 				"message": "address requires at least one of doorNo, street, landmark, or city",
 			})
 		}
 
 		if a.Type != "" && !isValidAddressType(a.Type) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   prefix + ".type",
 				"value":   a.Type,
 				"message": "address.type must be PERMANENT or CORRESPONDENCE",
@@ -70,14 +70,14 @@ func (v *individualValidator) validateAddresses(addresses []models.Address) erro
 		}
 
 		if a.Latitude != nil && (*a.Latitude < latitudeMin || *a.Latitude > latitudeMax) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   prefix + ".latitude",
 				"value":   *a.Latitude,
 				"message": "latitude must be between -90 and 90",
 			})
 		}
 		if a.Longitude != nil && (*a.Longitude < longitudeMin || *a.Longitude > longitudeMax) {
-			return common.ErrValidation.WithParams(map[string]interface{}{
+			return common.ErrValidation.WithContext(map[string]interface{}{
 				"field":   prefix + ".longitude",
 				"value":   *a.Longitude,
 				"message": "longitude must be between -180 and 180",

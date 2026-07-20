@@ -58,14 +58,15 @@ type DeleteResponse struct {
 	Deleted bool `json:"deleted"`
 }
 
-// Error represents individual error. Params is a free-form key/value map so
-// clients can pick out structured details (e.g. {"field":"givenName"}) instead
-// of having to string-split "field: givenName". See bug.md #12.
+// Error is a single error entry; responses return a []Error array. Shape matches
+// the platform common Error (code/message/description/params) — params is an
+// optional string array (placeholders), left unset by this service; specific
+// detail is carried in message.
 type Error struct {
-	Code        string                 `json:"code"`
-	Message     string                 `json:"message"`
-	Description string                 `json:"description,omitempty"`
-	Params      map[string]interface{} `json:"params,omitempty"`
+	Code        string   `json:"code"`
+	Message     string   `json:"message"`
+	Description string   `json:"description,omitempty"`
+	Params      []string `json:"params,omitempty"`
 }
 
 // RequestContext holds data extracted from headers

@@ -222,13 +222,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: Search / list individuals
@@ -317,7 +321,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ──────────────────────────────────────────────────────────────────────────────
 
@@ -411,7 +417,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ──────────────────────────────────────────────────────────────────────────────
 
@@ -456,18 +464,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Individual'
+        '400':
+          description: Invalid path UUID or missing required header.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found or soft-deleted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
       summary: Update individual
@@ -579,7 +599,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
           description: |
             Conflict — `version` mismatch (`ROW_VERSION_MISMATCH`) or
@@ -587,13 +609,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       summary: Delete individual (soft delete)
@@ -625,8 +651,8 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IndividualIdPath'
       responses:
-        '200':
-          description: Individual soft-deleted.
+        '204':
+          description: Individual soft-deleted (no content).
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -636,26 +662,30 @@ paths:
             X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
             X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+        '400':
+          description: Invalid path UUID or missing required header.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  deleted:
-                    type: boolean
-                    example: true
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found or already deleted.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # LAYER 2 — TENANT CONFIGURATION
@@ -678,7 +708,7 @@ paths:
         - `nameRegex`, if provided, must be a valid Java regular expression
           enforced server-side on `Individual.givenName` for this tenant.
         - `uniquenessCriteria` accepts `mobileNumber` and/or `name`; any other
-          value is silently ignored.
+          value is rejected with `400`.
         - Returns `201` when config is created for the first time for the tenant.
         - Returns `200` when an existing config is updated.
 
@@ -760,7 +790,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: Get tenant validation configuration
@@ -795,18 +827,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConfigResponse'
+        '400':
+          description: Missing required header (X-Tenant-ID).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: No configuration found for this tenant.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
@@ -1555,11 +1599,11 @@ components:
           example: '^[A-Za-z ]+$'
         uniquenessCriteria:
           type: array
-          maxItems: 8
+          maxItems: 2
           description: |
             Fields to enforce as unique per tenant across all individuals.
-            Recognised values: `mobileNumber`, `name`. Unknown values are
-            silently ignored. Violations on create/update return `409`.
+            Recognised values: `mobileNumber`, `name`. Any other value is
+            rejected with `400`. Violations on create/update return `409`.
           items:
             type: string
           example: [mobileNumber, name]
@@ -1567,7 +1611,7 @@ components:
         - tenantId is resolved from Bearer token; not accepted in the body.
         - mobileRegex must be a valid Java regex if non-empty; invalid returns 400.
         - nameRegex must be a valid Java regex if non-empty; invalid returns 400.
-        - uniquenessCriteria values outside [mobileNumber, name] are silently ignored.
+        - uniquenessCriteria values outside [mobileNumber, name] are rejected with 400.
         - Returns 201 on first-time creation for the tenant, 200 on subsequent updates.
 
     ConfigResponse:

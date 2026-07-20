@@ -6,12 +6,15 @@ import schemathesis
 from tests.helpers.curl_builder import build_curl
 
 GATEWAY_HEADER_PROFILES = {
+    # Headers Kong itself adds to every proxied response (verified against a
+    # live gateway response). Rate-limit headers appear only when the
+    # rate-limiting plugin is enabled on the route, so they are optional.
     "kong": {
-        "X-RateLimit-Limit-Minute":     {"required": True,  "type": int},
-        "X-RateLimit-Remaining-Minute": {"required": True,  "type": int},
         "X-Kong-Request-Id":            {"required": True,  "type": str},
         "X-Kong-Upstream-Latency":      {"required": False, "type": int},
         "X-Kong-Proxy-Latency":         {"required": False, "type": int},
+        "X-RateLimit-Limit-Minute":     {"required": False, "type": int},
+        "X-RateLimit-Remaining-Minute": {"required": False, "type": int},
     },
     "aws": {
         "x-amzn-RequestId":               {"required": True,  "type": str},
@@ -37,8 +40,6 @@ def pytest_addoption(parser):
                      help="Gateway profile for header validation.")
     parser.addoption("--tenant-id", action="store", default="default",
                      help="X-Tenant-ID header value")
-    parser.addoption("--user-id", action="store", default="conformance-test-user",
-                     help="X-User-ID header value (required by Individual Service middleware)")
 
 
 @pytest.fixture(scope="session")
@@ -49,19 +50,21 @@ def base_url(request):
 @pytest.fixture(scope="session")
 def auth_headers(request):
     """
-    Headers sent on every authenticated request. The Individual Service
-    middleware requires X-User-ID on top of the usual bearer token + tenant.
+    Headers sent on every authenticated request.
+
+    The suite targets the full path through Kong. Kong authenticates the Bearer
+    token and injects X-Tenant-ID / X-User-ID into the upstream request (and
+    echoes them back on the response), so the client only needs to send the
+    token. X-Tenant-ID is still sent when provided so the suite can also run
+    against a Kong route configured to trust a caller-supplied tenant.
     """
     token = request.config.getoption("--api-token")
     tenant = request.config.getoption("--tenant-id")
-    user_id = request.config.getoption("--user-id")
     headers = {}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     if tenant:
         headers["X-Tenant-ID"] = tenant
-    if user_id:
-        headers["X-User-ID"] = user_id
     return headers
 
 
