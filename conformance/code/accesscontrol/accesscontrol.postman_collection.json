@@ -1,0 +1,446 @@
+{
+  "info": {
+    "_postman_id": "e8158486-5b67-40e0-a0ad-a88b2d0c3c87",
+    "name": "accesscontrol",
+    "description": "A complete and well-organized Postman collection for the RBAC service, including RBAC, JBAC, and internal endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "35025473",
+    "_collection_link": "https://go.postman.co/collection/35025473-e8158486-5b67-40e0-a0ad-a88b2d0c3c87?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "RBAC",
+      "item": [
+        {
+          "name": "Create Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "// {\n//     \"roleNames\": [\"ADMIN\"],\n//     \"httpMethod\": \"POST\",\n//     \"path\": \"/example/path/{uuid}\",\n//     // \"path\": \"^/boundary/v3/.*\",\n//     \"effect\": \"ALLOW\",\n//     \"priority\": 100,\n//     \"enabled\": true\n// }\n\n{\"roleNames\": [\"SUPERUSER\"], \"httpMethod\": \"POST\", \"enabled\": true, \"path\": \"/individual/v3/configs\", \"effect\": \"ALLOW\", \"priority\": 40}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/{{ruleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "{{ruleId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    // \"roleNames\": [\"SUPERUSER\"],\n    \"effect\": \"DENY\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/{{ruleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "{{ruleId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/{{ruleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "{{ruleId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "JBAC",
+      "item": [
+        {
+          "name": "Create JBAC Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Individual Config Rule\",\n    \"pathPattern\": \"/individual/v3/configs\",\n    \"methods\": [\"POST\"],\n    \"enforcement\": \"REQUIRED\",\n    \"parentImpliesChildren\": true,\n    \"extractJurisdiction\": {\n        \"sources\": [\n                    {\n                        \"type\": \"HEADER\",\n                        \"key\": \"X-Jurisdiction-Id\"\n                    },\n                    {\n                        \"type\": \"BODY_FIELD\",\n                        \"path\": \"jurisdiction.id\"\n                    },\n                    {\n                        \"type\":\"QUERY_PARAM\",\n                        \"key\":\"jurisdiction\"\n                    }\n                ],\n                \"required\": true\n        }\n}\n"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List JBAC Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get JBAC Rule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/{{jbacRuleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                "{{jbacRuleId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update JBAC Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Boundary Rule\",\n    \"extractJurisdiction\": {\n            \"sources\": [\n                {\n                    \"type\": \"HEADER\",\n                    \"key\": \"X-Jurisdiction-Id\"\n                },\n                {\n                    \"type\": \"BODY_JSONPATH\",\n                    \"path\": \"$.property.address.localityCode\"\n                }\n            ],\n           \"required\": true\n    }\n\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/{{jbacRuleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                "{{jbacRuleId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete JBAC Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "RJ"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/{{jbacRuleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                "{{jbacRuleId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Internal",
+      "item": [
+        {
+          "name": "List All RBAC Rules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/rbac/rules?page=0&size=250",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "rbac",
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "250"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All RBAC Rules Version",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/rbac/rules/version",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "rbac",
+                "rules",
+                "version"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All JBAC Rules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/jbac/rules?page=0&size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "jbac",
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "100"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All JBAC Rules Version",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/jbac/rules/version",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "jbac",
+                "rules",
+                "version"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8081/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8081",
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "ruleId",
+      "value": ""
+    },
+    {
+      "key": "jbacRuleId",
+      "value": ""
+    }
+  ]
+}

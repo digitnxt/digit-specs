@@ -1,0 +1,547 @@
+{
+  "info": {
+    "_postman_id": "a876821a-e3c1-4cc1-a967-c68ac6760022",
+    "name": "DIGIT Employee v3",
+    "description": "Production collection for the DIGIT Employee service (v3).\n\n## Endpoints\n- **Employees** — POST (batch) / GET (search) / GET / PUT / PATCH / DELETE under `/employees`, plus `/deactivate` and `/reactivate` actions.\n- **Jurisdictions** — POST / GET (search) / GET / PUT under `/jurisdictions`.\n- **Operational** — `/health`.\n\n## Variables\n| Variable | Default | Notes |\n|---|---|---|\n| `baseUrl` | `http://localhost:8080/employee/v3` | LTS: `https://digit-lts.digit.org/employee/v3` |\n| `tenantId` | `pg` | Sent as X-Tenant-ID. |\n| `userId` | `00000000-0000-0000-0000-000000000001` | Sent as X-User-ID. |\n| `accessToken` | — | Keycloak bearer (Kong-validated). |\n| `individualId` | — | Paste from individual service (used in create-employee body). |\n| `boundaryCode`, `boundaryType`, `hierarchyType` | `WARD-NBO-001`, `Ward`, `ADMIN` | Defaults for jurisdiction payloads. |\n| `employeeId` | (auto) | Captured from create-employee response. |\n| `jurisdictionId` | (auto) | Captured from create-jurisdiction response. |\n\n## Boundary relation shape\nEach `boundaryRelation` entry carries `code`, `boundaryType`, `hierarchyType`. The Boundary service validates the triple — unknown combinations return 400 `VALIDATION_ERROR`.\n\n## Error envelope\nAll non-2xx responses are `[]Error` arrays. Common codes: `INVALID_REQUEST`, `INVALID_UUID`, `VALIDATION_ERROR`, `NOT_FOUND`, `EMPLOYEE_CODE_EXISTS`, `DATABASE_ERROR`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "35025473",
+    "_collection_link": "https://go.postman.co/collection/35025473-a876821a-e3c1-4cc1-a967-c68ac6760022?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Create employees (batch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (Array.isArray(body) && body.length > 0 && body[0].id) {",
+                  "    pm.collectionVariables.set('employeeId', body[0].id);",
+                  "    console.log('employeeId=' + body[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"userId\":         \"{{userId}}\",\n    \"individualId\":   \"{{individualId}}\",\n    \"employeeType\":   \"PERMANENT\",\n    \"department\":     \"FINANCE\",\n    \"designation\":    \"ACCOUNTS_OFFICER\",\n    \"dateOfAppointment\": \"2025-01-01T10:00:00Z\",\n    \"status\":         \"EMPLOYED\",\n    \"isActive\":       true,\n    \"jurisdictions\": [\n      {\n        \"boundaryRelation\": [\n          { \"code\": \"{{boundaryCode}}\", \"boundaryType\": \"{{boundaryType}}\", \"hierarchyType\": \"{{hierarchyType}}\" }\n        ],\n        \"isActive\": true\n      }\n    ]\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "description": "Body is a JSON array (1–100 records). All-or-nothing — any validation failure rolls back the entire batch. Omitting `code` makes the server auto-generate one."
+          },
+          "response": []
+        },
+        {
+          "name": "Search employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees?limit=20&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "uuids",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "codes",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "departments",
+                  "value": "FINANCE",
+                  "disabled": true
+                },
+                {
+                  "key": "designations",
+                  "value": "",
+                  "disabled": true
+                },
+{
+                  "key": "isActive",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get employee by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update employee (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeType\": \"PERMANENT\",\n  \"department\":   \"FINANCE\",\n  \"designation\":  \"SENIOR_ACCOUNTS_OFFICER\",\n  \"status\":       \"ACTIVE\",\n  \"isActive\":     true,\n  \"jurisdictions\": [\n    {\n      \"boundaryRelation\": [\n        { \"code\": \"{{boundaryCode}}\", \"boundaryType\": \"{{boundaryType}}\", \"hierarchyType\": \"{{hierarchyType}}\" }\n      ],\n      \"isActive\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Strict full-state PUT — all six mutable fields are required (employeeType, department, designation, status, isActive, jurisdictions). For partial updates use PATCH. `id`, `code`, `userId`, `individualId`, `dateOfAppointment`, `tenantId`, `auditDetail` are immutable and ignored if supplied. Jurisdictions are fully replaced — supply `[]` to clear, populated array to set."
+          },
+          "response": []
+        },
+        {
+          "name": "Patch employee",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"designation\": \"SENIOR_ACCOUNTS_OFFICER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Partial update — supply only the fields to change; omitted fields preserve existing DB value. At least one mutable field must be present (empty body returns 400). Mutable fields: status, employeeType, department, designation, isActive, jurisdictions. Jurisdictions, when supplied, fully replaces the existing collection. Immutable fields (id, code, userId, individualId, dateOfAppointment, tenantId, auditDetail) are ignored."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "deactivate"
+              ]
+            },
+            "description": "Soft deactivate — sets isActive=false. Returns 409 if already inactive."
+          },
+          "response": []
+        },
+        {
+          "name": "Reactivate employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/reactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "reactivate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Hard-delete employee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Irreversible. Returns 409 if jurisdictions are still attached — detach them first."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Jurisdictions",
+      "item": [
+        {
+          "name": "Create jurisdiction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body && body.id) { pm.collectionVariables.set('jurisdictionId', body.id); console.log('jurisdictionId=' + body.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boundaryRelation\": [\n    { \"code\": \"{{boundaryCode}}\", \"boundaryType\": \"{{boundaryType}}\", \"hierarchyType\": \"{{hierarchyType}}\" }\n  ],\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/jurisdictions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "jurisdictions"
+              ]
+            },
+            "description": "Nested under employees — owning employeeId comes from the URL path, not the body. Returns 404 if the path's employeeId doesn't exist."
+          },
+          "response": []
+        },
+        {
+          "name": "Search jurisdictions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/jurisdictions?limit=20&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "jurisdictions"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Lists jurisdictions for the employee in the path. Employee scope is positional now — no employeeId query param."
+          },
+          "response": []
+        },
+        {
+          "name": "Get jurisdiction by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/jurisdictions/{{jurisdictionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "jurisdictions",
+                "{{jurisdictionId}}"
+              ]
+            },
+            "description": "Returns 404 if the jurisdiction exists but belongs to a different employee than the one in the path (ownership check)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update jurisdiction (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boundaryRelation\": [\n    { \"code\": \"{{boundaryCode}}\",     \"boundaryType\": \"{{boundaryType}}\", \"hierarchyType\": \"{{hierarchyType}}\" },\n    { \"code\": \"WARD-NBO-002\",         \"boundaryType\": \"Ward\",              \"hierarchyType\": \"ADMIN\" }\n  ],\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{employeeId}}/jurisdictions/{{jurisdictionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{employeeId}}",
+                "jurisdictions",
+                "{{jurisdictionId}}"
+              ]
+            },
+            "description": "boundaryRelation is required and fully replaces the existing array. isActive is optional — omit to preserve the existing value. The owning employee is taken from the URL path; jurisdiction cannot be reassigned. Returns 404 if the jurisdiction exists but belongs to a different employee."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.request.headers.has('X-Request-ID')) {",
+          "  pm.request.headers.add({ key: 'X-Request-ID', value: 'pm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/employee/v3"
+    },
+    {
+      "key": "tenantId",
+      "value": "pg"
+    },
+    {
+      "key": "userId",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "individualId",
+      "value": ""
+    },
+    {
+      "key": "boundaryCode",
+      "value": "WARD-NBO-001"
+    },
+    {
+      "key": "boundaryType",
+      "value": "Ward"
+    },
+    {
+      "key": "hierarchyType",
+      "value": "ADMIN"
+    },
+    {
+      "key": "employeeId",
+      "value": ""
+    },
+    {
+      "key": "jurisdictionId",
+      "value": ""
+    }
+  ]
+}

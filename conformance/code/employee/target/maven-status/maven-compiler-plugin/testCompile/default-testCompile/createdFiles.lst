@@ -1,0 +1,7 @@
+com/digit/employee/pubsub/EventPublisherTest$CapturingClient.class
+com/digit/employee/pubsub/EventPublisherTest.class
+com/digit/employee/service/EmployeeVersioningTest.class
+com/digit/employee/service/EmployeeLifecycleTest.class
+com/digit/employee/service/JurisdictionServiceTest.class
+com/digit/employee/service/EmployeeSearchByRoleTest.class
+com/digit/employee/service/EmployeePatchPutTest.class

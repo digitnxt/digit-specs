@@ -1,168 +1,376 @@
+"""
+Happy-path response-shape contract tests for the Individual Service.
+
+Asserts:
+- Status codes match the spec.
+- Response bodies match the documented shape (no envelope on the new spec —
+  Individual is returned directly, search returns IndividualSearchResponse).
+- Content-Type is application/json.
+- Gateway headers are present when a gateway profile is configured.
+"""
+
+import uuid
 import requests as req_lib
+
 from tests.helpers.curl_builder import attach_curl
 from tests.helpers.validators import (
     assert_gateway_headers,
     assert_json_content_type,
-    assert_required_fields,
-    assert_field_types,
-    assert_enum_values,
-    GENDER_VALUES,
+    assert_individual_shape,
+    assert_individual_search_response,
+    assert_exists_response,
+    assert_config_response,
 )
-from tests.helpers.factories import make_individual, make_config
+from tests.helpers.factories import (
+    make_individual,
+    make_individual_full,
+    make_individual_with_address,
+    make_individual_with_identifiers,
+    make_individual_with_documents,
+    make_individual_update,
+    make_config_request,
+)
 
 
-def _send(node, method, url, headers=None, json_body=None):
+def _send(node, method, url, headers=None, json_body=None, params=None):
     """Prepare, attach cURL for HTML report, then send."""
-    r = req_lib.Request(method, url, headers=headers, json=json_body)
+    r = req_lib.Request(method, url, headers=headers, json=json_body, params=params)
     prepared = r.prepare()
     attach_curl(node, prepared)
     return req_lib.Session().send(prepared)
 
 
-# ── Individual search ─────────────────────────────────────────────────────────
-
-class TestIndividualSearchContract:
-    def test_search_returns_object_with_array(self, request, base_url, auth_headers, gateway_headers_spec):
-        response = _send(request.node, "GET", f"{base_url}/individuals", headers=auth_headers)
-
-        assert response.status_code == 200
-        assert_json_content_type(response)
-        assert_gateway_headers(response, gateway_headers_spec)
-
-        body = response.json()
-        assert_required_fields(body, ["Individuals", "totalCount"])
-        assert isinstance(body["Individuals"], list)
-        assert isinstance(body["totalCount"], int)
-
-    def test_search_individual_item_shape(self, request, base_url, auth_headers, gateway_headers_spec):
-        response = _send(request.node, "GET", f"{base_url}/individuals", headers=auth_headers)
-        assert response.status_code == 200
-
-        for item in response.json().get("Individuals", []):
-            assert_required_fields(item, ["name", "dateOfBirth"])
-            assert_field_types(item, {"id": str, "name": str, "dateOfBirth": str})
-            assert_enum_values(item, {"gender": GENDER_VALUES})
-
-    def test_search_with_name_filter(self, request, base_url, auth_headers, gateway_headers_spec):
-        r = req_lib.Request("GET", f"{base_url}/individuals",
-                            headers=auth_headers, params={"name": "Test"})
-        prepared = r.prepare()
-        attach_curl(request.node, prepared)
-        response = req_lib.Session().send(prepared)
-
-        assert response.status_code in (200, 404)
-        assert_gateway_headers(response, gateway_headers_spec)
-
-    def test_search_pagination_params(self, request, base_url, auth_headers, gateway_headers_spec):
-        r = req_lib.Request("GET", f"{base_url}/individuals",
-                            headers=auth_headers, params={"limit": 10, "offset": 0})
-        prepared = r.prepare()
-        attach_curl(request.node, prepared)
-        response = req_lib.Session().send(prepared)
-
-        assert response.status_code == 200
-        body = response.json()
-        assert_required_fields(body, ["Individuals", "totalCount"])
-        assert body["totalCount"] >= 0
-        assert_gateway_headers(response, gateway_headers_spec)
+def _cleanup(url, headers):
+    """Best-effort cleanup — swallows errors so test teardown can't fail the suite."""
+    try:
+        req_lib.Session().send(
+            req_lib.Request("DELETE", url, headers=headers).prepare()
+        )
+    except Exception:
+        pass
 
 
-# ── Individual create ─────────────────────────────────────────────────────────
+# ── POST /individuals ─────────────────────────────────────────────────────────
 
 class TestIndividualCreateContract:
-    def test_create_returns_201_with_individual(self, request, base_url, auth_headers, gateway_headers_spec):
+    def test_create_returns_201(self, request, base_url, auth_headers, gateway_headers_spec):
         response = _send(request.node, "POST", f"{base_url}/individuals",
                          headers=auth_headers, json_body=make_individual())
-
-        assert response.status_code == 201
-        assert_json_content_type(response)
-        assert_gateway_headers(response, gateway_headers_spec)
-
-        body = response.json()
-        assert_required_fields(body, ["Individual"])
-        ind = body["Individual"]
-        assert_required_fields(ind, ["id", "name", "dateOfBirth"])
-        assert_field_types(ind, {"id": str, "name": str, "dateOfBirth": str})
-
-        req_lib.Session().send(
-            req_lib.Request("DELETE", f"{base_url}/individuals/{ind['id']}",
-                            headers=auth_headers).prepare()
-        )
-
-    def test_create_response_individual_has_id(self, request, base_url, auth_headers, gateway_headers_spec):
-        response = _send(request.node, "POST", f"{base_url}/individuals",
-                         headers=auth_headers, json_body=make_individual())
-
-        assert response.status_code == 201
-        ind = response.json()["Individual"]
-        assert ind.get("id"), "id must be non-empty in create response"
-
-        req_lib.Session().send(
-            req_lib.Request("DELETE", f"{base_url}/individuals/{ind['id']}",
-                            headers=auth_headers).prepare()
-        )
-
-
-# ── Individual get by ID ──────────────────────────────────────────────────────
-
-class TestIndividualGetContract:
-    def test_get_by_id_returns_individual_wrapper(self, request, base_url, auth_headers, gateway_headers_spec):
-        create_r = _send(request.node, "POST", f"{base_url}/individuals",
-                         headers=auth_headers, json_body=make_individual())
-        assert create_r.status_code == 201
-        individual_id = create_r.json()["Individual"]["id"]
         try:
-            response = _send(request.node, "GET",
-                             f"{base_url}/individuals/{individual_id}",
-                             headers=auth_headers)
-
-            assert response.status_code == 200
+            assert response.status_code == 201, f"create failed: {response.text}"
             assert_json_content_type(response)
             assert_gateway_headers(response, gateway_headers_spec)
-
-            body = response.json()
-            assert_required_fields(body, ["Individual"])
-            assert body["Individual"]["id"] == individual_id
+            ind = response.json()
+            assert_individual_shape(ind)
         finally:
-            req_lib.Session().send(
-                req_lib.Request("DELETE", f"{base_url}/individuals/{individual_id}",
-                                headers=auth_headers).prepare()
-            )
+            if response.status_code == 201:
+                _cleanup(f"{base_url}/individuals/{response.json()['id']}", auth_headers)
 
-    def test_get_nonexistent_id_returns_404(self, request, base_url, auth_headers, gateway_headers_spec):
-        import uuid
-        response = _send(request.node, "GET",
-                         f"{base_url}/individuals/{uuid.uuid4()}",
+    def test_create_returns_location_header(self, request, base_url, auth_headers, gateway_headers_spec):
+        response = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual())
+        try:
+            assert response.status_code == 201, f"create failed: {response.text}"
+            # Spec declares Location header on 201
+            assert "Location" in response.headers, \
+                "Location header missing from 201 response"
+            location = response.headers["Location"]
+            assert response.json()["id"] in location, \
+                f"Location header '{location}' should contain created id"
+        finally:
+            if response.status_code == 201:
+                _cleanup(f"{base_url}/individuals/{response.json()['id']}", auth_headers)
+
+    def test_create_echoes_required_fields(self, request, base_url, auth_headers, gateway_headers_spec):
+        body = make_individual(givenName="Conformance Echo")
+        response = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=body)
+        try:
+            assert response.status_code == 201, f"create failed: {response.text}"
+            ind = response.json()
+            assert ind["givenName"] == "Conformance Echo"
+            assert ind["gender"] == body["gender"]
+        finally:
+            if response.status_code == 201:
+                _cleanup(f"{base_url}/individuals/{response.json()['id']}", auth_headers)
+
+    def test_create_generates_id_and_individualId(self, request, base_url, auth_headers, gateway_headers_spec):
+        response = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual())
+        try:
+            assert response.status_code == 201, f"create failed: {response.text}"
+            ind = response.json()
+            assert ind.get("id"), "id must be server-generated and non-empty"
+            # individualId is generated by IDGen; should be present
+            assert ind.get("individualId"), "individualId must be server-generated"
+        finally:
+            if response.status_code == 201:
+                _cleanup(f"{base_url}/individuals/{response.json()['id']}", auth_headers)
+
+    def test_create_with_address(self, request, base_url, auth_headers, gateway_headers_spec):
+        response = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual_with_address())
+        try:
+            assert response.status_code == 201, f"create failed: {response.text}"
+            ind = response.json()
+            assert_individual_shape(ind)
+            assert isinstance(ind.get("address", []), list)
+            assert len(ind.get("address", [])) >= 1, "address[] should round-trip"
+        finally:
+            if response.status_code == 201:
+                _cleanup(f"{base_url}/individuals/{response.json()['id']}", auth_headers)
+
+    def test_create_with_identifiers(self, request, base_url, auth_headers, gateway_headers_spec):
+        response = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual_with_identifiers())
+        try:
+            assert response.status_code == 201, f"create failed: {response.text}"
+            ind = response.json()
+            assert_individual_shape(ind)
+            assert isinstance(ind.get("identifiers", []), list)
+            assert len(ind.get("identifiers", [])) >= 1, "identifiers[] should round-trip"
+        finally:
+            if response.status_code == 201:
+                _cleanup(f"{base_url}/individuals/{response.json()['id']}", auth_headers)
+
+    def test_create_with_documents(self, request, base_url, auth_headers, gateway_headers_spec):
+        response = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual_with_documents())
+        try:
+            assert response.status_code == 201, f"create failed: {response.text}"
+            ind = response.json()
+            assert_individual_shape(ind)
+            assert isinstance(ind.get("documents", []), list)
+            for doc in ind.get("documents", []):
+                assert "documentType" in doc
+                assert "fileStoreId" in doc
+        finally:
+            if response.status_code == 201:
+                _cleanup(f"{base_url}/individuals/{response.json()['id']}", auth_headers)
+
+
+# ── GET /individuals (search) ─────────────────────────────────────────────────
+
+class TestIndividualSearchContract:
+    def test_search_returns_200(self, request, base_url, auth_headers, gateway_headers_spec):
+        response = _send(request.node, "GET", f"{base_url}/individuals",
                          headers=auth_headers)
-
-        assert response.status_code == 404
+        assert response.status_code == 200, f"search failed: {response.text}"
         assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
+        assert_individual_search_response(response.json())
+
+    def test_search_pagination_defaults(self, request, base_url, auth_headers, gateway_headers_spec):
+        """Per spec, default page=1 and size=20."""
+        response = _send(request.node, "GET", f"{base_url}/individuals",
+                         headers=auth_headers)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["page"] == 1, f"default page should be 1, got {body['page']}"
+        assert body["size"] <= 20, f"default size should be ≤ 20, got {body['size']}"
+
+    def test_search_respects_size_query(self, request, base_url, auth_headers, gateway_headers_spec):
+        response = _send(request.node, "GET", f"{base_url}/individuals",
+                         headers=auth_headers, params={"page": 1, "size": 5})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["size"] == 5
+        assert len(body["individuals"]) <= 5
+
+    def test_search_empty_filter_returns_empty_individuals(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        """Per spec: no records matching → 200 with empty individuals, totalCount=0; never 404."""
+        non_matching = "z" * 100  # unlikely to match any real record
+        response = _send(request.node, "GET", f"{base_url}/individuals",
+                         headers=auth_headers, params={"givenName": non_matching})
+        assert response.status_code == 200, \
+            f"empty filter result must be 200 (never 404), got {response.status_code}: {response.text}"
+        body = response.json()
+        assert_individual_search_response(body)
 
 
-# ── Config upsert ─────────────────────────────────────────────────────────────
+# ── GET /individuals/exists ──────────────────────────────────────────────────
+
+class TestIndividualExistsContract:
+    def test_exists_no_match_returns_false(self, request, base_url, auth_headers, gateway_headers_spec):
+        # Random UUID we never created
+        response = _send(request.node, "GET", f"{base_url}/individuals/exists",
+                         headers=auth_headers, params={"id": str(uuid.uuid4())})
+        assert response.status_code == 200, \
+            f"exists check should return 200 even on no-match, got {response.status_code}: {response.text}"
+        assert_json_content_type(response)
+        assert_gateway_headers(response, gateway_headers_spec)
+        body = response.json()
+        assert_exists_response(body)
+        assert body["exists"] is False, "expected exists=false for random UUID"
+
+    def test_exists_match_returns_true(self, request, base_url, auth_headers, gateway_headers_spec):
+        create_r = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual())
+        if create_r.status_code != 201:
+            import pytest
+            pytest.skip(f"setup create failed: {create_r.text}")
+        ind_id = create_r.json()["id"]
+        try:
+            response = _send(request.node, "GET", f"{base_url}/individuals/exists",
+                             headers=auth_headers, params={"id": ind_id})
+            assert response.status_code == 200
+            body = response.json()
+            assert_exists_response(body)
+            assert body["exists"] is True, f"expected exists=true for created id {ind_id}"
+        finally:
+            _cleanup(f"{base_url}/individuals/{ind_id}", auth_headers)
+
+
+# ── GET /individuals/{id} ─────────────────────────────────────────────────────
+
+class TestIndividualGetByIdContract:
+    def test_get_by_id_returns_individual(self, request, base_url, auth_headers, gateway_headers_spec):
+        create_r = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual())
+        if create_r.status_code != 201:
+            import pytest
+            pytest.skip(f"setup create failed: {create_r.text}")
+        ind_id = create_r.json()["id"]
+        try:
+            response = _send(request.node, "GET", f"{base_url}/individuals/{ind_id}",
+                             headers=auth_headers)
+            assert response.status_code == 200, f"get failed: {response.text}"
+            assert_json_content_type(response)
+            assert_gateway_headers(response, gateway_headers_spec)
+            ind = response.json()
+            assert_individual_shape(ind)
+            assert ind["id"] == ind_id
+        finally:
+            _cleanup(f"{base_url}/individuals/{ind_id}", auth_headers)
+
+
+# ── PUT /individuals/{id} ────────────────────────────────────────────────────
+
+class TestIndividualUpdateContract:
+    def test_update_returns_200_with_updated_individual(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        create_r = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual())
+        if create_r.status_code != 201:
+            import pytest
+            pytest.skip(f"setup create failed: {create_r.text}")
+        created = create_r.json()
+        ind_id = created["id"]
+        # Per spec, supplying `version` enforces optimistic locking; mismatch
+        # returns 409. Pass the current version from the create response so
+        # the update doesn't trip ROW_VERSION_MISMATCH.
+        current_version = created.get("version", 1)
+        try:
+            update_body = make_individual_update(
+                givenName="Conformance Updated",
+                version=current_version,
+            )
+            response = _send(request.node, "PUT",
+                             f"{base_url}/individuals/{ind_id}",
+                             headers=auth_headers, json_body=update_body)
+            assert response.status_code == 200, f"update failed: {response.text}"
+            assert_json_content_type(response)
+            assert_gateway_headers(response, gateway_headers_spec)
+            ind = response.json()
+            assert_individual_shape(ind)
+            assert ind["id"] == ind_id, "update must preserve id"
+            assert ind["givenName"] == "Conformance Updated", \
+                "update should reflect the new givenName"
+        finally:
+            _cleanup(f"{base_url}/individuals/{ind_id}", auth_headers)
+
+
+# ── DELETE /individuals/{id} ──────────────────────────────────────────────────
+
+class TestIndividualDeleteContract:
+    def test_delete_returns_204_no_content(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        """Per spec: DELETE returns 204 No Content on success — soft-deletes
+        the record (isActive=false) but returns no response body."""
+        create_r = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual())
+        if create_r.status_code != 201:
+            import pytest
+            pytest.skip(f"setup create failed: {create_r.text}")
+        ind_id = create_r.json()["id"]
+
+        response = _send(request.node, "DELETE",
+                         f"{base_url}/individuals/{ind_id}",
+                         headers=auth_headers)
+        assert response.status_code == 204, f"delete failed: {response.status_code} {response.text}"
+        assert_gateway_headers(response, gateway_headers_spec)
+        # 204 has no body — don't try to parse JSON.
+
+    def test_get_after_delete_returns_404(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        create_r = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual())
+        if create_r.status_code != 201:
+            import pytest
+            pytest.skip(f"setup create failed: {create_r.text}")
+        ind_id = create_r.json()["id"]
+        del_r = _send(request.node, "DELETE",
+                      f"{base_url}/individuals/{ind_id}", headers=auth_headers)
+        assert del_r.status_code == 204
+
+        response = _send(request.node, "GET",
+                         f"{base_url}/individuals/{ind_id}", headers=auth_headers)
+        assert response.status_code == 404, \
+            f"GET on soft-deleted record should be 404, got {response.status_code}"
+
+
+# ── POST /configs (upsert) ────────────────────────────────────────────────────
 
 class TestConfigUpsertContract:
-    def test_upsert_config_returns_config_object(self, request, base_url, auth_headers, gateway_headers_spec):
+    def test_upsert_config_returns_200_or_201(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        """Per spec: 201 first time per tenant, 200 thereafter."""
         response = _send(request.node, "POST", f"{base_url}/configs",
-                         headers=auth_headers, json_body=make_config())
-
-        assert response.status_code in (200, 201)
+                         headers=auth_headers, json_body=make_config_request())
+        assert response.status_code in (200, 201), \
+            f"upsert config status must be 200 or 201, got {response.status_code}: {response.text}"
         assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
+        assert_config_response(response.json())
 
-        body = response.json()
-        assert_required_fields(body, ["key", "value"])
-        assert_field_types(body, {"key": str, "value": str})
+    def test_upsert_then_update_returns_200(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        # First call may be 201 or 200 depending on whether a prior config exists.
+        first = _send(request.node, "POST", f"{base_url}/configs",
+                      headers=auth_headers, json_body=make_config_request())
+        assert first.status_code in (200, 201)
+        # Second call: definitely 200 (config now exists for this tenant).
+        second = _send(request.node, "POST", f"{base_url}/configs",
+                       headers=auth_headers,
+                       json_body=make_config_request(
+                           uniquenessCriteria=["mobileNumber", "name"]))
+        assert second.status_code == 200, \
+            f"second upsert should be 200, got {second.status_code}: {second.text}"
+        assert_config_response(second.json())
 
-    def test_upsert_config_update_returns_200(self, request, base_url, auth_headers, gateway_headers_spec):
-        cfg = make_config()
-        _send(request.node, "POST", f"{base_url}/configs",
-              headers=auth_headers, json_body=cfg)
 
-        cfg["value"] = "updated-value"
-        response = _send(request.node, "POST", f"{base_url}/configs",
-                         headers=auth_headers, json_body=cfg)
+# ── GET /configs ──────────────────────────────────────────────────────────────
 
-        assert response.status_code in (200, 201)
+class TestConfigGetContract:
+    def test_get_config_after_upsert_returns_200(
+        self, request, base_url, auth_headers, gateway_headers_spec
+    ):
+        # Make sure a config exists before reading.
+        upsert_r = _send(request.node, "POST", f"{base_url}/configs",
+                         headers=auth_headers, json_body=make_config_request())
+        assert upsert_r.status_code in (200, 201), \
+            f"setup upsert failed: {upsert_r.text}"
+
+        response = _send(request.node, "GET", f"{base_url}/configs",
+                         headers=auth_headers)
+        assert response.status_code == 200, f"get config failed: {response.text}"
+        assert_json_content_type(response)
         assert_gateway_headers(response, gateway_headers_spec)
+        assert_config_response(response.json())

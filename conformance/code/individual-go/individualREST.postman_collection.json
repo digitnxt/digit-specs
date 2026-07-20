@@ -1,0 +1,393 @@
+{
+  "info": {
+    "_postman_id": "7cfbe6a7-36f6-48a2-9ff7-5df4a1ab2198",
+    "name": "DIGIT Individual v3",
+    "description": "Production collection for the DIGIT Individual service (v3).\n\n## Endpoints\n- **Individuals** — POST / GET (search) / GET /exists / GET / PUT / DELETE under `/individuals`.\n- **Configs** — POST (upsert) / GET under `/configs`.\n- **Operational** — `/health`.\n\n## Variables\n| Variable | Default | Notes |\n|---|---|---|\n| `baseUrl` | `http://localhost:8080/individuals/v3` | LTS: `https://digit-lts.digit.org/individuals/v3` |\n| `tenantId` | `pg` | Sent as X-Tenant-ID. |\n| `userId` | `00000000-0000-0000-0000-000000000001` | Sent as X-User-ID. |\n| `accessToken` | — | Keycloak bearer (Kong-validated). |\n| `individualId` | (auto) | Captured from Create response. |\n\n## Error envelope\nAll non-2xx responses are `[]Error` arrays. Common codes: `VALIDATION_ERROR`, `NOT_FOUND`, `UNIQUE_ENTITY_ERROR`, `ROW_VERSION_MISMATCH`, `DATABASE_ERROR`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "35025473",
+    "_collection_link": "https://go.postman.co/collection/35025473-7cfbe6a7-36f6-48a2-9ff7-5df4a1ab2198?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Individuals",
+      "item": [
+        {
+          "name": "Create individual",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body && body.id) { pm.collectionVariables.set('individualId', body.id); console.log('individualId=' + body.id); }",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "disabled": true
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"givenName\":    \"Aisha\",\n  \"familyName\":   \"Khan\",\n  \"gender\":       \"FEMALE\",\n//   \"mobileNumber\": \"9876543210\",\n  \"email\":        \"aisha@example.com\",\n  \"dateOfBirth\":  \"1990-01-15\",\n  \"locale\":       \"en-IN\",\n  \"additionalAttributes\": { \"occupation\": \"teacher\" },\n  \"address\": [\n    { \"type\": \"PERMANENT\", \"city\": \"Pune\", \"pincode\": \"411001\", \"country\": \"IN\" }\n  ],\n  \"identifiers\": [\n    { \"identifierType\": \"PAN\", \"identifierId\": \"ABCDE1234F\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/individuals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "individuals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get individual by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/individuals/{{individualId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "individuals",
+                "{{individualId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search individuals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/individuals?givenName=Aisha&gender=FEMALE&page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "individuals"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "individualId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "givenName",
+                  "value": "Aisha"
+                },
+                {
+                  "key": "mobileNumber",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "gender",
+                  "value": "FEMALE"
+                },
+                {
+                  "key": "dateOfBirth",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "includeDeleted",
+                  "value": "false",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check exists",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/individuals/exists?id={{individualId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "individuals",
+                "exists"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{individualId}}"
+                },
+                {
+                  "key": "individualId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "mobileNumber",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "At least one searchable filter is required (id, individualId, givenName, mobileNumber, gender, dateOfBirth)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update individual (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"givenName\":   \"Aisha\",\n  \"familyName\":  \"KhanUpdated\",\n  \"gender\":      \"FEMALE\",\n  \"mobileNumber\":\"9876543210\",\n  \"email\":       \"aisha.updated@example.com\",\n  \"dateOfBirth\": \"1990-01-15\",\n  \"version\":     1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/individuals/{{individualId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "individuals",
+                "{{individualId}}"
+              ]
+            },
+            "description": "Full replace. `version` is the optimistic-lock counter — supply the value last returned by Create / Get. Stale value → 409 ROW_VERSION_MISMATCH."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete individual",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/individuals/{{individualId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "individuals",
+                "{{individualId}}"
+              ]
+            },
+            "description": "Soft delete. Returns 204 No Content on success; 404 if already deleted or unknown."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Configs",
+      "item": [
+        {
+          "name": "Upsert tenant config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileRegex\":        \"^[6-9][0-9]{9}$\",\n  \"nameRegex\":          \"^[A-Za-z ]+$\",\n  \"uniquenessCriteria\": [\"mobileNumber\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/configs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "configs"
+              ]
+            },
+            "description": "At least one of mobileRegex / nameRegex / uniquenessCriteria must be present — empty bodies return 400."
+          },
+          "response": []
+        },
+        {
+          "name": "Get tenant config",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}",
+                "disabled": true
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/configs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "configs"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.request.headers.has('X-Request-ID')) {",
+          "  pm.request.headers.add({ key: 'X-Request-ID', value: 'pm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/individuals/v3"
+    },
+    {
+      "key": "tenantId",
+      "value": "pg"
+    },
+    {
+      "key": "userId",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "individualId",
+      "value": ""
+    }
+  ]
+}

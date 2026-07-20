@@ -37,6 +37,8 @@ def pytest_addoption(parser):
                      help="Gateway profile for header validation.")
     parser.addoption("--tenant-id", action="store", default="default",
                      help="X-Tenant-ID header value")
+    parser.addoption("--user-id", action="store", default="conformance-test-user",
+                     help="X-User-ID header value (required by Individual Service middleware)")
 
 
 @pytest.fixture(scope="session")
@@ -46,11 +48,20 @@ def base_url(request):
 
 @pytest.fixture(scope="session")
 def auth_headers(request):
+    """
+    Headers sent on every authenticated request. The Individual Service
+    middleware requires X-User-ID on top of the usual bearer token + tenant.
+    """
     token = request.config.getoption("--api-token")
     tenant = request.config.getoption("--tenant-id")
-    headers = {"X-Tenant-ID": tenant}
+    user_id = request.config.getoption("--user-id")
+    headers = {}
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    if tenant:
+        headers["X-Tenant-ID"] = tenant
+    if user_id:
+        headers["X-User-ID"] = user_id
     return headers
 
 
@@ -62,7 +73,7 @@ def gateway_headers_spec(request):
 
 @pytest.fixture(scope="session")
 def swagger_schema(base_url):
-    _SCHEMA_PATH = pathlib.Path(__file__).parent / "schema.yaml"
+    _SCHEMA_PATH = pathlib.Path(__file__).parent / "individual.yaml"
     return schemathesis.openapi.from_path(_SCHEMA_PATH)
 
 

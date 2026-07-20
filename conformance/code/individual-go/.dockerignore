@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.example
+README.md
+IMPLEMENTATION_GUIDE.md
+REMAINING_IMPLEMENTATION.md
+TECHNICAL_DESIGN_CONTRACT.md
+*.md
+bin/
+docs/
+tests/
+.vscode/
+.idea/
+*.log

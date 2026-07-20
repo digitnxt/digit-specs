@@ -1,0 +1,108 @@
+server:
+  port: ${HTTP_PORT:8080}
+
+spring:
+  application:
+    name: ${OTEL_SERVICE_NAME:employee-service}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:employee_db}?sslmode=${DB_SSL_MODE:disable}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    # Boot's Flyway auto-config is not used; the service runs Flyway explicitly (FlywayConfig)
+    # against the default (public) schema at startup, and per-tenant via tenant-migration-java.
+    enabled: false
+
+# Official DIGIT tracer (org.digit:tracer) configuration. Telemetry, the request-tracing filter and
+# Micrometer metrics are owned by the tracer library. NOTE: digit.tracer.pubsub.type is intentionally
+# left UNSET so no PubSubClient bean is created — pub/sub becomes a graceful no-op and no Kafka broker
+# is required at startup (matches the Go service's graceful degradation).
+digit:
+  tracer:
+    request-logging-enabled: true
+    otel:
+      enabled: ${OTEL_ENABLED:false}
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+      service-name: ${OTEL_SERVICE_NAME:employee-service}
+      service-version: ${OTEL_SERVICE_VERSION:1.0.0}
+
+# Actuator exposes the Micrometer metrics (http_server_requests, db_operations, ...) registered by the
+# tracer + employee BusinessMetrics. Disable Spring Boot's own OTLP export auto-config.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  otlp:
+    metrics:
+      export:
+        enabled: false
+    tracing:
+      export:
+        enabled: false
+
+# employee service configuration (mirrors the Go service config.LoadConfig defaults)
+employee:
+  server:
+    context-path: ${SERVER_CONTEXT_PATH:/employee}
+  otel:
+    service-name: ${OTEL_SERVICE_NAME:employee-service}
+    service-version: ${OTEL_SERVICE_VERSION:1.0.0}
+    otlp-endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:localhost:4320}
+    sampling-ratio: ${OTEL_TRACES_SAMPLER_ARG:1.0}
+    enabled: ${OTEL_ENABLED:false}
+    metrics-enabled: ${OTEL_METRICS_ENABLED:false}
+    prometheus-port: ${PROMETHEUS_PORT:9090}
+  logging:
+    level: ${LOG_LEVEL:info}
+    console-logs-enabled: ${CONSOLE_LOGS_ENABLED:true}
+  idgen:
+    host: ${IDGEN_HOST:http://localhost:8100}
+    path: ${IDGEN_PATH:/idgen/v3/generate}
+    idgen-name: ${IDGEN_NAME:EmployeeCode}
+    enabled: ${IDGEN_ENABLED:true}
+  boundary:
+    base-url: ${BOUNDARY_HOST:http://localhost:8095}
+    path: ${BOUNDARY_PATH:/boundary/v3/relationship}
+    enabled: ${BOUNDARY_ENABLED:true}
+  individual:
+    host: ${INDIVIDUAL_HOST:http://localhost:8086}
+    path: ${INDIVIDUAL_PATH:/individuals/v3/individuals}
+    enabled: ${INDIVIDUAL_ENABLED:false}
+  keycloak:
+    base-url: ${KEYCLOAK_BASE_URL:https://digit-lts.digit.org/keycloak}
+    enabled: ${KEYCLOAK_ENABLED:false}
+  tenant-migration:
+    enabled: ${SCHEMA_SEPARATION_MODE:false}
+    topic: ${SCHEMA_SEPARATION_TOPIC:account-migration}
+    flyway-locations: ${MIGRATION_FLYWAY_LOCATIONS:classpath:db/migration}
+    schema-table: ${MIGRATION_SCHEMA_TABLE:employee_schema}
+  pubsub:
+    enabled: ${PUBSUB_ENABLED:false}
+    type: ${PUBSUB_TYPE:kafka}
+    topics:
+      create-employee: ${PUBSUB_TOPIC_CREATE_EMPLOYEE:employee-create-employee}
+      update-employee: ${PUBSUB_TOPIC_UPDATE_EMPLOYEE:employee-update-employee}
+      delete-employee: ${PUBSUB_TOPIC_DELETE_EMPLOYEE:employee-delete-employee}
+      create-jurisdiction: ${PUBSUB_TOPIC_CREATE_JURISDICTION:employee-create-jurisdiction}
+      update-jurisdiction: ${PUBSUB_TOPIC_UPDATE_JURISDICTION:employee-update-jurisdiction}
+    kafka:
+      brokers: ${KAFKA_BROKERS:localhost:9092}
+      auto-create: ${KAFKA_AUTO_CREATE_TOPICS_ENABLE:true}
+      partitions: ${KAFKA_PARTITION_COUNT:1}
+      replication: ${KAFKA_REPLICATION_FACTOR:1}
+      consumer-group: ${KAFKA_CONSUMER_GROUP:employee-service}
+    redis:
+      address: ${REDIS_ADDRESS:localhost:6379}
+      password: ${REDIS_PASSWORD:}
+      db: ${REDIS_DB:0}
+      consumer-group: ${REDIS_CONSUMER_GROUP:employee-service}
+      consumer-id: ${REDIS_CONSUMER_ID:employee-service-1}
+      retention-days: ${REDIS_RETENTION_DAYS:7}
+      max-stream-length: ${REDIS_MAX_STREAM_LENGTH:1000000}
+      cleanup-interval-seconds: ${REDIS_CLEANUP_INTERVAL:3600}
+
+logging:
+  level:
+    root: info
