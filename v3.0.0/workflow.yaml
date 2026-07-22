@@ -151,16 +151,23 @@ paths:
                   version: "1.0"
                   sla: 432000000
                   slotPercentage: 80
+                  additionalDetails:
+                    category: licensing
+                    module: trade-license
                   states:
                     - code: PENDING_REVIEW
                       name: Pending Review
                       type: INITIAL
                       description: Application submitted and awaiting officer review.
                       sla: 172800000
+                      additionalDetails:
+                        queue: trade-license-review
                       actions:
                         - code: APPROVE
                           label: Approve
                           nextState: APPROVED
+                          additionalDetails:
+                            uiColor: success
                         - code: RETURN
                           label: Return for Correction
                           nextState: RETURNED
@@ -518,6 +525,10 @@ paths:
                   minimum: 1
                   maximum: 99
                   description: Near-SLA threshold percentage for this process version.
+                additionalDetails:
+                  type: object
+                  additionalProperties: true
+                  description: Free-form process metadata for tenant or module-specific configuration.
       responses:
         '201':
           description: Process created
@@ -536,6 +547,10 @@ paths:
                     type: integer
                     minimum: 1
                     maximum: 99
+                  additionalDetails:
+                    type: object
+                    additionalProperties: true
+                    description: Free-form process metadata for tenant or module-specific configuration.
                   auditDetail: { $ref: '#/components/schemas/AuditDetail' }
         '400':
           description: Validation error
@@ -606,6 +621,10 @@ paths:
                       type: integer
                       minimum: 1
                       maximum: 99
+                    additionalDetails:
+                      type: object
+                      additionalProperties: true
+                      description: Free-form process metadata for tenant or module-specific configuration.
                     auditDetail: { $ref: '#/components/schemas/AuditDetail' }
         '400':
           description: Validation error
@@ -663,6 +682,10 @@ paths:
                     type: integer
                     minimum: 1
                     maximum: 99
+                  additionalDetails:
+                    type: object
+                    additionalProperties: true
+                    description: Free-form process metadata for tenant or module-specific configuration.
                   auditDetail: { $ref: '#/components/schemas/AuditDetail' }
         '404':
           description: Process not found
@@ -711,6 +734,10 @@ paths:
                   minimum: 1
                   maximum: 99
                   description: Near-SLA threshold percentage for this process version.
+                additionalDetails:
+                  type: object
+                  additionalProperties: true
+                  description: Free-form process metadata for tenant or module-specific configuration.
       responses:
         '200':
           description: Updated process
@@ -729,6 +756,10 @@ paths:
                     type: integer
                     minimum: 1
                     maximum: 99
+                  additionalDetails:
+                    type: object
+                    additionalProperties: true
+                    description: Free-form process metadata for tenant or module-specific configuration.
                   auditDetail: { $ref: '#/components/schemas/AuditDetail' }
         '404':
           description: Process not found
@@ -1913,15 +1944,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /transition/count/total:
+  /transition/count:
 
     get:
       summary: Count process instances
-      operationId: countTransitionTotal
+      operationId: countTransitions
       tags: [Transition]
       description: |
-        Returns the total number of process instances matching the supplied
+        Returns aggregate counts for process instances matching the supplied
         filters, scoped to the tenant resolved from `X-Tenant-ID`.
+
+        Use `countType` to select the aggregate:
+        - `total`: total number of matching process instances.
+        - `status`: counts grouped by current state.
+        - `inbox`: current work items assigned/actionable for the supplied
+          `assignee` or authenticated user.
+        - `escalated`: process instances marked as escalated.
+        - `slaBreached`: process instances whose configured state or process
+          SLA threshold has already been breached. `processCode` is required.
+        - `nearSla`: process instances that have crossed the configured
+          near-SLA threshold but have not yet breached the SLA. The near-SLA
+          threshold is resolved from `slotPercentage` on the process version.
+          `processCode` is required.
 
         When `history: false` (default), counts are calculated only from the
         latest non-terminal process instance state per entity/process. When
@@ -1936,6 +1980,7 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/TransitionCountType'
         - $ref: '#/components/parameters/TransitionCountProcessCode'
         - $ref: '#/components/parameters/TransitionCountVersion'
         - $ref: '#/components/parameters/TransitionCountEntityId'
@@ -1947,208 +1992,7 @@ paths:
         - $ref: '#/components/parameters/TransitionCountHistory'
       responses:
         '200':
-          $ref: '#/components/responses/TransitionTotalCountResponse'
-        '400':
-          $ref: '#/components/responses/TransitionCountBadRequest'
-        '403':
-          $ref: '#/components/responses/TransitionCountForbidden'
-        '404':
-          $ref: '#/components/responses/TransitionCountNotFound'
-        '500':
-          $ref: '#/components/responses/TransitionCountServerError'
-
-  /transition/count/status:
-
-    get:
-      summary: Count process instances by status
-      operationId: countTransitionStatus
-      tags: [Transition]
-      description: |
-        Returns counts grouped by current state for process instances matching
-        the supplied filters, scoped to the tenant resolved from `X-Tenant-ID`.
-      parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/UserId'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - $ref: '#/components/parameters/TransitionCountProcessCode'
-        - $ref: '#/components/parameters/TransitionCountVersion'
-        - $ref: '#/components/parameters/TransitionCountEntityId'
-        - $ref: '#/components/parameters/TransitionCountCurrentState'
-        - $ref: '#/components/parameters/TransitionCountAssignee'
-        - $ref: '#/components/parameters/TransitionCountEscalated'
-        - $ref: '#/components/parameters/TransitionCountFromDate'
-        - $ref: '#/components/parameters/TransitionCountToDate'
-        - $ref: '#/components/parameters/TransitionCountHistory'
-      responses:
-        '200':
-          $ref: '#/components/responses/TransitionStatusCountResponse'
-        '400':
-          $ref: '#/components/responses/TransitionCountBadRequest'
-        '403':
-          $ref: '#/components/responses/TransitionCountForbidden'
-        '404':
-          $ref: '#/components/responses/TransitionCountNotFound'
-        '500':
-          $ref: '#/components/responses/TransitionCountServerError'
-
-  /transition/count/inbox:
-
-    get:
-      summary: Count inbox process instances
-      operationId: countTransitionInbox
-      tags: [Transition]
-      description: |
-        Returns the number of current work items assigned to the supplied
-        `assignee`, scoped to the tenant resolved from `X-Tenant-ID`.
-      parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/UserId'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - $ref: '#/components/parameters/TransitionCountProcessCode'
-        - $ref: '#/components/parameters/TransitionCountVersion'
-        - $ref: '#/components/parameters/TransitionCountEntityId'
-        - $ref: '#/components/parameters/TransitionCountCurrentState'
-        - $ref: '#/components/parameters/TransitionCountRequiredAssignee'
-        - $ref: '#/components/parameters/TransitionCountFromDate'
-        - $ref: '#/components/parameters/TransitionCountToDate'
-      responses:
-        '200':
-          $ref: '#/components/responses/TransitionInboxCountResponse'
-        '400':
-          $ref: '#/components/responses/TransitionCountBadRequest'
-        '403':
-          $ref: '#/components/responses/TransitionCountForbidden'
-        '404':
-          $ref: '#/components/responses/TransitionCountNotFound'
-        '500':
-          $ref: '#/components/responses/TransitionCountServerError'
-
-  /transition/count/escalated:
-
-    get:
-      summary: Count escalated process instances
-      operationId: countTransitionEscalated
-      tags: [Transition]
-      description: |
-        Returns the number of process instances marked as escalated, scoped to
-        the tenant resolved from `X-Tenant-ID`.
-      parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/UserId'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - $ref: '#/components/parameters/TransitionCountProcessCode'
-        - $ref: '#/components/parameters/TransitionCountVersion'
-        - $ref: '#/components/parameters/TransitionCountEntityId'
-        - $ref: '#/components/parameters/TransitionCountCurrentState'
-        - $ref: '#/components/parameters/TransitionCountAssignee'
-        - $ref: '#/components/parameters/TransitionCountFromDate'
-        - $ref: '#/components/parameters/TransitionCountToDate'
-        - $ref: '#/components/parameters/TransitionCountHistory'
-      responses:
-        '200':
-          $ref: '#/components/responses/TransitionEscalatedCountResponse'
-        '400':
-          $ref: '#/components/responses/TransitionCountBadRequest'
-        '403':
-          $ref: '#/components/responses/TransitionCountForbidden'
-        '404':
-          $ref: '#/components/responses/TransitionCountNotFound'
-        '500':
-          $ref: '#/components/responses/TransitionCountServerError'
-
-  /transition/count/sla-breached:
-
-    get:
-      summary: Count SLA-breached process instances
-      operationId: countTransitionSlaBreached
-      tags: [Transition]
-      description: |
-        Returns the number of process instances whose configured state or
-        process SLA threshold has already been breached.
-        `processCode` is required.
-      parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/UserId'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - $ref: '#/components/parameters/TransitionCountRequiredProcessCode'
-        - $ref: '#/components/parameters/TransitionCountVersion'
-        - $ref: '#/components/parameters/TransitionCountEntityId'
-        - $ref: '#/components/parameters/TransitionCountCurrentState'
-        - $ref: '#/components/parameters/TransitionCountAssignee'
-        - $ref: '#/components/parameters/TransitionCountFromDate'
-        - $ref: '#/components/parameters/TransitionCountToDate'
-        - $ref: '#/components/parameters/TransitionCountHistory'
-      responses:
-        '200':
-          $ref: '#/components/responses/TransitionSlaBreachedCountResponse'
-        '400':
-          $ref: '#/components/responses/TransitionCountBadRequest'
-        '403':
-          $ref: '#/components/responses/TransitionCountForbidden'
-        '404':
-          $ref: '#/components/responses/TransitionCountNotFound'
-        '500':
-          $ref: '#/components/responses/TransitionCountServerError'
-
-  /transition/count/near-sla:
-
-    get:
-      summary: Count near-SLA process instances
-      operationId: countTransitionNearSla
-      tags: [Transition]
-      description: |
-        Returns the number of process instances that have crossed the configured
-        near-SLA threshold but have not yet breached the SLA. The near-SLA
-        threshold is resolved from `slotPercentage` on the process version. For
-        example, `80` means elapsed time is at least 80 percent and less than
-        100 percent of the configured SLA.
-
-        `processCode` is required.
-      parameters:
-        - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/CorrelationIdHeader'
-        - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ForwardedForHeader'
-        - $ref: '#/components/parameters/UserId'
-        - $ref: '#/components/parameters/ClientId'
-        - $ref: '#/components/parameters/ClientSecret'
-        - $ref: '#/components/parameters/TimeStamp'
-        - $ref: '#/components/parameters/TransitionCountRequiredProcessCode'
-        - $ref: '#/components/parameters/TransitionCountVersion'
-        - $ref: '#/components/parameters/TransitionCountEntityId'
-        - $ref: '#/components/parameters/TransitionCountCurrentState'
-        - $ref: '#/components/parameters/TransitionCountAssignee'
-        - $ref: '#/components/parameters/TransitionCountFromDate'
-        - $ref: '#/components/parameters/TransitionCountToDate'
-        - $ref: '#/components/parameters/TransitionCountHistory'
-      responses:
-        '200':
-          $ref: '#/components/responses/TransitionNearSlaCountResponse'
+          $ref: '#/components/responses/TransitionCountResponse'
         '400':
           $ref: '#/components/responses/TransitionCountBadRequest'
         '403':
@@ -2408,6 +2252,15 @@ components:
 
     # ── Transition count query parameters ────────────────────────────────────────
 
+    TransitionCountType:
+      name: countType
+      in: query
+      required: true
+      description: Aggregate count to return.
+      schema:
+        type: string
+        enum: [total, status, inbox, escalated, slaBreached, nearSla]
+
     TransitionCountProcessCode:
       name: processCode
       in: query
@@ -2415,16 +2268,6 @@ components:
       description: Filter by process code.
       schema:
         type: string
-        maxLength: 64
-
-    TransitionCountRequiredProcessCode:
-      name: processCode
-      in: query
-      required: true
-      description: Process code to evaluate for SLA-based counts.
-      schema:
-        type: string
-        minLength: 1
         maxLength: 64
 
     TransitionCountVersion:
@@ -2464,16 +2307,6 @@ components:
       description: Filter by assignee user ID.
       schema:
         type: string
-        maxLength: 256
-
-    TransitionCountRequiredAssignee:
-      name: assignee
-      in: query
-      required: true
-      description: User ID whose current inbox work items should be counted.
-      schema:
-        type: string
-        minLength: 1
         maxLength: 256
 
     TransitionCountEscalated:
@@ -2533,8 +2366,8 @@ components:
 
   responses:
 
-    TransitionTotalCountResponse:
-      description: Total process-instance count returned.
+    TransitionCountResponse:
+      description: Count returned.
       headers:
         X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
         X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -2548,109 +2381,32 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/TransitionCountResponse'
-          example:
-            countType: total
-            totalCount: 47
-
-    TransitionStatusCountResponse:
-      description: Status grouped process-instance counts returned.
-      headers:
-        X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
-        X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
-        X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
-        X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
-        X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
-        X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
-        X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
-        X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TransitionCountResponse'
-          example:
-            countType: status
-            totalCount: 47
-            statusCounts:
-              - currentState: PENDING_REVIEW
-                count: 31
-              - currentState: APPROVED
-                count: 16
-
-    TransitionInboxCountResponse:
-      description: Inbox process-instance count returned.
-      headers:
-        X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
-        X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
-        X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
-        X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
-        X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
-        X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
-        X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
-        X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TransitionCountResponse'
-          example:
-            countType: inbox
-            totalCount: 12
-
-    TransitionEscalatedCountResponse:
-      description: Escalated process-instance count returned.
-      headers:
-        X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
-        X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
-        X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
-        X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
-        X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
-        X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
-        X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
-        X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TransitionCountResponse'
-          example:
-            countType: escalated
-            totalCount: 6
-
-    TransitionSlaBreachedCountResponse:
-      description: SLA-breached process-instance count returned.
-      headers:
-        X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
-        X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
-        X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
-        X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
-        X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
-        X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
-        X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
-        X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TransitionCountResponse'
-          example:
-            countType: slaBreached
-            totalCount: 4
-
-    TransitionNearSlaCountResponse:
-      description: Near-SLA process-instance count returned.
-      headers:
-        X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
-        X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
-        X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
-        X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
-        X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
-        X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
-        X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
-        X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TransitionCountResponse'
-          example:
-            countType: nearSla
-            totalCount: 8
+          examples:
+            total:
+              summary: Total matching instances
+              value:
+                countType: total
+                totalCount: 47
+            status:
+              summary: Counts grouped by current state
+              value:
+                countType: status
+                totalCount: 47
+                statusCounts:
+                  - currentState: PENDING_REVIEW
+                    count: 31
+                  - currentState: APPROVED
+                    count: 16
+            inbox:
+              summary: Current inbox count
+              value:
+                countType: inbox
+                totalCount: 12
+            nearSla:
+              summary: Instances nearing SLA breach
+              value:
+                countType: nearSla
+                totalCount: 8
 
     TransitionCountBadRequest:
       description: Bad request — invalid query parameters or missing required criteria.
@@ -2734,6 +2490,10 @@ components:
           description: |
             If `true`, the transition is rejected unless the authenticated caller
             is listed in `ProcessInstance.assignees` at the time of execution.
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form action metadata for tenant, module, or UI-specific configuration.
       x-businessRules:
         - code is immutable after creation; must be unique within the state.
         - nextState must reference a valid State.code within the same process.
@@ -2796,6 +2556,10 @@ components:
             State-level SLA in milliseconds. Time allowed for the process
             instance to exit this state before escalation is triggered.
           example: 172800000
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form state metadata for tenant, module, or UI-specific configuration.
         actions:
           type: array
           description: |
@@ -2859,6 +2623,10 @@ components:
             less than 100 percent of the applicable process or state SLA has
             elapsed. If omitted, the service default applies.
           example: 80
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form process metadata for tenant, module, or UI-specific configuration.
         states:
           type: array
           minItems: 1
@@ -2930,6 +2698,10 @@ components:
             type: string
             maxLength: 64
             example: TRADE_LICENSE_APPROVER
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form action metadata for tenant, module, or UI-specific configuration.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
       x-businessRules:
@@ -2977,6 +2749,10 @@ components:
           readOnly: true
           description: Code of the parent process.
           example: trade-license-approval
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form state metadata for tenant, module, or UI-specific configuration.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
       x-businessRules:
@@ -3016,6 +2792,10 @@ components:
           readOnly: true
           description: Code of the parent process.
           example: trade-license-approval
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form state metadata for tenant, module, or UI-specific configuration.
         actions:
           type: array
           description: Actions available at this state.
@@ -3068,6 +2848,10 @@ components:
           type: string
           readOnly: true
           description: Tenant that owns this process. Resolved from the Bearer token.
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form process metadata for tenant, module, or UI-specific configuration.
         states:
           type: array
           description: All states in the process with their actions.
