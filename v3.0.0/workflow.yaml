@@ -3042,6 +3042,12 @@ components:
           description: |
             Additional key-value attributes validated against `assigneeCheck`
             and any attribute rules configured on the action.
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: |
+            Free-form transition metadata supplied by the caller and stored with
+            the transition row.
 
     TransitionResponse:
       type: object
@@ -3097,6 +3103,10 @@ components:
           format: int64
           readOnly: true
           description: Remaining process-level SLA in milliseconds.
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form metadata recorded against this transition.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
@@ -3138,6 +3148,10 @@ components:
           items:
             $ref: '#/components/schemas/Document'
           description: Documents attached at the time of this transition.
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form metadata recorded at the time of this transition.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
@@ -3202,6 +3216,10 @@ components:
           format: int64
           readOnly: true
           description: Remaining process-level SLA in milliseconds.
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form metadata from the last transition on this instance.
         roles:
           type: array
           items:
