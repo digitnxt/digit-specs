@@ -213,8 +213,27 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -388,8 +407,27 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -446,6 +484,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: Employee not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -588,8 +634,27 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -724,8 +789,27 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -778,6 +862,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: Employee not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -886,6 +978,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -955,6 +1055,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '409':
           description: Employee is already active.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -1052,8 +1160,27 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -1143,6 +1270,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -1204,6 +1339,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: Jurisdiction not found for this employee.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -1317,8 +1460,27 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:

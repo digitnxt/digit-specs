@@ -175,7 +175,7 @@ class TestJurisdictionLifecycle:
                       headers=auth_headers,
                       json_body=make_jurisdiction_update(
                           version=juris_version,
-                          boundary_relations=[make_boundary_relation(code="WARD-UPDATED-001")]))
+                          boundary_relations=[make_boundary_relation()]))
             # Replacement boundary code may fail boundary validation in a strict env.
             if r.status_code == 400:
                 pytest.skip("Boundary service rejected the replacement boundary code")
@@ -195,7 +195,7 @@ class TestEmployeeWithInlineJurisdictionFlow:
         emp_id = None
         try:
             emp = make_employee(jurisdictions=[make_jurisdiction_create(
-                boundary_relations=[make_boundary_relation(code="WARD-INLINE-001")])])
+                boundary_relations=[make_boundary_relation()])])
             r = _send(request.node, "POST", f"{base_url}/employees",
                       headers=auth_headers, json_body=[emp])
             if r.status_code == 400:

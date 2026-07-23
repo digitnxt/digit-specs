@@ -225,8 +225,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — the ID-generation (idgen) service
+            did not respond successfully. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -310,6 +328,14 @@ paths:
                 $ref: '#/components/schemas/IndividualSearchResponse'
         '400':
           description: Bad request — invalid or unknown query parameters.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -412,6 +438,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -474,6 +508,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -612,6 +654,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -672,6 +722,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: Individual not found or already deleted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -785,6 +843,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
@@ -837,6 +903,14 @@ paths:
                   $ref: '#/components/schemas/Error'
         '404':
           description: No configuration found for this tenant.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:

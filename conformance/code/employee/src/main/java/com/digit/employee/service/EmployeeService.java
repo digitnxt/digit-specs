@@ -155,6 +155,7 @@ public class EmployeeService {
         r.setDepartment(emp.getDepartment());
         r.setDesignation(emp.getDesignation());
         r.setActive(emp.isActive());
+        r.setVersion(emp.getVersion());
         r.setJurisdictions(jurisdictions);
         r.setAuditDetail(emp.getAuditDetails());
         return r;
@@ -275,9 +276,8 @@ public class EmployeeService {
      */
     @Transactional
     public EmployeeResponse updateEmployee(String uuid, UpdateEmployeeRequest req, String tenantId, String userId) {
-        Employee existing = repo.findByUUID(uuid, tenantId); // throws NOT_FOUND
-
-        // Strict PUT: every mutable field is required + length-capped (mirrors Go binding).
+        // Body validation first — mirrors Go, where bind-time validation returns 400 before the
+        // row is loaded (so PUT to a missing id with an invalid body is 400, not 404).
         requireField("employeeType", req.getEmployeeType(), ValidationConstants.EMPLOYEE_TYPE_MAX_LEN);
         requireField("department", req.getDepartment(), ValidationConstants.DEPARTMENT_MAX_LEN);
         requireField("designation", req.getDesignation(), ValidationConstants.DESIGNATION_MAX_LEN);
@@ -291,6 +291,9 @@ public class EmployeeService {
         if (req.getVersion() == null) {
             throw new CustomException(ErrorCodes.VALIDATION_ERROR, "version is required");
         }
+
+        Employee existing = repo.findByUUID(uuid, tenantId); // throws NOT_FOUND
+
         // Optimistic fast-fail before touching jurisdictions; the CAS in repo.update closes the race.
         if (existing.getVersion() != req.getVersion()) {
             throw new CustomException(ErrorCodes.ROW_VERSION_MISMATCH, "employee was modified concurrently", HttpStatus.CONFLICT);

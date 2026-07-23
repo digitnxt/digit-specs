@@ -4,6 +4,23 @@ import schemathesis
 import schemathesis.openapi
 from tests.helpers.curl_builder import build_curl
 
+# Hypothesis profiles for the schemathesis property-based module. The default
+# 200ms per-example deadline is unusable against a remote gateway (every call
+# would flag DeadlineExceeded), so deadline is disabled. Select with
+# `--hypothesis-profile=bounded` (fast smoke) or `=full` (thorough).
+try:
+    from hypothesis import HealthCheck, settings
+
+    # too_slow: network latency per example. filter_too_much: some operations have
+    # tightly-constrained schemas (uuid formats + patterns + enums) that filter out
+    # most randomly-generated data — a generation limitation, not a service issue
+    # (Hypothesis itself recommends suppressing it).
+    _SUPPRESS = [HealthCheck.too_slow, HealthCheck.filter_too_much]
+    settings.register_profile("bounded", max_examples=25, deadline=None, suppress_health_check=_SUPPRESS)
+    settings.register_profile("full", max_examples=100, deadline=None, suppress_health_check=_SUPPRESS)
+except Exception:
+    pass
+
 GATEWAY_HEADER_PROFILES = {
     # Kong is the production gateway. These are the headers Kong itself adds to
     # every proxied response (verified against a live employee-search response).

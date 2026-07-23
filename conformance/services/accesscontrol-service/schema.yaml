@@ -1,0 +1,2695 @@
+openapi: 3.0.3
+info:
+  title: Access Control Service
+  version: 3.0.0
+  description: "Centralized Access Control microservice supporting both Role-Based\
+    \ Access Control \nand Job-Based Access Control  for Kong gateway integration.\n\
+    Manages access control rules with tenant-aware operations, version tracking, and\
+    \ internal\nendpoints for Kong plugin integration.\n"
+servers:
+- url: https://api.example.com/access/v3
+  description: Production server
+- url: https://staging-api.example.com/access/v3
+  description: Staging server
+- url: http://localhost:8080/access/v3
+  description: Local development server
+security:
+- BearerAuth: []
+tags:
+- name: RBAC Rules
+  description: Role-Based Access Control rule CRUD operations
+- name: JBAC Rules
+  description: Job-Based Access Control rule CRUD operations
+- name: Internal
+  description: Internal endpoints for Kong plugin integration
+paths:
+  /rbac/rules:
+    post:
+      tags:
+      - RBAC Rules
+      summary: Create RBAC rule
+      operationId: createRbacRule
+      description: 'Creates a new Role-Based Access Control rule for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Request body must contain valid rule configuration
+
+
+        **Business Rules:**
+
+        - Rule ID is auto-generated as UUID
+
+        - Priority determines rule evaluation order (lower values evaluated first)
+
+        - Multiple roles can be assigned to a single rule
+
+        - Path supports wildcard patterns (e.g., /api/*/users)
+
+        - HTTP method must be one of: GET, POST, PUT, DELETE, PATCH
+
+        - Effect must be either ALLOW or DENY
+
+        - Enabled flag defaults to true if not specified
+
+
+        **Post-conditions:**
+
+        - Rule is persisted to database
+
+        - Response includes complete rule object with generated ID
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RbacRuleRequest'
+            example:
+              roleNames:
+              - admin
+              - moderator
+              httpMethod: POST
+              path: /api/users
+              effect: ALLOW
+              priority: 10
+              description: Allow admins and moderators to create users
+              enabled: true
+      responses:
+        '201':
+          description: Rule created successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacRuleResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity - business rule violation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    get:
+      tags:
+      - RBAC Rules
+      summary: List RBAC rules with pagination
+      operationId: listRbacRules
+      description: 'Retrieves a paginated list of Role-Based Access Control rules
+        for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - Results are filtered by tenant ID from header
+
+        - Results are sorted by priority (ascending) then by creation time (descending)
+
+        - Disabled rules are included in results but can be filtered
+
+        - Pagination defaults to page 1, size 20 if not specified
+
+        - Maximum page size is 100
+
+
+        **Post-conditions:**
+
+        - Response includes total count of rules matching filter
+
+        - Response includes current page number and size
+
+        - Response includes hasMore flag for client pagination
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum number of rules to return (max 100)
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 50
+      - name: offset
+        in: query
+        required: false
+        description: Number of rules to skip
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 0
+      - name: roleName
+        in: query
+        required: false
+        description: Filter by role name
+        schema:
+          type: string
+      - name: httpMethod
+        in: query
+        required: false
+        description: Filter by HTTP method
+        schema:
+          type: string
+          enum:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+      - name: effect
+        in: query
+        required: false
+        description: Filter by effect
+        schema:
+          type: string
+          enum:
+          - ALLOW
+          - DENY
+      - name: enabled
+        in: query
+        required: false
+        description: Filter by enabled status
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Rules retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacRuleListResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /rbac/rules/bulk:
+    post:
+      tags:
+      - RBAC Rules
+      summary: Bulk create RBAC rules
+      operationId: bulkCreateRbacRules
+      description: 'Creates multiple RBAC rules in a single request for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Request body must contain array of valid rule configurations
+
+
+        **Business Rules:**
+
+        - All rules must be valid for the entire operation to succeed
+
+        - If any rule fails validation, the entire operation is rolled back
+
+        - Maximum 500 rules per request
+
+
+        **Post-conditions:**
+
+        - All rules are persisted to database
+
+        - Response includes array of created rules with generated IDs
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - rules
+              properties:
+                rules:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    $ref: '#/components/schemas/RbacRuleRequest'
+            example:
+              rules:
+              - roleNames:
+                - admin
+                httpMethod: POST
+                path: /api/users
+                effect: ALLOW
+                priority: 10
+                description: Allow admins to create users
+                enabled: true
+              - roleNames:
+                - moderator
+                httpMethod: GET
+                path: /api/users
+                effect: ALLOW
+                priority: 20
+                description: Allow moderators to view users
+                enabled: true
+      responses:
+        '201':
+          description: Rules created (atomic — all or none)
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCreateRbacRulesResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity - business rule violation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /rbac/rules/tenant:
+    delete:
+      tags:
+      - RBAC Rules
+      summary: Delete all RBAC rules for a tenant
+      operationId: deleteRbacRulesByTenant
+      description: 'Deletes all RBAC rules for the tenant specified in X-Tenant-ID
+        header.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - This is a destructive operation that removes all rules for the tenant
+
+        - Operation is idempotent (deleting non-existent rules returns success)
+
+
+        **Post-conditions:**
+
+        - All rules for the tenant are removed
+
+        - Response is 204 No Content
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '204':
+          description: Rules deleted successfully — no content returned
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /rbac/rules/{id}:
+    get:
+      tags:
+      - RBAC Rules
+      summary: Get a single RBAC rule
+      operationId: getRbacRule
+      description: 'Retrieves a specific RBAC rule by ID for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Rule ID must be a valid UUID
+
+
+        **Business Rules:**
+
+        - Rule must belong to the tenant specified in X-Tenant-ID header
+
+        - Deleted rules cannot be retrieved
+
+
+        **Post-conditions:**
+
+        - Response includes complete rule object with all fields
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Rule ID (UUID)
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Rule retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacRuleResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+      - RBAC Rules
+      summary: Partially update an RBAC rule
+      operationId: updateRbacRule
+      description: 'Partially updates an existing RBAC rule for the tenant. Only fields present in the request body are modified; absent fields are left untouched. For nullable fields (constraints, description) sending an explicit JSON `null` clears the column.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Rule ID must be a valid UUID and exist
+
+        - Rule must belong to the tenant specified in X-Tenant-ID header
+
+
+        **Business Rules:**
+
+        - Rule ID cannot be changed
+
+        - Tenant ID cannot be changed
+
+        - All fields in request body are updated
+
+        - Priority can be modified to reorder rule evaluation
+
+        - Enabled status can be toggled without affecting other rules
+
+
+        **Post-conditions:**
+
+        - Rule is persisted with updated values
+
+        - Modification timestamp is updated
+
+        - Response includes updated rule object
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Rule ID (UUID)
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRbacRuleRequest'
+      responses:
+        '200':
+          description: Rule updated successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RbacRuleResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity - business rule violation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+      - RBAC Rules
+      summary: Delete an RBAC rule
+      operationId: deleteRbacRule
+      description: 'Deletes an RBAC rule for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Rule ID must be a valid UUID and exist
+
+        - Rule must belong to the tenant specified in X-Tenant-ID header
+
+
+        **Business Rules:**
+
+        - Delete is a hard delete — rule is permanently removed from database
+
+        - Deleted rules do not appear in list or get operations
+
+
+        **Post-conditions:**
+
+        - Rule is removed from database
+
+        - Response is 204 No Content on success
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        description: Rule ID (UUID)
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Rule deleted successfully — no content returned
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+  /jbac/rules:
+    post:
+      tags:
+      - JBAC Rules
+      summary: Create JBAC rule
+      operationId: createJbacRule
+      description: 'Creates a new Job-Based Access Control rule for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Request body must contain valid rule configuration
+
+
+        **Business Rules:**
+
+        - Rule ID is auto-generated as UUID
+
+        - Path pattern supports static segments, `{param:UUID}` / `{param:ALNUM}` placeholders, and `*` as the last segment only
+
+        - HTTP method values must be one of: GET, POST, PUT, DELETE, PATCH
+
+        - Enforcement must be one of: REQUIRED, OPTIONAL, DISABLED
+
+        - parentImpliesChildren defaults to false if omitted
+
+        - extractJurisdiction is an optional JSON config blob (max 4096 bytes)
+
+
+        **Post-conditions:**
+
+        - Rule is persisted to database
+
+        - Response includes complete rule object with generated ID
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JbacRuleRequest'
+      responses:
+        '201':
+          description: Rule created successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JbacRuleResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    get:
+      tags:
+      - JBAC Rules
+      summary: List JBAC rules with pagination
+      operationId: listJbacRules
+      description: 'Retrieves a paginated list of Job-Based Access Control rules
+        for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - Results are filtered by tenant ID from header
+
+        - Disabled rules are NOT a concept here (JBAC has no enabled flag) — use enforcement=DISABLED to deactivate a rule
+
+        - Pagination defaults to limit=50, offset=0 if not specified
+
+        - Maximum page size is 100
+
+
+        **Post-conditions:**
+
+        - Response includes total count of rules matching filter
+
+        - Response includes current page limit and offset
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum number of rules to return (max 100)
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 50
+      - name: offset
+        in: query
+        required: false
+        description: Number of rules to skip
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 0
+      - name: name
+        in: query
+        required: false
+        description: Filter by rule name (partial match)
+        schema:
+          type: string
+      - name: enforcement
+        in: query
+        required: false
+        description: Filter by enforcement type
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Rules retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JbacRuleListResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /jbac/rules/bulk:
+    post:
+      tags:
+      - JBAC Rules
+      summary: Bulk create JBAC rules
+      operationId: bulkCreateJbacRules
+      description: Creates multiple JBAC rules in a single request
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - rules
+              properties:
+                rules:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    $ref: '#/components/schemas/JbacRuleRequest'
+            example:
+              rules:
+              - name: Manager Access Rule
+                pathPattern: /api/reports
+                methods:
+                - POST
+                enforcement: REQUIRED
+                parentImpliesChildren: true
+                description: Allow managers to create reports
+              - name: Analyst Access Rule
+                pathPattern: /api/reports
+                methods:
+                - GET
+                enforcement: OPTIONAL
+                parentImpliesChildren: false
+                description: Allow analysts to view reports
+      responses:
+        '201':
+          description: Rules created (atomic — all or none)
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCreateJbacRulesResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /jbac/rules/tenant:
+    delete:
+      tags:
+      - JBAC Rules
+      summary: Delete all JBAC rules for a tenant
+      operationId: deleteJbacRulesByTenant
+      description: 'Deletes all JBAC rules for the tenant specified in X-Tenant-ID
+        header.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+
+        **Business Rules:**
+
+        - This is a destructive operation that removes all rules for the tenant
+
+        - Operation is idempotent (deleting non-existent rules returns success)
+
+
+        **Post-conditions:**
+
+        - All rules for the tenant are removed
+
+        - Response is 204 No Content
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '204':
+          description: Rules deleted successfully — no content returned
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /jbac/rules/{id}:
+    get:
+      tags:
+      - JBAC Rules
+      summary: Get a single JBAC rule
+      operationId: getJbacRule
+      description: 'Retrieves a specific JBAC rule by ID for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Rule ID must be a valid UUID
+
+
+        **Business Rules:**
+
+        - Rule must belong to the tenant specified in X-Tenant-ID header
+
+        - Deleted rules cannot be retrieved
+
+
+        **Post-conditions:**
+
+        - Response includes complete rule object with all fields
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Rule retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JbacRuleResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+      - JBAC Rules
+      summary: Partially update a JBAC rule
+      operationId: updateJbacRule
+      description: 'Partially updates an existing JBAC rule. Only fields present in the request body are modified; absent fields are left untouched. For nullable fields (extractJurisdiction, description) sending an explicit JSON `null` clears the column.'
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateJbacRuleRequest'
+      responses:
+        '200':
+          description: Rule updated successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JbacRuleResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+      - JBAC Rules
+      summary: Delete a JBAC rule
+      operationId: deleteJbacRule
+      description: 'Deletes a JBAC rule for the tenant.
+
+
+        **Pre-conditions:**
+
+        - User must be authenticated with valid bearer token
+
+        - X-Tenant-ID header must be present and valid
+
+        - Rule ID must be a valid UUID and exist
+
+        - Rule must belong to the tenant specified in X-Tenant-ID header
+
+
+        **Business Rules:**
+
+        - Delete is a hard delete — rule is permanently removed from database
+
+        - Deleted rules do not appear in list or get operations
+
+
+        **Post-conditions:**
+
+        - Rule is removed from database
+
+        - Response is 204 No Content on success
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Rule deleted successfully — no content returned
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+  /internal/rbac/rules:
+    get:
+      tags:
+      - Internal
+      summary: Get all RBAC rules (across all tenants)
+      operationId: listAllRbacRules
+      description: Internal endpoint for the Kong plugin to fetch the RBAC rules of every tenant (no X-Tenant-ID filter). The returned shape matches the tenant-scoped list endpoint but the semantics are different — see InternalRbacRulesResponse.
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum number of rules to return (max 1000)
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          default: 100
+      - name: offset
+        in: query
+        required: false
+        description: Number of rules to skip
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      responses:
+        '200':
+          description: Rules retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalRbacRulesResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /internal/rbac/rules/version:
+    get:
+      tags:
+      - Internal
+      summary: Get RBAC rules version
+      operationId: getAllRbacRulesVersion
+      description: Internal endpoint to get RBAC ruleset version hash for cache validation
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Version retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /internal/jbac/rules:
+    get:
+      tags:
+      - Internal
+      summary: Get all JBAC rules (across all tenants)
+      operationId: listAllJbacRules
+      description: Internal endpoint for the Kong plugin to fetch the JBAC rules of every tenant (no X-Tenant-ID filter). The returned shape matches the tenant-scoped list endpoint but the semantics are different — see InternalJbacRulesResponse.
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum number of rules to return (max 1000)
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          default: 100
+      - name: offset
+        in: query
+        required: false
+        description: Number of rules to skip
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      responses:
+        '200':
+          description: Rules retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalJbacRulesResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+  /internal/jbac/rules/version:
+    get:
+      tags:
+      - Internal
+      summary: Get JBAC rules version
+      operationId: getAllJbacRulesVersion
+      description: Internal endpoint to get JBAC ruleset version hash for cache validation
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Version retrieved successfully
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    parameters: []
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
+  parameters:
+    RequestIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
+    CorrelationIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
+    UserAgentHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
+    UserIdHeader:
+      name: X-User-ID
+      in: header
+      required: false
+      description: Unique identifier assigned to the user making the request.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 64
+        example: 550e8400-e29b-41d4-a716-446655440000
+    TenantIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
+    ForwardedForHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
+    ClientSecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
+    TimeStamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
+  headers:
+    X-Response-Time:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
+    X-Response-Timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
+    X-Request-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
+    X-Correlation-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
+    X-Tenant-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
+    X-Rate-Limit:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
+    X-Rate-Limit-Remaining:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
+    X-Rate-Limit-Reset:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
+  schemas:
+    Error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
+    RbacRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Rule ID
+        tenantId:
+          type: string
+          description: Tenant that owns this rule (populated from X-Tenant-ID on create)
+        roleNames:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: '^[A-Za-z0-9_-]+$'
+          description: List of role names
+        httpMethod:
+          type: string
+          enum:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          description: HTTP method (canonical uppercase)
+        path:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: API path pattern
+        effect:
+          type: string
+          enum:
+          - ALLOW
+          - DENY
+          description: Effect (canonical uppercase)
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: Priority
+        enabled:
+          type: boolean
+          description: Is enabled
+        constraints:
+          description: Additional constraints (JSON, max 4096 bytes)
+        description:
+          type: string
+          maxLength: 256
+          description: Description
+        requestId:
+          type: string
+          description: Request ID for traceability
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    InternalRbacRulesResponse:
+      type: object
+      description: |
+        Response returned by GET /internal/rbac/rules — a paginated list of
+        RBAC rules ACROSS ALL TENANTS. This is distinct from
+        RbacRuleListResponse, which is returned by the tenant-scoped public
+        list endpoint. The wire format happens to be identical, but the
+        semantics are different:
+          - public endpoint: requires X-Tenant-ID, returns only that tenant's rules
+          - internal endpoint (this one): no tenant filter, returns rules for all tenants
+            (used by the Kong plugin to build a global authorization cache)
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RbacRule'
+        limit:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        offset:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        total:
+          type: integer
+          minimum: 0
+    InternalJbacRulesResponse:
+      type: object
+      description: |
+        Response returned by GET /internal/jbac/rules — a paginated list of
+        JBAC rules ACROSS ALL TENANTS. Same distinction as
+        InternalRbacRulesResponse vs JbacRuleListResponse: shape is identical,
+        semantics differ (no tenant scoping, used by the Kong plugin).
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/JbacRule'
+        limit:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        offset:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        total:
+          type: integer
+          minimum: 0
+    VersionResponse:
+      type: object
+      properties:
+        version:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: |
+            Opaque version token. Format is implementation-defined and may
+            change between releases — clients should treat it as a string
+            for equality comparison only, not parse it.
+    RbacRuleRequest:
+      type: object
+      required:
+      - roleNames
+      - httpMethod
+      - path
+      - effect
+      properties:
+        roleNames:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: '^[A-Za-z0-9_-]+$'
+          description: List of role names this rule applies to
+        httpMethod:
+          type: string
+          enum:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          description: HTTP method (canonical uppercase, exact match enforced)
+        path:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^((/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){0,19}/\*|(/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){1,20}/?)$'
+          description: API path pattern (supports wildcards like /api/*/users)
+        effect:
+          type: string
+          enum:
+          - ALLOW
+          - DENY
+          description: Whether to allow or deny access (canonical uppercase)
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 2147483647
+          description: Rule evaluation priority (lower values evaluated first). Optional — omitted rules default to the lowest evaluation precedence.
+        enabled:
+          type: boolean
+          default: true
+          description: Whether this rule is enabled. Optional — defaults to true.
+        constraints:
+          description: Optional JSON constraints for advanced rule matching (max 4096 bytes)
+        description:
+          type: string
+          maxLength: 256
+          description: Optional description of the rule
+    UpdateRbacRuleRequest:
+      type: object
+      properties:
+        roleNames:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: '^[A-Za-z0-9_-]+$'
+          description: List of role names this rule applies to
+        httpMethod:
+          type: string
+          enum:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          description: HTTP method (canonical uppercase, exact match enforced)
+        path:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^((/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){0,19}/\*|(/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){1,20}/?)$'
+          description: API path pattern (supports wildcards like /api/*/users)
+        effect:
+          type: string
+          enum:
+          - ALLOW
+          - DENY
+          description: Whether to allow or deny access (canonical uppercase)
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: Rule evaluation priority (lower values evaluated first)
+        enabled:
+          type: boolean
+          description: Whether this rule is enabled
+        constraints:
+          nullable: true
+          description: Optional JSON constraints for advanced rule matching (max 4096 bytes). Send `null` to clear.
+        description:
+          type: string
+          maxLength: 256
+          nullable: true
+          description: Optional description of the rule. Send `null` to clear.
+    RbacRuleResponse:
+      type: object
+      properties:
+        rule:
+          $ref: '#/components/schemas/RbacRule'
+    RbacRuleListResponse:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RbacRule'
+        limit:
+          type: integer
+          minimum: 0
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        total:
+          type: integer
+          minimum: 0
+    JbacRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Rule ID
+        tenantId:
+          type: string
+          description: Tenant that owns this rule (populated from X-Tenant-ID on create)
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Rule name
+        pathPattern:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Path pattern
+        methods:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: string
+            enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+          description: HTTP methods (canonical uppercase)
+        enforcement:
+          type: string
+          enum:
+          - REQUIRED
+          - OPTIONAL
+          - DISABLED
+          description: Enforcement type (canonical uppercase)
+        parentImpliesChildren:
+          type: boolean
+          description: Parent implies children
+        extractJurisdiction:
+          description: Extract jurisdiction config (JSON, max 4096 bytes)
+        description:
+          type: string
+          maxLength: 256
+          description: Description
+        requestId:
+          type: string
+          description: Request ID for traceability
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    JbacRuleRequest:
+      type: object
+      required:
+      - name
+      - pathPattern
+      - methods
+      - enforcement
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z0-9]([A-Za-z0-9 _\-]{0,62}[A-Za-z0-9])?$'
+          description: Name of the JBAC rule. Alphanumeric with spaces, underscores, and hyphens; cannot start or end with whitespace.
+        pathPattern:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^((/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){0,19}/\*|(/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){1,20}/?)$'
+          description: Path pattern for jurisdiction extraction
+        methods:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: string
+            enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+          description: HTTP methods (canonical uppercase, exact match enforced)
+        enforcement:
+          type: string
+          enum:
+          - REQUIRED
+          - OPTIONAL
+          - DISABLED
+          description: Enforcement type (canonical uppercase, exact match enforced)
+        parentImpliesChildren:
+          type: boolean
+          default: false
+          description: Whether parent jurisdiction implies access to children. Optional — defaults to false (parent-only, do not propagate to children).
+        extractJurisdiction:
+          description: JSON configuration for jurisdiction extraction (max 4096 bytes)
+        description:
+          type: string
+          maxLength: 256
+          description: Optional description of the rule
+    UpdateJbacRuleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z0-9]([A-Za-z0-9 _\-]{0,62}[A-Za-z0-9])?$'
+          description: Name of the JBAC rule. Alphanumeric with spaces, underscores, and hyphens; cannot start or end with whitespace.
+        pathPattern:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^((/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){0,19}/\*|(/([A-Za-z0-9_-]+|\{param:(UUID|ALNUM)\})){1,20}/?)$'
+          description: Path pattern for jurisdiction extraction
+        methods:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: string
+            enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+          description: HTTP methods (canonical uppercase, exact match enforced)
+        enforcement:
+          type: string
+          enum:
+          - REQUIRED
+          - OPTIONAL
+          - DISABLED
+          description: Enforcement type (canonical uppercase, exact match enforced)
+        parentImpliesChildren:
+          type: boolean
+          description: Whether parent jurisdiction implies access to children
+        extractJurisdiction:
+          nullable: true
+          description: JSON configuration for jurisdiction extraction (max 4096 bytes). Send `null` to clear.
+        description:
+          type: string
+          maxLength: 256
+          nullable: true
+          description: Optional description of the rule. Send `null` to clear.
+    JbacRuleResponse:
+      type: object
+      properties:
+        rule:
+          $ref: '#/components/schemas/JbacRule'
+    JbacRuleListResponse:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/JbacRule'
+        limit:
+          type: integer
+          minimum: 0
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        total:
+          type: integer
+          minimum: 0
+    AuditDetail:
+      type: object
+      properties:
+        createdBy:
+          type: string
+          description: User ID who created the record
+        createdTime:
+          type: integer
+          format: int64
+          description: Creation timestamp in epoch milliseconds
+        modifiedBy:
+          type: string
+          description: User ID who last modified the record
+        modifiedTime:
+          type: integer
+          format: int64
+          description: Last modification timestamp in epoch milliseconds
+    BulkCreateRbacRulesResponse:
+      type: object
+      properties:
+        created:
+          type: integer
+          minimum: 0
+          description: Number of rules created. Bulk insert is atomic — either all rules are created (201) or none are (4xx/5xx).
+    BulkCreateJbacRulesResponse:
+      type: object
+      properties:
+        created:
+          type: integer
+          minimum: 0
+          description: Number of rules created. Bulk insert is atomic — either all rules are created (201) or none are (4xx/5xx).

@@ -5,6 +5,20 @@ import requests as _requests
 import schemathesis
 from tests.helpers.curl_builder import build_curl
 
+# Hypothesis profiles for the schemathesis module. The default 200ms per-example
+# deadline is unusable against a remote gateway (every call flags DeadlineExceeded),
+# so it is disabled. too_slow + filter_too_much are network/generation concerns,
+# not service issues. Select with `--hypothesis-profile=bounded` (fast smoke) or
+# `=full` (thorough).
+try:
+    from hypothesis import HealthCheck, settings
+
+    _SUPPRESS = [HealthCheck.too_slow, HealthCheck.filter_too_much]
+    settings.register_profile("bounded", max_examples=25, deadline=None, suppress_health_check=_SUPPRESS)
+    settings.register_profile("full", max_examples=100, deadline=None, suppress_health_check=_SUPPRESS)
+except Exception:
+    pass
+
 GATEWAY_HEADER_PROFILES = {
     # Headers Kong itself adds to every proxied response (verified against a
     # live gateway response). Rate-limit headers appear only when the

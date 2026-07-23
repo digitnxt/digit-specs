@@ -1,8 +1,19 @@
+import os
 import uuid
 
 
 def _uid():
     return uuid.uuid4().hex[:8].upper()
+
+
+# A jurisdiction's boundaryRelation is validated against the boundary service
+# (when enabled), so it must reference a boundary that actually exists in the
+# target tenant. Supply a real triple via these env vars for a live run;
+# otherwise a random (invalid) code is generated and boundary-validating
+# environments will reject it (the jurisdiction tests skip on that 400).
+_ENV_BOUNDARY_CODE = "CONFORMANCE_BOUNDARY_CODE"
+_ENV_BOUNDARY_TYPE = "CONFORMANCE_BOUNDARY_TYPE"
+_ENV_BOUNDARY_HIERARCHY = "CONFORMANCE_BOUNDARY_HIERARCHY"
 
 
 # ── Employee ──────────────────────────────────────────────────────────────────
@@ -55,15 +66,18 @@ def make_employee_patch(version, **overrides):
 
 # ── Boundary / Jurisdiction ──────────────────────────────────────────────────
 
-def make_boundary_relation(code=None, boundary_type="Ward", hierarchy_type="ADMIN"):
+def make_boundary_relation(code=None, boundary_type=None, hierarchy_type=None):
     """
     A single boundaryRelation entry: {code, boundaryType, hierarchyType}.
     All three fields are required (see the Boundary schema / models.BoundaryRef).
+
+    Explicit args win; then the CONFORMANCE_BOUNDARY_* env vars (for live runs
+    against a boundary-validating tenant); then a random fallback.
     """
     return {
-        "code": code or f"WARD-{_uid()}",
-        "boundaryType": boundary_type,
-        "hierarchyType": hierarchy_type,
+        "code": code or os.environ.get(_ENV_BOUNDARY_CODE) or f"WARD-{_uid()}",
+        "boundaryType": boundary_type or os.environ.get(_ENV_BOUNDARY_TYPE) or "Ward",
+        "hierarchyType": hierarchy_type or os.environ.get(_ENV_BOUNDARY_HIERARCHY) or "ADMIN",
     }
 
 
