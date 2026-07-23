@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS access_rbac_rules ADD COLUMN IF NOT EXISTS requestid TEXT;
+ALTER TABLE IF EXISTS access_jbac_rules ADD COLUMN IF NOT EXISTS requestid TEXT;

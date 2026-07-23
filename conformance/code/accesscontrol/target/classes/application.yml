@@ -1,0 +1,87 @@
+server:
+  port: ${HTTP_PORT:8080}
+
+spring:
+  application:
+    name: ${OTEL_SERVICE_NAME:accesscontrol-service}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:accesscontrol}?sslmode=${DB_SSL_MODE:disable}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:1234}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    # Boot's Flyway auto-config is not used; the service runs Flyway explicitly (FlywayConfig)
+    # against the default (public) schema at startup, and per-tenant via tenant-migration-java.
+    enabled: false
+
+# Official DIGIT tracer (org.digit:tracer) configuration. Telemetry, the request-tracing filter and
+# Micrometer metrics are owned by the tracer library. NOTE: digit.tracer.pubsub.type is intentionally
+# left UNSET so no PubSubClient bean is created — pub/sub becomes a graceful no-op and no Kafka broker
+# is required at startup (matches the Go service's graceful degradation).
+digit:
+  tracer:
+    request-logging-enabled: true
+    otel:
+      enabled: ${OTEL_ENABLED:false}
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+      service-name: ${OTEL_SERVICE_NAME:accesscontrol-service}
+      service-version: ${OTEL_SERVICE_VERSION:1.0.0}
+
+# Actuator exposes the Micrometer metrics (http_server_requests, db_operations, ...) registered by the
+# tracer. Disable Spring Boot's own OTLP export auto-config.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  otlp:
+    metrics:
+      export:
+        enabled: false
+    tracing:
+      export:
+        enabled: false
+
+# accesscontrol service configuration (mirrors the Go service config.Load defaults)
+accesscontrol:
+  server:
+    context-path: ${SERVER_CONTEXT_PATH:/access}
+  otel:
+    service-name: ${OTEL_SERVICE_NAME:accesscontrol-service}
+    service-version: ${OTEL_SERVICE_VERSION:1.0.0}
+    otlp-endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:localhost:4320}
+    sampling-ratio: ${OTEL_TRACES_SAMPLER_ARG:1.0}
+    enabled: ${OTEL_ENABLED:true}
+    metrics-enabled: ${OTEL_METRICS_ENABLED:true}
+    prometheus-port: ${PROMETHEUS_PORT:9090}
+  logging:
+    level: ${LOG_LEVEL:info}
+    console-logs-enabled: ${CONSOLE_LOGS_ENABLED:true}
+  tenant-migration:
+    enabled: ${SCHEMA_SEPARATION_MODE:false}
+    topic: ${SCHEMA_SEPARATION_TOPIC:account-migration}
+    flyway-locations: ${MIGRATION_FLYWAY_LOCATIONS:classpath:db/migration}
+    schema-table: ${MIGRATION_SCHEMA_TABLE:accesscontrol_schema}
+  pubsub:
+    enabled: ${PUBSUB_ENABLED:true}
+    type: ${PUBSUB_TYPE:kafka}
+    kafka:
+      brokers: ${KAFKA_BROKERS:127.0.0.1:9092}
+      auto-create: ${KAFKA_AUTO_CREATE_TOPICS_ENABLE:true}
+      partitions: ${KAFKA_PARTITION_COUNT:1}
+      replication: ${KAFKA_REPLICATION_FACTOR:1}
+      consumer-group: ${KAFKA_CONSUMER_GROUP:accesscontrol-service}
+    redis:
+      address: ${REDIS_ADDRESS:localhost:6379}
+      password: ${REDIS_PASSWORD:}
+      db: ${REDIS_DB:0}
+      consumer-group: ${REDIS_CONSUMER_GROUP:accesscontrol-service}
+      consumer-id: ${REDIS_CONSUMER_ID:accesscontrol-service-1}
+      retention-days: ${REDIS_RETENTION_DAYS:7}
+      max-stream-length: ${REDIS_MAX_STREAM_LENGTH:1000000}
+      cleanup-interval-seconds: ${REDIS_CLEANUP_INTERVAL:3600}
+
+# Keep Spring's own logging quiet enough; the tracer-java OTelLogger emits structured console JSON.
+logging:
+  level:
+    root: info

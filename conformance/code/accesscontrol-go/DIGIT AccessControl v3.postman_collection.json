@@ -1,0 +1,639 @@
+{
+  "info": {
+    "_postman_id": "59703d86-1ce5-4718-9ecd-c56670493bd8",
+    "name": "DIGIT AccessControl v3",
+    "description": "Production collection for the AccessControl service (v3).\n\n## Endpoints\n- **RBAC** — CRUD + bulk + delete-by-tenant under `/v3/rbac/rules`.\n- **JBAC** — same shape under `/v3/jbac/rules`.\n- **Internal** — `/v3/internal/{rbac,jbac}/rules[/version]` (Kong plugin consumers — no tenant header).\n- **Operational** — `/health`.\n\n## Variables\n| Variable | Default | Notes |\n|---|---|---|\n| `baseUrl` | `http://localhost:8080/access/v3` | LTS: `https://digit-lts.digit.org/access/v3` |\n| `tenantId` | `pg` | Sent as X-Tenant-ID on tenant-scoped routes. |\n| `userId` | `00000000-0000-0000-0000-000000000001` | Sent as X-User-ID on writes. |\n| `accessToken` | — | Keycloak bearer (Kong-validated). |\n| `rbacRuleId`, `jbacRuleId` | (auto) | Captured from the respective create-rule response. |\n\n## Error envelope\nAll non-2xx responses are `[]Error` arrays with codes like `AccessControl.InvalidRequest`, `AccessControl.NotFound`, `AccessControl.InternalError`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "35025473",
+    "_collection_link": "https://go.postman.co/collection/35025473-59703d86-1ce5-4718-9ecd-c56670493bd8?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "RBAC",
+      "item": [
+        {
+          "name": "Create RBAC rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  const id = (body && body.rule && body.rule.id) || (body && body.id);",
+                  "  if (id) { pm.collectionVariables.set('rbacRuleId', id); console.log('rbacRuleId=' + id); }",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleNames\":  [\"EMPLOYEE_ADMIN\"],\n  \"httpMethod\": \"POST\",\n  \"path\":       \"/ransom/v3/employees\",\n  \"effect\":     \"ALLOW\",\n  \"priority\":   100,\n  \"enabled\":    true,\n  \"description\":\"HR admins can create employees\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List RBAC rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/?limit=20&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "roleName",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "httpMethod",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "effect",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "enabled",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get RBAC rule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/{{rbacRuleId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "{{rbacRuleId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update RBAC rule (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": 50,\n  \"description\": \"Bumped priority\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/{{rbacRuleId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "{{rbacRuleId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk create RBAC rules",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rules\": [\n    { \"roleNames\": [\"HR_USER\"], \"httpMethod\": \"GET\", \"path\": \"/employee/v3/employees/*\", \"effect\": \"ALLOW\" },\n    { \"roleNames\": [\"EMPLOYEE_ADMIN\"], \"httpMethod\": \"PUT\", \"path\": \"/employee/v3/employees/{param:UUID}\", \"effect\": \"ALLOW\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete RBAC rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/{{rbacRuleId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "{{rbacRuleId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete all RBAC rules for tenant",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rbac/rules/tenant",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rbac",
+                "rules",
+                "tenant"
+              ]
+            },
+            "description": "Removes every RBAC rule for the tenant. Destructive — use with care."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "JBAC",
+      "item": [
+        {
+          "name": "Create JBAC rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  const id = (body && body.rule && body.rule.id) || (body && body.id);",
+                  "  if (id) { pm.collectionVariables.set('jbacRuleId', id); console.log('jbacRuleId=' + id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\":         \"Employee jurisdiction guard\",\n  \"pathPattern\":  \"/employee/v3/employees\",\n  \"methods\":      [\"POST\",\"PUT\",\"PATCH\"],\n  \"enforcement\":  \"REQUIRED\",\n  \"parentImpliesChildren\": true,\n  \"extractJurisdiction\": {\n    \"required\": true,\n    \"sources\": [\n      { \"from\": \"body\", \"path\": \"$.jurisdictions[*].boundaryRelation[*].code\" }\n    ]\n  },\n  \"description\":  \"All employee writes must be within caller's jurisdictions\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List JBAC rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/?limit=20&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "enforcement",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get JBAC rule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/{{jbacRuleId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                "{{jbacRuleId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update JBAC rule (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-User-ID",
+                "value": "{{userId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enforcement\": \"OPTIONAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/{{jbacRuleId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                "{{jbacRuleId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete JBAC rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jbac/rules/{{jbacRuleId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jbac",
+                "rules",
+                "{{jbacRuleId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Internal (Kong plugin endpoints)",
+      "item": [
+        {
+          "name": "List all RBAC rules (cross-tenant)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/rbac/rules?limit=1000&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "rbac",
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1000"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Consumed by the Kong rbac plugin. Pagination: limit 0–1000, offset 0–100000."
+          },
+          "response": []
+        },
+        {
+          "name": "RBAC rules version",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/rbac/rules/version",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "rbac",
+                "rules",
+                "version"
+              ]
+            },
+            "description": "Cheap cache-invalidation check: returns { version: '<hash>' }. Kong plugin polls this every `reload_interval` seconds."
+          },
+          "response": []
+        },
+        {
+          "name": "List all JBAC rules (cross-tenant)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/jbac/rules?limit=1000&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "jbac",
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1000"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "JBAC rules version",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/jbac/rules/version",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "jbac",
+                "rules",
+                "version"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.request.headers.has('X-Request-ID')) {",
+          "  pm.request.headers.add({ key: 'X-Request-ID', value: 'pm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/access/v3"
+    },
+    {
+      "key": "tenantId",
+      "value": "pg"
+    },
+    {
+      "key": "userId",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "rbacRuleId",
+      "value": ""
+    },
+    {
+      "key": "jbacRuleId",
+      "value": ""
+    }
+  ]
+}
