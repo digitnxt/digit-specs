@@ -327,6 +327,7 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/ProcessVersionQuery'
       responses:
         '200':
           description: Process definition returned.
@@ -664,6 +665,7 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/ProcessVersionQuery'
       responses:
         '200':
           description: Process details
@@ -1852,6 +1854,7 @@ paths:
           schema:
             type: string
             maxLength: 64
+        - $ref: '#/components/parameters/ProcessVersionQuery'
         - name: entityId
           in: query
           required: false
@@ -1966,10 +1969,15 @@ paths:
           near-SLA threshold but have not yet breached the SLA. The near-SLA
           threshold is resolved from `slotPercentage` on the process version.
           `processCode` is required.
+        - `actionTaken`: transition rows created by the authenticated user
+          resolved from `X-User-ID`, grouped by action. Use `fromDate` and
+          `toDate` to restrict the duration.
 
-        When `history: false` (default), counts are calculated only from the
-        latest non-terminal process instance state per entity/process. When
-        `history: true`, historical transition rows are included.
+        For `total`, `status`, `inbox`, `escalated`, `slaBreached`, and
+        `nearSla`, `history: false` (default) counts only the latest process
+        instance state per entity/process, including terminal states. When
+        `history: true`, historical transition rows are included. `actionTaken`
+        always counts historical transition rows, irrespective of `history`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -2224,6 +2232,17 @@ components:
         minLength: 1
         maxLength: 64
 
+    ProcessVersionQuery:
+      name: version
+      in: query
+      required: false
+      description: |
+        Optional process definition version. Must be supplied with
+        `processCode`. When omitted, the latest process version is used.
+      schema:
+        type: string
+        maxLength: 32
+
     StateCodePath:
       name: stateCode
       in: path
@@ -2259,7 +2278,7 @@ components:
       description: Aggregate count to return.
       schema:
         type: string
-        enum: [total, status, inbox, escalated, slaBreached, nearSla]
+        enum: [total, status, inbox, escalated, slaBreached, nearSla, actionTaken]
 
     TransitionCountProcessCode:
       name: processCode
@@ -2999,6 +3018,14 @@ components:
           maxLength: 64
           description: Code of the workflow process (`Process.code`).
           example: trade-license-approval
+        version:
+          type: string
+          maxLength: 32
+          description: |
+            Optional process definition version to use for this transition.
+            Must be supplied with `processCode`. When omitted, the latest
+            process version is used.
+          example: v2
         entityId:
           type: string
           minLength: 1
@@ -3063,6 +3090,11 @@ components:
           readOnly: true
           description: Code of the workflow process.
           example: trade-license-approval
+        version:
+          type: string
+          readOnly: true
+          description: Process definition version used for the transition.
+          example: v2
         entityId:
           type: string
           readOnly: true
@@ -3206,6 +3238,13 @@ components:
           readOnly: true
           description: Code of the state the instance is currently in.
           example: PENDING_REVIEW
+        stateAdditionalDetails:
+          type: object
+          additionalProperties: true
+          readOnly: true
+          description: Additional metadata configured on the current state.
+          example:
+            checklist: true
         stateSla:
           type: integer
           format: int64
@@ -3232,6 +3271,15 @@ components:
           description: |
             Action codes available to the caller in the current state.
             Computed at read time based on caller roles.
+        nextActionDetails:
+          type: array
+          readOnly: true
+          description: |
+            Detailed action configuration for actions available to the caller
+            in the current state. Includes action-level metadata configured
+            on each action.
+          items:
+            $ref: '#/components/schemas/TransitionNextActionDetail'
         escalated:
           type: boolean
           readOnly: true
@@ -3247,6 +3295,36 @@ components:
             $ref: '#/components/schemas/TransitionHistoryEntry'
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
+
+    TransitionNextActionDetail:
+      type: object
+      description: Action configuration detail returned with `GET /transition`.
+      properties:
+        action:
+          type: string
+          readOnly: true
+          description: Action code available from the current state.
+          example: APPROVE
+        nextState:
+          type: string
+          readOnly: true
+          description: State code reached when this action is executed.
+          example: APPROVED
+        roles:
+          type: array
+          readOnly: true
+          description: Roles permitted to execute this action.
+          items:
+            type: string
+            maxLength: 64
+          example: [APPROVER]
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          readOnly: true
+          description: Additional metadata configured on this action.
+          example:
+            notificationEnabled: true
 
     ProcessInstanceListResponse:
       type: object
@@ -3284,13 +3362,27 @@ components:
           description: Number of process instances in this state.
           example: 31
 
+    TransitionActionCount:
+      type: object
+      description: Count of transition rows grouped by action.
+      properties:
+        action:
+          type: string
+          description: Action code recorded on the transition row.
+          example: APPROVE
+        count:
+          type: integer
+          format: int64
+          description: Number of transition rows for this action.
+          example: 12
+
     TransitionCountResponse:
       type: object
       description: Aggregate process-instance count response.
       properties:
         countType:
           type: string
-          enum: [total, status, inbox, escalated, slaBreached, nearSla]
+          enum: [total, status, inbox, escalated, slaBreached, nearSla, actionTaken]
           description: Count aggregate requested by the caller.
           example: status
         totalCount:
@@ -3305,6 +3397,13 @@ components:
             `countType=status`.
           items:
             $ref: '#/components/schemas/TransitionStatusCount'
+        actionCounts:
+          type: array
+          description: |
+            Counts grouped by action. Present only when
+            `countType=actionTaken`.
+          items:
+            $ref: '#/components/schemas/TransitionActionCount'
 
     EscalationResult:
       type: object
