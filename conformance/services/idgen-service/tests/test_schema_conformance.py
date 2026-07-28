@@ -44,6 +44,7 @@ _CROSS_FIELD_ENDPOINTS = {
     "POST /generate/bulk",
     "DELETE /template",
     "PUT /template",
+    "GET /template",
 }
 
 _SURROGATE_RE = re.compile(r"[\ud800-\udfff]")
