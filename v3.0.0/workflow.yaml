@@ -46,7 +46,7 @@ info:
     | `slotPercentage` | Near-SLA threshold percentage at the process version level. For example, `80` means near-SLA starts after 80 percent of the configured SLA has elapsed. |
     | `stateSlaMinutes` / `processSlaMinutes` | SLA thresholds in minutes at the escalation config level |
     | `id` | System-generated UUID present in all response bodies for internal reference — **never used in API paths** |
-    | `X-User-ID` | Required on every request — identifies the authenticated user and populates `createdBy` / `modifiedBy` in `auditDetail` |
+    | `X-User-ID` | Required on user-scoped requests — identifies the authenticated user and populates `createdBy` / `modifiedBy` in `auditDetail`. Not required for `POST /system/transition`, which records audit as `system`. |
 
     The `tenantId` is always resolved from the Bearer token and must not be
     sent in request bodies.
@@ -1936,6 +1936,87 @@ paths:
                   $ref: '#/components/schemas/Error'
         '403':
           description: Forbidden — insufficient permissions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /system/transition:
+
+    post:
+      summary: Trigger a system workflow transition
+      operationId: createSystemTransition
+      tags: [Transition]
+      security: []
+      description: |
+        Executes a workflow transition as an internal system operation.
+        This endpoint does not require a bearer token or `X-User-ID`, and does
+        not apply action role or assignee guard checks. The transition is
+        audited with `createdBy` / `modifiedBy` as `system`.
+
+        Workflow validation still applies: the process, entity, current state,
+        action, and configured next state must be valid.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+            examples:
+              systemApprove:
+                summary: System approves an existing application
+                value:
+                  processCode: trade-license-approval
+                  entityId: cert-uuid-001
+                  action: APPROVE
+                  currentState: PENDING_REVIEW
+                  comment: Approved by internal system process.
+      responses:
+        '200':
+          description: System transition executed. Returns the updated process instance.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransitionResponse'
+        '400':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Process, process instance, or entity not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Action is not valid for the current state of the process instance.
           content:
             application/json:
               schema:
