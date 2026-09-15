@@ -85,9 +85,6 @@ paths:
         All records are validated before any are persisted — if any employee
         fails validation the entire operation is rolled back and no records
         are created.
-
-        **Idempotency:** Supply the same `Idempotency-Key` on retries within
-        24 hours to receive the original response without duplication.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -767,9 +764,6 @@ paths:
         **Immutable fields** (`id`, `code`, `userId`, `individualId`,
         `dateOfAppointment`, `tenantId`, `auditDetail`) are silently ignored
         if included in the body — they cannot be changed via this endpoint.
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original response without re-applying the update.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -918,9 +912,6 @@ paths:
         → insert, omitted existing → deactivate; `[]` deactivates all). When
         omitted, the existing collection is preserved untouched. See
         `JurisdictionUpsertRequest`.
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original response without re-applying the patch.
 
         For full-state declaration (declarative provisioners), use
         `PUT /employees/{employeeId}` instead.
@@ -1324,9 +1315,6 @@ paths:
 
         An employee may hold multiple active jurisdiction records concurrently
         (e.g., assigned to both ward-level and block-level boundaries).
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original record without duplication.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1614,9 +1602,6 @@ paths:
         and cannot be changed through this endpoint. If a jurisdiction with
         the given UUID exists but belongs to a different employee, this
         endpoint returns 404 — the resource does not exist at this URL.
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original response without re-applying the update.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1756,10 +1741,6 @@ components:
         maxLength: 128
       description: |
         Unique key to prevent duplicate operations on retries.
-        Scoped per operation — the same key on `/employees` POST and
-        `/employees/{employeeId}/jurisdictions` POST are independent.
-        Same key re-submitted within 24 hours returns the original response
-        without re-executing the operation.
     EmployeeIdPath:
       name: employeeId
       in: path
