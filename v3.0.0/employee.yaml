@@ -31,14 +31,20 @@ info:
     | `employeeType` | Classification of the employment arrangement (e.g., PERMANENT, CONTRACT, DEPUTATION). |
     | `boundaryRelation` | Array of `{ code, boundaryType, hierarchyType }` objects defining the geographic scope of a jurisdiction. |
 
-    The `tenantId` is always resolved from the Bearer token and must not be
+    `X-Tenant-ID` and `X-User-ID` are derived from the bearer token and must not be
     sent in request bodies.
 
+    **Envelope dialect**
+
+    Every path is also served under `/v3/canonical` with identical validation,
+    status codes and error bodies. Request context moves into the body —
+    `RequestMetadata.tenantId` → `X-Tenant-ID`, `RequestMetadata.userInfo.uuid` →
+    `X-User-ID` — with the domain payload under `data`, and responses become
+    `{"ResponseMetadata": {…}, "data": <body>}`. `Authorization` stays a header.
+
 servers:
-  - url: https://api.example.com/employee/v3
+  - url: https://test-lts.digit.org/employee/v3
     description: Production
-  - url: https://staging-api.example.com/employee/v3
-    description: Staging
   - url: http://localhost:8080/employee/v3
     description: Local Development
 
@@ -92,6 +98,7 @@ paths:
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UserIdHeader'
       requestBody:
         required: true
         content:
@@ -103,6 +110,23 @@ paths:
               items:
                 $ref: '#/components/schemas/EmployeeCreateRequest'
             examples:
+              fullEmployeeWithJurisdictions:
+                summary: Permanent employee with every field set, including a jurisdiction
+                value:
+                  - userId: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                    individualId: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
+                    employeeType: PERMANENT
+                    department: FINANCE
+                    designation: ACCOUNTS_OFFICER
+                    dateOfAppointment: "2025-01-01T10:00:00Z"
+                    status: EMPLOYED
+                    isActive: true
+                    jurisdictions:
+                      - boundaryRelation:
+                          - code: STATE33d
+                            boundaryType: state
+                            hierarchyType: state-district-city
+                        isActive: true
               singlePermanentEmployee:
                 summary: Single permanent employee with full fields
                 value:
@@ -142,6 +166,40 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EmployeeResponse'
+              examples:
+                fullEmployeeWithJurisdictions:
+                  summary: Newly created employee, code auto-generated, with jurisdiction and audit fields populated
+                  value:
+                    - id: 50843605-23cb-4b6d-b246-6da77d172756
+                      code: EMP-PGG-00008
+                      userId: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                      individualId: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
+                      status: EMPLOYED
+                      employeeType: PERMANENT
+                      dateOfAppointment: "2025-01-01T10:00:00Z"
+                      department: FINANCE
+                      designation: ACCOUNTS_OFFICER
+                      isActive: true
+                      version: 1
+                      jurisdictions:
+                        - id: 538f4d95-da67-4b6e-a555-f1ba464a98aa
+                          employeeId: 50843605-23cb-4b6d-b246-6da77d172756
+                          boundaryRelation:
+                            - code: STATE33d
+                              boundaryType: state
+                              hierarchyType: state-district-city
+                          isActive: true
+                          version: 1
+                          auditDetail:
+                            createdBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                            modifiedBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                            createdTime: 1780478075753
+                            modifiedTime: 1780478075753
+                      auditDetail:
+                        createdBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                        modifiedBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                        createdTime: 1780478075749
+                        modifiedTime: 1780478075749
         '400':
           description: |
             Validation error — one or more employee records failed field-level
@@ -158,13 +216,36 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: Search / list employees
@@ -172,10 +253,13 @@ paths:
       tags: [Employee]
       description: |
         Returns a paginated list of employees for the calling tenant.
-        Results are filtered to the `tenantId` resolved from the Bearer token.
-        Results are ordered by creation time, newest first.
+        Results are scoped to the `tenantId` resolved from the X-Tenant-Id
+        header and ordered by creation time, newest first.
 
-        Supports optional filtering by `code` and `name`.
+        All filters are optional. Multi-value filters use IN-match semantics
+        via repeated query parameters —
+        e.g. `?statuses=ACTIVE&statuses=ON_LEAVE` matches employees whose
+        status is either `ACTIVE` or `ON_LEAVE`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -185,57 +269,145 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
-        - name: code
+        - name: ids
           in: query
           required: false
-          description: Filter by employee code (exact match).
+          description: Filter by one or more employee UUIDs (IN match).
           schema:
-            type: string
-            maxLength: 64
-        - name: name
+            type: array
+            items:
+              type: string
+              format: uuid
+          style: form
+          explode: true
+        - name: codes
           in: query
           required: false
-          description: Filter by employee name (partial, case-insensitive match against the linked Individual profile).
+          description: Filter by one or more employee codes (IN match).
           schema:
-            type: string
-            maxLength: 300
-        - name: employeeType
+            type: array
+            items:
+              type: string
+              maxLength: 64
+          style: form
+          explode: true
+        - name: userIds
           in: query
           required: false
-          description: Filter by employment type.
+          description: |
+            Filter by one or more platform user ids (IN match) — the `userId` each
+            employee record links to.
+
+            Keycloak identifiers are not required to be UUIDs, so only emptiness and
+            length are enforced; a blank entry in the list is rejected with `400`.
           schema:
-            type: string
-            maxLength: 128
-        - name: department
+            type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 64
+          style: form
+          explode: true
+          example: [0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f]
+        - name: statuses
           in: query
           required: false
-          description: Filter by department.
+          description: Filter by one or more employment status labels (IN match).
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 64
+          style: form
+          explode: true
+        - name: employeeTypes
+          in: query
+          required: false
+          description: Filter by one or more employment types (IN match).
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 128
+          style: form
+          explode: true
+        - name: departments
+          in: query
+          required: false
+          description: Filter by one or more departments (IN match).
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 128
+          style: form
+          explode: true
+        - name: designations
+          in: query
+          required: false
+          description: Filter by one or more designations (IN match).
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 128
+          style: form
+          explode: true
+        - name: role
+          in: query
+          required: false
+          description: |
+            Filter by a Keycloak realm role. Employees carry no role column — the
+            role is resolved against Keycloak to its member user IDs and matched
+            on user_id, composed with the other filters.
+
+            This is the only filter that needs a bearer token: supplying `role`
+            without `Authorization` returns `401`. A Keycloak lookup failure is
+            `502`.
           schema:
             type: string
-            maxLength: 128
+            minLength: 1
+            maxLength: 256
+        - name: dateOfAppointmentFrom
+          in: query
+          required: false
+          description: |
+            Lower bound (inclusive) on dateOfAppointment. `YYYY-MM-DD`.
+          schema:
+            type: string
+            format: date
+        - name: dateOfAppointmentTo
+          in: query
+          required: false
+          description: |
+            Upper bound (inclusive) on dateOfAppointment. `YYYY-MM-DD`.
+          schema:
+            type: string
+            format: date
         - name: isActive
           in: query
           required: false
           description: Filter by active status.
           schema:
             type: boolean
-        - name: page
+        - name: limit
           in: query
           required: false
-          description: Page number (1-indexed).
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: size
-          in: query
-          required: false
-          description: Number of records per page. Maximum 100.
+          description: Maximum number of records to return.
           schema:
             type: integer
             minimum: 1
             maximum: 100
-            default: 20
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          description: Number of records to skip (for pagination).
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            default: 0
       responses:
         '200':
           description: Employee list returned.
@@ -251,9 +423,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmployeeListResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmployeeResponse'
         '400':
           description: Bad request — invalid query parameter values.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -265,7 +447,222 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # EMPLOYEE — ONBOARDING
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  /employees/onboard:
+
+    post:
+      summary: Onboard an employee (login user + individual + employee)
+      operationId: onboardEmployee
+      tags: [Employee]
+      description: |
+        Creates a login user, an individual profile and an employee record in one
+        call, linked by the new user's id.
+
+        `userId` and `individualId` are not accepted — the server injects the new
+        user's id into both the individual and the employee. The username is
+        `user.mobileNumber`; the password is set as supplied and never returned.
+
+        The token is forwarded to Keycloak, so a caller can only assign roles it is
+        permitted to grant. Requested roles are checked to exist before anything is
+        created:
+
+        | Step | On failure |
+        |---|---|
+        | 1. Create the Keycloak user | nothing to undo |
+        | 2. Assign realm roles | the user is deleted |
+        | 3. Create the individual | the user is deleted |
+        | 4. Create the employee | the individual is soft-deleted, then the user is deleted |
+
+        Compensation is best-effort; a failure is reported with the status of the
+        step that failed.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardRequest'
+            examples:
+              full:
+                summary: Every field — user, individual and employee with a jurisdiction
+                value:
+                  user:
+                    mobileNumber: "9812345678"
+                    password: Secret@123
+                    email: aisha.khan@corp.example
+                    firstName: Aisha
+                    lastName: Khan
+                    emailVerified: false
+                    roles: [EMPLOYEE]
+                  individual:
+                    givenName: Aisha
+                    familyName: Khan
+                    gender: FEMALE
+                    mobileNumber: "9812345678"
+                    email: aisha.khan@corp.example
+                    identifiers:
+                      - identifierType: PAN
+                        identifierId: ABCDE1234F
+                  employee:
+                    employeeType: PERMANENT
+                    department: FINANCE
+                    designation: ACCOUNTS_OFFICER
+                    dateOfAppointment: "2025-01-01T10:00:00Z"
+                    status: EMPLOYED
+                    isActive: true
+                    jurisdictions:
+                      - boundaryRelation:
+                          - code: STATE33d
+                            boundaryType: state
+                            hierarchyType: state-district-city
+                        isActive: true
+              minimal:
+                summary: Required fields only
+                value:
+                  user:
+                    mobileNumber: "9812345678"
+                    password: Secret@123
+                  individual:
+                    givenName: Aisha
+                    gender: FEMALE
+                  employee:
+                    employeeType: PERMANENT
+                    department: FINANCE
+                    designation: ACCOUNTS_OFFICER
+                    isActive: true
+                    jurisdictions: []
+      responses:
+        '201':
+          description: All three records created and linked.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardResponse'
+              example:
+                user:
+                  id: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                  username: "9812345678"
+                  roles: [EMPLOYEE]
+                individual:
+                  id: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
+                  individualId: IND-PUNECITY-00107
+                  givenName: Aisha
+                  familyName: Khan
+                  gender: FEMALE
+                  mobileNumber: "9812345678"
+                  isActive: true
+                employee:
+                  id: 50843605-23cb-4b6d-b246-6da77d172756
+                  code: EMP-PUNECITY-00003
+                  userId: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                  individualId: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
+                  status: EMPLOYED
+                  employeeType: PERMANENT
+                  dateOfAppointment: "2025-01-01T10:00:00Z"
+                  department: FINANCE
+                  designation: ACCOUNTS_OFFICER
+                  isActive: true
+                  version: 1
+                  auditDetail:
+                    createdBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                    modifiedBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                    createdTime: 1780478075749
+                    modifiedTime: 1780478075749
+        '400':
+          description: |
+            Validation error — a missing `user`, `individual` or `employee` block, a
+            missing `user.mobileNumber` / `user.password`, a role that does not exist
+            in the realm, or an individual/employee payload rejected by its own
+            validation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The caller is not permitted to assign one of the requested roles. The
+            Keycloak user created in step 1 is deleted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A user with this mobile number or email already exists, or the individual
+            conflicts with an existing record.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — keycloak, individual, boundary or idgen
+            did not respond successfully. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # EMPLOYEE — SINGLE RESOURCE
@@ -306,30 +703,70 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EmployeeResponse'
+        '400':
+          description: Invalid path UUID or missing required header.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Employee not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
-      summary: Update employee
+      summary: Update employee (full-state)
       operationId: updateEmployee
       tags: [Employee]
       description: |
-        Fully replaces the mutable fields of an existing employee record.
-        `id`, `code`, `tenantId`, and `auditDetail` are immutable and ignored
-        if supplied in the request body.
+        Updates an existing employee with a **strict full-state declaration**.
+        The request body must describe the complete post-update state —
+        every mutable field (`employeeType`, `department`, `designation`,
+        `status`, `isActive`, `jurisdictions`) plus the concurrency `version`
+        is required.
 
-        Supply all mutable fields — omitted optional fields are cleared to null.
-        For partial updates (supply only changed fields), use `PATCH /employees/{employeeId}`.
+        For partial updates (change one or two fields without re-stating
+        the rest), use `PATCH /employees/{employeeId}` instead.
+
+        **Optimistic concurrency:** `version` (the value last read) is required.
+        The update is a compare-and-swap on it — if the employee changed since
+        you read it, the request is rejected with 409 `ROW_VERSION_MISMATCH`;
+        on success the version is bumped by 1. No row lock is held.
+
+        **Jurisdictions** are required in the body and **reconciled** against
+        the current collection (not replace-on-set): an entry with `id` +
+        `version` updates that jurisdiction in place, an id-less entry inserts a
+        new one, and any existing jurisdiction omitted from the array is
+        deactivated. Supply `[]` to deactivate the whole collection. See
+        `JurisdictionUpsertRequest`. This path is guarded by the **employee**
+        version; each in-place jurisdiction update is additionally guarded by
+        that jurisdiction's own version.
+
+        **Immutable fields** (`id`, `code`, `userId`, `individualId`,
+        `dateOfAppointment`, `tenantId`, `auditDetail`) are silently ignored
+        if included in the body — they cannot be changed via this endpoint.
 
         **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
         original response without re-applying the update.
@@ -344,12 +781,46 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/EmployeeIdPath'
+        - $ref: '#/components/parameters/UserIdHeader'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/EmployeeUpdateRequest'
+            examples:
+              fullStateUpdate:
+                summary: Full-state PUT — update one jurisdiction in place, insert one, drop the rest
+                value:
+                  version: 3
+                  employeeType: PERMANENT
+                  department: FINANCE
+                  designation: SENIOR_ACCOUNTS_OFFICER
+                  status: ACTIVE
+                  isActive: true
+                  jurisdictions:
+                    - id: f1e2d3c4-b5a6-7890-fedc-ba0987654321
+                      version: 2
+                      boundaryRelation:
+                        - code: WARD-NBO-001
+                          boundaryType: Ward
+                          hierarchyType: ADMIN
+                      isActive: true
+                    - boundaryRelation:
+                        - code: WARD-NBO-002
+                          boundaryType: Ward
+                          hierarchyType: ADMIN
+                      isActive: true
+              clearJurisdictions:
+                summary: Replace state and deactivate all jurisdictions
+                value:
+                  version: 4
+                  employeeType: CONTRACT
+                  department: PUBLIC_HEALTH
+                  designation: FIELD_INSPECTOR
+                  status: ON_LEAVE
+                  isActive: true
+                  jurisdictions: []
       responses:
         '200':
           description: Employee updated.
@@ -375,37 +846,84 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Employee not found.
+          description: Employee not found (or a jurisdiction id in the body is not owned by this employee).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict — immutable field change attempted.
+          description: |
+            Conflict — the employee (or a jurisdiction being updated in place)
+            was modified since it was read: `ROW_VERSION_MISMATCH`.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     patch:
       summary: Partially update employee
       operationId: patchEmployee
       tags: [Employee]
       description: |
-        Partially updates an employee record. Only supplied fields are changed;
-        omitted fields retain their existing values.
+        Partially updates an employee record. Every field on the request body
+        is optional; only supplied fields are written, omitted fields preserve
+        their existing DB value.
 
-        Useful for targeted changes such as updating contact details or
-        toggling `isActive` without re-submitting the full record.
+        At least one mutable field must be supplied — an empty body `{}`
+        returns 400. The concurrency `version` is required in addition.
+
+        **Mutable surface**: `status`, `employeeType`, `department`,
+        `designation`, `isActive`, `jurisdictions`. Immutable fields
+        (`id`, `code`, `userId`, `individualId`, `dateOfAppointment`,
+        `tenantId`, `auditDetail`) cannot be changed and are silently
+        ignored if supplied.
+
+        **Optimistic concurrency:** `version` (the value last read) is required
+        even on a partial update. The write compare-and-swaps on it — a stale
+        value returns 409 `ROW_VERSION_MISMATCH`; on success it is bumped by 1.
+
+        **Jurisdictions** are optional. When supplied, the collection is
+        **reconciled** against the array (id+version → update in place, id-less
+        → insert, omitted existing → deactivate; `[]` deactivates all). When
+        omitted, the existing collection is preserved untouched. See
+        `JurisdictionUpsertRequest`.
 
         **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
         original response without re-applying the patch.
+
+        For full-state declaration (declarative provisioners), use
+        `PUT /employees/{employeeId}` instead.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -417,12 +935,47 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/EmployeeIdPath'
+        - $ref: '#/components/parameters/UserIdHeader'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/EmployeePatchRequest'
+            examples:
+              changeDepartmentOnly:
+                summary: Change just the department (most common PATCH use)
+                value:
+                  version: 5
+                  department: PUBLIC_HEALTH
+              promoteAndRelabel:
+                summary: Change designation + status together
+                value:
+                  version: 5
+                  designation: SENIOR_ACCOUNTS_OFFICER
+                  status: ACTIVE
+              reconcileJurisdictions:
+                summary: Update one jurisdiction in place and add a new one, leave other fields
+                value:
+                  version: 5
+                  jurisdictions:
+                    - id: f1e2d3c4-b5a6-7890-fedc-ba0987654321
+                      version: 2
+                      boundaryRelation:
+                        - code: WARD-NBO-003
+                          boundaryType: Ward
+                          hierarchyType: ADMIN
+                      isActive: true
+                    - boundaryRelation:
+                        - code: WARD-NBO-004
+                          boundaryType: Ward
+                          hierarchyType: ADMIN
+                      isActive: true
+              clearJurisdictions:
+                summary: Deactivate all jurisdictions, preserve everything else
+                value:
+                  version: 5
+                  jurisdictions: []
       responses:
         '200':
           description: Employee patched.
@@ -448,32 +1001,63 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Employee not found.
+          description: Employee not found (or a jurisdiction id in the body is not owned by this employee).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            Conflict — the employee (or a jurisdiction being updated in place)
+            was modified since it was read: `ROW_VERSION_MISMATCH`.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       summary: Hard-delete employee
       operationId: hardDeleteEmployee
       tags: [Employee]
       description: |
-        Permanently and irreversibly deletes the employee record and all
-        associated jurisdiction assignments from the database.
+        Permanently and irreversibly deletes the employee record. Associated
+        jurisdiction assignments are removed in the same operation via
+        `ON DELETE CASCADE`.
 
         **This operation cannot be undone.** Prefer deactivation
         (`POST /employees/{employeeId}/deactivate`) for soft removal
         that preserves audit history.
-
-        Returns `409` if the employee has active jurisdiction assignments
-        that must be removed first.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -484,8 +1068,9 @@ paths:
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/EmployeeIdPath'
+        - $ref: '#/components/parameters/UserIdHeader'
       responses:
-        '200':
+        '204':
           description: Employee deleted.
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
@@ -496,32 +1081,38 @@ paths:
             X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
             X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
             X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+        '400':
+          description: Invalid path UUID or missing required header.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  deleted:
-                    type: boolean
-                    example: true
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Employee not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Employee has active jurisdiction assignments — remove them first.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # EMPLOYEE — LIFECYCLE ACTIONS
@@ -540,6 +1131,10 @@ paths:
 
         Returns `409` if the employee is already inactive.
 
+        Takes no request body. The employee's `version` is bumped by 1 on
+        success (returned in the response) — no version token is required on the
+        request; the already-inactive state guard prevents redundant transitions.
+
         The employee can be restored using `POST /employees/{employeeId}/reactivate`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -552,6 +1147,7 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/EmployeeIdPath'
+        - $ref: '#/components/parameters/UserIdHeader'
       responses:
         '200':
           description: Employee deactivated.
@@ -568,24 +1164,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EmployeeResponse'
+              examples:
+                deactivated:
+                  summary: Employee after deactivation
+                  value:
+                    id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    code: EMP-NBO-0042
+                    userId: usr-uuid-001
+                    individualId: ind-uuid-001
+                    employeeType: PERMANENT
+                    department: FINANCE
+                    designation: ACCOUNTS_OFFICER
+                    dateOfAppointment: "2022-06-01T00:00:00.000Z"
+                    status: ACTIVE
+                    isActive: false
+                    auditDetail:
+                      createdBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                      modifiedBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                      createdTime: 1780348693060
+                      modifiedTime: 1780349115544
+        '400':
+          description: Invalid path UUID or missing required header.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Employee not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
           description: Employee is already inactive.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /employees/{employeeId}/reactivate:
 
@@ -597,6 +1234,10 @@ paths:
         Restores a previously deactivated employee by setting `isActive = true`.
 
         Returns `409` if the employee is already active.
+
+        Takes no request body. The employee's `version` is bumped by 1 on
+        success (returned in the response) — no version token is required on the
+        request; the already-active state guard prevents redundant transitions.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -608,6 +1249,7 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/EmployeeIdPath'
+        - $ref: '#/components/parameters/UserIdHeader'
       responses:
         '200':
           description: Employee reactivated.
@@ -624,38 +1266,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EmployeeResponse'
+        '400':
+          description: Invalid path UUID or missing required header.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Employee not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
           description: Employee is already active.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # JURISDICTION — COLLECTION
   # ══════════════════════════════════════════════════════════════════════════════
 
-  /jurisdictions:
+  /employees/{employeeId}/jurisdictions:
 
     post:
       summary: Create jurisdiction
       operationId: createJurisdiction
       tags: [Jurisdiction]
       description: |
-        Creates a new jurisdiction assignment, binding an employee to one or
-        more boundary relation codes.
+        Creates a new jurisdiction assignment for the employee identified by
+        `employeeId` in the path, binding the employee to one or more
+        boundary relation codes.
 
         An employee may hold multiple active jurisdiction records concurrently
         (e.g., assigned to both ward-level and block-level boundaries).
@@ -672,6 +1337,8 @@ paths:
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EmployeeIdPath'
+        - $ref: '#/components/parameters/UserIdHeader'
       requestBody:
         required: true
         content:
@@ -682,7 +1349,6 @@ paths:
               wardAssignment:
                 summary: Assign employee to two ward-level boundaries
                 value:
-                  employeeId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                   boundaryRelation:
                     - code: WARD-NBO-001
                       boundaryType: Ward
@@ -720,27 +1386,48 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: An identical active jurisdiction assignment already exists for this employee.
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
-      summary: Search / list jurisdictions
+      summary: List jurisdictions for an employee
       operationId: searchJurisdictions
       tags: [Jurisdiction]
       description: |
-        Returns a paginated list of jurisdiction assignments for the calling tenant.
-        Results are scoped to the `tenantId` resolved from the Bearer token.
+        Returns a paginated list of jurisdiction assignments belonging to the
+        employee identified by `employeeId` in the path. Results are scoped to
+        the `tenantId` resolved from the X-Tenant-Id header and ordered by
+        creation time, newest first.
+
+        Remaining filters (`ids`, `isActive`) are optional.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -750,36 +1437,42 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
-        - name: employeeId
+        - $ref: '#/components/parameters/EmployeeIdPath'
+        - name: ids
           in: query
           required: false
-          description: Filter to jurisdictions belonging to a specific employee.
+          description: Filter by one or more jurisdiction UUIDs (IN match).
           schema:
-            type: string
-            format: uuid
+            type: array
+            items:
+              type: string
+              format: uuid
+          style: form
+          explode: true
         - name: isActive
           in: query
           required: false
           description: Filter by active status.
           schema:
             type: boolean
-        - name: page
+        - name: limit
           in: query
           required: false
-          description: Page number (1-indexed).
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: size
-          in: query
-          required: false
-          description: Number of records per page. Maximum 100.
+          description: Maximum number of records to return.
           schema:
             type: integer
             minimum: 1
             maximum: 100
-            default: 20
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          description: Number of records to skip (for pagination).
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            default: 0
       responses:
         '200':
           description: Jurisdiction list returned.
@@ -795,9 +1488,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JurisdictionListResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/JurisdictionResponse'
         '400':
           description: Bad request — invalid query parameter values.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -809,19 +1512,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # JURISDICTION — SINGLE RESOURCE
   # ══════════════════════════════════════════════════════════════════════════════
 
-  /jurisdictions/{jurisdictionId}:
+  /employees/{employeeId}/jurisdictions/{jurisdictionId}:
 
     get:
       summary: Get jurisdiction by ID
       operationId: getJurisdiction
       tags: [Jurisdiction]
-      description: Returns the jurisdiction assignment record for the given UUID.
+      description: |
+        Returns the jurisdiction assignment record for the given UUID, scoped
+        to the owning employee in the path. If a jurisdiction with the given
+        UUID exists but belongs to a different employee, this endpoint
+        returns 404 (the resource does not exist at this URL).
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -831,6 +1540,7 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/EmployeeIdPath'
         - $ref: '#/components/parameters/JurisdictionIdPath'
       responses:
         '200':
@@ -848,29 +1558,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JurisdictionResponse'
-        '404':
-          description: Jurisdiction not found.
+        '400':
+          description: Invalid path UUID or missing required header.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Jurisdiction not found for this employee.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
-      summary: Replace jurisdiction
-      operationId: replaceJurisdiction
+      summary: Update jurisdiction
+      operationId: updateJurisdiction
       tags: [Jurisdiction]
       description: |
-        Fully replaces the boundary relation list and active status of an
-        existing jurisdiction assignment.
+        Updates an existing jurisdiction assignment, scoped to the owning
+        employee in the path.
 
-        `id`, `employeeId`, and `tenantId` are immutable and ignored if
-        supplied in the request body.
+        `boundaryRelation` is required and fully replaces the existing array
+        (not merged). `isActive` is optional — when omitted the existing
+        value is preserved, since jurisdictions have no dedicated
+        deactivate/reactivate endpoints.
+
+        **Optimistic concurrency:** `version` (the value last read for this
+        jurisdiction) is required. The update compare-and-swaps on it — a stale
+        value returns 409 `ROW_VERSION_MISMATCH`; on success it is bumped by 1.
+        This version is **independent** of the owning employee's version:
+        updating a jurisdiction here does not change the employee's version.
+
+        The jurisdiction's owning `employeeId` and `tenantId` are immutable
+        and cannot be changed through this endpoint. If a jurisdiction with
+        the given UUID exists but belongs to a different employee, this
+        endpoint returns 404 — the resource does not exist at this URL.
 
         **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
         original response without re-applying the update.
@@ -884,16 +1627,31 @@ paths:
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/EmployeeIdPath'
         - $ref: '#/components/parameters/JurisdictionIdPath'
+        - $ref: '#/components/parameters/UserIdHeader'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/JurisdictionUpdateRequest'
+            examples:
+              updateBoundaries:
+                summary: Replace boundaries on a jurisdiction (version required)
+                value:
+                  version: 2
+                  boundaryRelation:
+                    - code: WARD-NBO-001
+                      boundaryType: Ward
+                      hierarchyType: ADMIN
+                    - code: WARD-NBO-003
+                      boundaryType: Ward
+                      hierarchyType: ADMIN
+                  isActive: true
       responses:
         '200':
-          description: Jurisdiction replaced.
+          description: Jurisdiction updated.
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -916,23 +1674,48 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Jurisdiction not found.
+          description: Jurisdiction not found for this employee.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict — immutable field change attempted.
+          description: 'Conflict — the jurisdiction was modified since it was read: `ROW_VERSION_MISMATCH`.'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — a service this request depends on
+            (boundary, keycloak, individual, or idgen) did not respond
+            successfully. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
@@ -953,6 +1736,8 @@ components:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
     TenantIdHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
+    UserIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader'
     ForwardedForHeader:
       $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
     ClientId:
@@ -972,7 +1757,7 @@ components:
       description: |
         Unique key to prevent duplicate operations on retries.
         Scoped per operation — the same key on `/employees` POST and
-        `/jurisdictions` POST are independent.
+        `/employees/{employeeId}/jurisdictions` POST are independent.
         Same key re-submitted within 24 hours returns the original response
         without re-executing the operation.
     EmployeeIdPath:
@@ -1048,7 +1833,7 @@ components:
         userId:
           type: string
           minLength: 1
-          maxLength: 256
+          maxLength: 64
           description: |
             Reference to the platform User record that provides the employee's
             authentication identity. Nullable — can be linked after creation.
@@ -1056,7 +1841,7 @@ components:
         individualId:
           type: string
           minLength: 1
-          maxLength: 256
+          maxLength: 64
           description: |
             Reference to the Individual profile record that holds demographic
             data (name, date of birth, contact details) for this employee.
@@ -1113,22 +1898,43 @@ components:
             Whether the employee record is active in the system.
             Defaults to `true` on creation. Set to `false` to soft-deactivate
             (preferred over hard-delete for audit trail preservation).
+        jurisdictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/JurisdictionCreateRequest'
+          description: |
+            Optional jurisdiction assignments to create together with the
+            employee. Each is created at version 1 in the same transaction —
+            if any entry is invalid the whole create rolls back. Omit or supply
+            `[]` to create an employee with no jurisdictions.
       x-businessRules:
         - code is immutable after creation.
         - code must be unique within the tenant.
         - If code is omitted the server generates a unique value and returns it.
         - All employees in a batch must be valid for any to be persisted.
+        - jurisdictions, if supplied, are created in the same transaction as the employee; any invalid entry rolls back the whole create.
 
     EmployeeUpdateRequest:
       type: object
       description: |
-        Full replacement payload for mutable employee fields.
-        `id`, `code`, `tenantId`, and `auditDetail` are immutable and
-        must not be supplied — they are ignored if present.
+        PUT body for updating an employee — a **strict full-state declaration**.
+        Every mutable field is required; the client must describe the complete
+        post-update state of the employee.
 
-        All mutable fields should be supplied — omitted optional fields
-        are cleared to null. For targeted field changes use
-        `EmployeePatchRequest` instead.
+        If you only want to change a subset of fields, use
+        `PATCH /employees/{employeeId}` instead. PUT exists for callers who
+        already hold the full desired state (admin tools, declarative
+        provisioners, GET-then-mutate-PUT workflows).
+
+        **Immutable fields** (`id`, `code`, `userId`, `individualId`,
+        `dateOfAppointment`, `tenantId`, `createdBy`, `createdTime`,
+        `auditDetail`) are intentionally absent from this schema. Including
+        them in the body has no effect — they are silently ignored.
+
+        **Optimistic concurrency:** `version` (the value the client last read)
+        is required. The write is a compare-and-swap on it — a stale value is
+        rejected with 409 `ROW_VERSION_MISMATCH`.
+      required: [employeeType, department, designation, status, isActive, jurisdictions, version]
       properties:
         employeeType:
           type: string
@@ -1156,39 +1962,67 @@ components:
           description: |
             Employment status label. Tenant-configured vocabulary.
           example: ACTIVE
-        phone:
-          type: string
-          minLength: 10
-          maxLength: 20
-          description: |
-            Contact phone number. No format enforcement at the envelope level —
-            format validation is the responsibility of the consuming client.
-          example: "+254712345678"
-        emailId:
-          type: string
-          format: email
-          minLength: 5
-          maxLength: 256
-          description: |
-            Contact email address. Validated as RFC 5321 format.
-          example: john.kamau@example.com
         isActive:
           type: boolean
           description: |
-            Active status of the employee record.
-            Prefer the dedicated `/deactivate` and `/reactivate` endpoints
-            for lifecycle state changes to ensure correct audit trail recording.
+            Active status of the employee record. Must be explicit (true/false)
+            on every PUT — omitting returns 400. Prefer `/deactivate` and
+            `/reactivate` for dedicated lifecycle transitions with cleaner
+            audit-trail signal.
+          example: true
+        jurisdictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/JurisdictionUpsertRequest'
+          description: |
+            Jurisdiction assignments for the employee. Required on PUT, and
+            **reconciled** against the current collection (not replace-on-set):
+            an entry with `id` + `version` updates that jurisdiction in place,
+            an id-less entry inserts a new one, and any existing jurisdiction
+            omitted from the array is deactivated. Supply `[]` to deactivate
+            the whole collection. See `JurisdictionUpsertRequest`.
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          description: |
+            Optimistic-concurrency version the client last read. The update
+            compare-and-swaps on it — a mismatch returns 409
+            `ROW_VERSION_MISMATCH`. Bumped by 1 on success.
+          example: 3
       x-businessRules:
-        - code, id, tenantId, and auditDetail are immutable — ignored if supplied.
-        - Omitted optional fields are cleared to null (full replace semantics).
+        - All mutable fields plus version are required on every PUT.
+        - jurisdictions are reconciled by id — id+version updates in place, id-less inserts (version 1), omitted existing entries are deactivated (soft-delete). An empty array deactivates the whole collection.
+        - An entry with an id but no version returns 400; a foreign id returns 404; a stale version returns 409.
+        - version is required and CAS-guarded — a stale employee version returns 409 ROW_VERSION_MISMATCH.
+        - id, code, userId, individualId, dateOfAppointment, tenantId, createdBy, createdTime, and auditDetail are immutable — ignored if supplied.
+        - For partial updates that only change a subset of fields, use PATCH instead.
 
     EmployeePatchRequest:
       type: object
       description: |
-        Partial update payload for an employee record.
-        Only supplied fields are changed; omitted fields retain their existing values.
+        PATCH body for partial update of an employee. Every field is optional;
+        omitted fields preserve their existing DB value. Useful for targeted
+        changes such as updating department or toggling isActive without
+        re-stating the rest of the record.
 
-        All fields are optional. At least one field must be present.
+        At least one mutable field must be supplied — an empty body `{}`
+        returns 400.
+
+        **Mutable surface**: `status`, `employeeType`, `department`,
+        `designation`, `isActive`, `jurisdictions`.
+
+        **Immutable** (cannot be changed via PATCH; ignored if supplied):
+        `id`, `code`, `userId`, `individualId`, `dateOfAppointment`,
+        `tenantId`, `createdBy`, `createdTime`, `auditDetail`.
+
+        For full-state declaration (e.g., declarative provisioners), use
+        `PUT /employees/{employeeId}` instead.
+
+        **Optimistic concurrency:** `version` (the value the client last read)
+        is required even on a partial update — the write compare-and-swaps on
+        it, rejecting a stale patch with 409 `ROW_VERSION_MISMATCH`.
+      required: [version]
       properties:
         employeeType:
           type: string
@@ -1214,36 +2048,47 @@ components:
           maxLength: 64
           description: Employment status label. Tenant-configured vocabulary.
           example: ON_LEAVE
-        phone:
-          type: string
-          minLength: 10
-          maxLength: 20
-          description: Contact phone number.
-          example: "+254712345678"
-        emailId:
-          type: string
-          format: email
-          minLength: 5
-          maxLength: 256
-          description: Contact email address. Validated as RFC 5321 format.
-          example: john.kamau@example.com
         isActive:
           type: boolean
           description: |
             Active status of the employee record.
             Prefer the dedicated `/deactivate` and `/reactivate` endpoints
-            for lifecycle state changes to ensure correct audit trail recording.
+            for lifecycle state changes — they produce cleaner audit trails
+            and reject already-in-state requests with 409.
+        jurisdictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/JurisdictionUpsertRequest'
+          description: |
+            Jurisdiction assignments for the employee. Optional — when omitted,
+            the existing collection is preserved untouched. When supplied, the
+            collection is **reconciled** against the array (id+version → update
+            in place, id-less → insert, omitted existing → deactivate; `[]`
+            deactivates all). See `JurisdictionUpsertRequest`.
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          description: |
+            Optimistic-concurrency version the client last read. Required even
+            on a partial update. The write compare-and-swaps on it — a mismatch
+            returns 409 `ROW_VERSION_MISMATCH`. Bumped by 1 on success.
+          example: 5
       x-businessRules:
-        - At least one field must be present.
-        - code, id, tenantId, and auditDetail are immutable — ignored if supplied.
-        - Omitted fields retain existing values (partial update semantics).
+        - At least one mutable field must be present; empty body returns 400.
+        - version is required and CAS-guarded — a stale employee version returns 409 ROW_VERSION_MISMATCH.
+        - Omitted fields preserve their existing DB value.
+        - jurisdictions, when supplied, are reconciled by id (id+version updates in place, id-less inserts, omitted existing entries are deactivated). Empty array deactivates the whole collection.
+        - id, code, userId, individualId, dateOfAppointment, tenantId, createdBy, createdTime, and auditDetail are immutable — ignored if supplied.
 
     EmployeeResponse:
       type: object
       description: |
         Full employee record as returned by the service.
-        Includes server-managed fields (`id`, `tenantId`, `auditDetail`)
-        and the associated jurisdiction assignments.
+        Includes server-managed fields (`id`, `auditDetail`) and the
+        associated jurisdiction assignments. `tenantId` is intentionally
+        omitted — the caller already knows their tenant from the
+        X-Tenant-Id header they sent.
       properties:
         id:
           type: string
@@ -1287,33 +2132,19 @@ components:
           type: string
           description: Employment status label. Tenant-configured vocabulary.
           example: ACTIVE
-        phone:
-          type: string
-          description: Contact phone number.
-          example: "+254712345678"
-        emailId:
-          type: string
-          format: email
-          description: Contact email address.
-          example: john.kamau@example.com
         isActive:
           type: boolean
           description: Whether the employee record is active in the system.
           example: true
-        tenantId:
-          type: string
-          readOnly: true
-          description: |
-            Tenant the employee belongs to. Resolved from the Bearer token.
-            Never supplied by the client.
         jurisdictions:
           type: array
           items:
             $ref: '#/components/schemas/JurisdictionResponse'
           description: |
             All jurisdiction assignments associated with this employee.
-            Included inline for convenience — use `/jurisdictions?employeeId=`
-            for paginated access when large numbers of assignments are expected.
+            Included inline for convenience — use
+            `GET /employees/{employeeId}/jurisdictions` for paginated access
+            when large numbers of assignments are expected.
         version:
           type: integer
           format: int32
@@ -1322,37 +2153,114 @@ components:
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
-    EmployeeListResponse:
+    OnboardRequest:
       type: object
-      description: Paginated list of employee records.
+      description: |
+        Combined payload for onboarding. All three blocks are required. `userId` and
+        `individualId` are server-injected and must not be supplied.
+      required: [user, individual, employee]
       properties:
-        totalCount:
-          type: integer
-          minimum: 0
-          description: Total number of employees matching the applied filters.
-          example: 47
-        page:
-          type: integer
-          minimum: 1
-          description: Current page number (1-indexed).
-          example: 1
-        size:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Number of records per page as requested.
-          example: 20
-        hasMore:
-          type: boolean
+        user:
+          $ref: '#/components/schemas/OnboardUser'
+        individual:
+          type: object
           description: |
-            Whether additional pages of results exist beyond the current page.
-            Clients should use this flag rather than computing `totalCount / size`
-            to drive pagination.
-          example: true
-        employees:
+            Individual (person) payload, forwarded to the Individual service and
+            validated there. `givenName` and `gender` are required; `address`,
+            `documents` and `identifiers` are supported. The new user's id is
+            injected before forwarding.
+          additionalProperties: true
+          example:
+            givenName: Aisha
+            familyName: Khan
+            gender: FEMALE
+            mobileNumber: "9812345678"
+            identifiers:
+              - identifierType: PAN
+                identifierId: ABCDE1234F
+        employee:
+          allOf:
+            - $ref: '#/components/schemas/EmployeeCreateRequest'
+          description: |
+            Employee payload, validated by the same rules as `POST /employees`.
+            `userId` and `individualId` are ignored if sent.
+
+    OnboardUser:
+      type: object
+      description: The login user to provision. `mobileNumber` becomes the username and is immutable.
+      required: [mobileNumber, password]
+      properties:
+        mobileNumber:
+          type: string
+          description: Becomes the username — the login identifier.
+          example: "9812345678"
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          description: Initial password, set as supplied. Never returned.
+          example: Secret@123
+        email:
+          type: string
+          format: email
+          example: aisha.khan@corp.example
+        firstName:
+          type: string
+          example: Aisha
+        lastName:
+          type: string
+          example: Khan
+        emailVerified:
+          type: boolean
+          default: false
+        roles:
           type: array
+          description: |
+            Realm roles to assign. Each must already exist in the realm — an unknown
+            name is `400` and nothing is created.
           items:
-            $ref: '#/components/schemas/EmployeeResponse'
+            type: string
+          example: [EMPLOYEE]
+
+    OnboardResponse:
+      type: object
+      description: The three created records.
+      required: [user, individual, employee]
+      properties:
+        user:
+          $ref: '#/components/schemas/OnboardUserResponse'
+        individual:
+          type: object
+          description: The created individual, as returned by the Individual service.
+          additionalProperties: true
+        employee:
+          $ref: '#/components/schemas/EmployeeResponse'
+
+    OnboardUserResponse:
+      type: object
+      description: |
+        The server-decided facts about the new login user. Fields the client supplied
+        are not echoed, and the password is never returned.
+      required: [id, username]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The new user's id, also set as the employee's `userId`.
+          example: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+        username:
+          type: string
+          readOnly: true
+          description: The login identifier, derived from `user.mobileNumber`.
+          example: "9812345678"
+        roles:
+          type: array
+          readOnly: true
+          description: Roles actually assigned. Omitted when none were requested.
+          items:
+            type: string
+          example: [EMPLOYEE]
 
     Boundary:
       type: object
@@ -1397,25 +2305,20 @@ components:
     JurisdictionCreateRequest:
       type: object
       description: |
-        Payload for creating a new jurisdiction assignment that binds an employee
-        to one or more geographical boundaries.
+        Payload for creating a new jurisdiction assignment. The owning
+        `employeeId` is supplied via the URL path (this is a nested resource)
+        and is therefore absent from the body.
 
         Each entry in `boundaryRelation` carries a `code` (the tenant-defined
         identifier from the boundary service), a `boundaryType` (the label
         the code resolves to inside the chosen hierarchy), and a
         `hierarchyType` (the hierarchy the code belongs to). At least one
-        boundary is required.
+        boundary is required, and each entry must be unique by the
+        `{code, boundaryType, hierarchyType}` triple.
 
         An employee may hold multiple active jurisdiction records concurrently.
-      required: [employeeId, boundaryRelation]
+      required: [boundaryRelation]
       properties:
-        employeeId:
-          type: string
-          format: uuid
-          description: |
-            UUID of the employee this jurisdiction is assigned to.
-            Must reference an existing, active employee record within the tenant.
-          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         boundaryRelation:
           type: array
           minItems: 1
@@ -1437,18 +2340,86 @@ components:
           default: true
           description: Whether this jurisdiction assignment is active.
       x-businessRules:
-        - employeeId must reference an existing employee within the same tenant.
+        - The owning employeeId comes from the URL path; including it in the body has no effect.
         - boundaryRelation must contain at least one entry.
+        - Each boundaryRelation entry must be unique by (code, boundaryType, hierarchyType).
         - An employee may hold multiple active jurisdiction records concurrently.
+
+    JurisdictionUpsertRequest:
+      type: object
+      description: |
+        A jurisdiction entry inside an employee **PUT/PATCH** body. The array is
+        **reconciled** against the employee's current jurisdictions (it is not
+        replace-on-set):
+
+        - entry with `id` + `version` → the matching jurisdiction is updated in
+          place (ownership + version checked; version bumped, identity/audit
+          preserved).
+        - entry with `id` but no `version` → 400 (version is required to update
+          an existing jurisdiction).
+        - entry with an `id` not owned by the employee in the path → 404.
+        - entry without `id` → a new jurisdiction is inserted (version 1).
+        - any existing jurisdiction omitted from the array → deactivated
+          (`isActive=false`, soft-delete), not hard-deleted.
+
+        An empty array deactivates the whole collection.
+      required: [boundaryRelation]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: |
+            UUID of an existing jurisdiction to update in place. Omit to insert
+            a new jurisdiction. Must belong to the employee in the path.
+          example: f1e2d3c4-b5a6-7890-fedc-ba0987654321
+        version:
+          type: integer
+          format: int32
+          description: |
+            Optimistic-concurrency version of the existing jurisdiction being
+            updated. Required together with `id`; a mismatch returns 409
+            `ROW_VERSION_MISMATCH`. Ignored for id-less (insert) entries.
+          example: 2
+        boundaryRelation:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Boundary'
+          description: |
+            Array of boundary assignments defining the geographical scope of
+            this jurisdiction. Each entry carries `code`, `boundaryType`, and
+            `hierarchyType`.
+          example:
+            - code: WARD-NBO-001
+              boundaryType: Ward
+              hierarchyType: ADMIN
+        isActive:
+          type: boolean
+          default: true
+          description: Whether this jurisdiction assignment is active.
+      x-businessRules:
+        - id and version travel together — supplying id without version returns 400.
+        - id must belong to the employee in the path; a foreign id returns 404.
+        - id-less entries are inserted as new jurisdictions at version 1.
+        - existing jurisdictions omitted from the array are deactivated (soft-delete), not hard-deleted.
+        - a stale version on an update entry returns 409 ROW_VERSION_MISMATCH.
 
     JurisdictionUpdateRequest:
       type: object
       description: |
-        Full replacement payload for an existing jurisdiction assignment.
-        `id`, `employeeId`, and `tenantId` are immutable and ignored if supplied.
+        Update payload for an existing jurisdiction assignment.
 
-        Supply all mutable fields — `boundaryRelation` is fully replaced
-        (not merged) with the submitted array.
+        `boundaryRelation` is required and fully replaces the existing array
+        (not merged). `isActive` is optional — when omitted the existing
+        value is preserved.
+
+        **Optimistic concurrency:** `version` (the value the client last read
+        for this jurisdiction) is required. The write compare-and-swaps on it —
+        a stale value returns 409 `ROW_VERSION_MISMATCH`. This version is
+        independent of the owning employee's version.
+
+        `id`, `employeeId`, and `tenantId` are immutable and ignored if supplied.
+      required: [boundaryRelation, version]
       properties:
         boundaryRelation:
           type: array
@@ -1458,6 +2429,8 @@ components:
           description: |
             Replacement array of boundary assignments. Fully replaces the
             existing `boundaryRelation` — supply all entries that should remain.
+            Each `{code, boundaryType, hierarchyType}` triple must be unique
+            within the array.
           example:
             - code: WARD-NBO-001
               boundaryType: Ward
@@ -1467,11 +2440,26 @@ components:
               hierarchyType: ADMIN
         isActive:
           type: boolean
-          description: Active status of the jurisdiction assignment.
+          description: |
+            Active status of the jurisdiction assignment. Optional — when
+            omitted the existing value is preserved (no implicit deactivation
+            on absence).
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          description: |
+            Optimistic-concurrency version the client last read for this
+            jurisdiction. Required; the update compare-and-swaps on it — a
+            mismatch returns 409 `ROW_VERSION_MISMATCH`. Independent of the
+            owning employee's version. Bumped by 1 on success.
+          example: 2
       x-businessRules:
         - id, employeeId, and tenantId are immutable — ignored if supplied.
-        - boundaryRelation replaces the existing array entirely (full replace semantics).
-        - boundaryRelation must contain at least one entry if supplied.
+        - boundaryRelation is required and fully replaces the existing array (not merged).
+        - boundaryRelation must contain at least one entry, and each entry must be unique by (code, boundaryType, hierarchyType).
+        - isActive is optional; absence preserves the existing value.
+        - version is required and CAS-guarded — a stale jurisdiction version returns 409 ROW_VERSION_MISMATCH. It is independent of the employee's version.
 
     JurisdictionResponse:
       type: object
@@ -1479,6 +2467,8 @@ components:
         A jurisdiction assignment record as returned by the service,
         representing an employee's authorization to operate within
         a defined set of geographical boundaries.
+        `tenantId` is intentionally omitted — the caller already knows
+        their tenant from the X-Tenant-Id header they sent.
       properties:
         id:
           type: string
@@ -1509,12 +2499,6 @@ components:
           type: boolean
           description: Whether this jurisdiction assignment is currently active.
           example: true
-        tenantId:
-          type: string
-          readOnly: true
-          description: |
-            Tenant the jurisdiction belongs to. Resolved from the Bearer token.
-            Never supplied by the client.
         version:
           type: integer
           format: int32
@@ -1522,33 +2506,3 @@ components:
           description: Optimistic concurrency version. Incremented on every mutation.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
-
-    JurisdictionListResponse:
-      type: object
-      description: Paginated list of jurisdiction assignment records.
-      properties:
-        totalCount:
-          type: integer
-          minimum: 0
-          description: Total number of jurisdiction records matching the applied filters.
-          example: 12
-        page:
-          type: integer
-          minimum: 1
-          description: Current page number (1-indexed).
-          example: 1
-        size:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: Number of records per page as requested.
-          example: 20
-        hasMore:
-          type: boolean
-          description: |
-            Whether additional pages of results exist beyond the current page.
-          example: false
-        jurisdictions:
-          type: array
-          items:
-            $ref: '#/components/schemas/JurisdictionResponse'
