@@ -1,0 +1,3 @@
+ALTER TABLE IF EXISTS boundary_v1 ADD COLUMN IF NOT EXISTS requestid TEXT;
+ALTER TABLE IF EXISTS boundary_hierarchy_v1 ADD COLUMN IF NOT EXISTS requestid TEXT;
+ALTER TABLE IF EXISTS boundary_relationship_v1 ADD COLUMN IF NOT EXISTS requestid TEXT;

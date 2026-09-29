@@ -1,0 +1,519 @@
+{
+	"info": {
+		"_postman_id": "7629e156-7cfa-5780-8473-c5a3dd635489",
+		"name": "IDGen-3.0 (Java)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32125612"
+	},
+	"item": [
+		{
+			"name": "Template Management",
+			"item": [
+				{
+					"name": "Create template",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-User-ID",
+								"value": "550e8400-e29b-41d4-a716-446655440000"
+							},
+							{
+								"key": "X-Tenant-ID",
+								"value": "pg"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"templateCode\": \"orgId\",\n    \"config\": {\n        \"template\": \"{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}\",\n        \"sequence\": {\n            \"scope\": \"DAILY\",\n            \"start\": 1,\n            \"padding\": {\n                \"length\": 4,\n                \"char\": \"0\"\n            }\n        },\n        \"random\": {\n            \"length\": 2,\n            \"charset\": \"A-Z0-9\"\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8100/idgen/v3/template",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8100",
+							"path": [
+								"idgen",
+								"v3",
+								"template"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update template",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "X-User-ID",
+								"value": "550e8400-e29b-41d4-a716-446655440001"
+							},
+							{
+								"key": "X-Tenant-ID",
+								"value": "pg"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"templateCode\": \"orgId\",\n    \"config\": {\n        \"template\": \"{ORG}-{DATE:yyyyMMdd}-{SEQ}-{RAND}\",\n        \"sequence\": {\n            \"scope\": \"DAILY\",\n            \"start\": 1,\n            \"padding\": {\n                \"length\": 3,\n                \"char\": \"0\"\n            }\n        },\n        \"random\": {\n            \"length\": 3,\n            \"charset\": \"A-Z0-9\"\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8100/idgen/v3/template",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8100",
+							"path": [
+								"idgen",
+								"v3",
+								"template"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search template",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-ID",
+								"value": "pg"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8100/idgen/v3/template?ids=25e0ec85-92ab-4c6a-9cd9-b86ed1cc3493,cbe8aacd-a4f1-4a5d-99ed-11caeb7d5790&templateCode=orgId&version=v1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8100",
+							"path": [
+								"idgen",
+								"v3",
+								"template"
+							],
+							"query": [
+								{
+									"key": "ids",
+									"value": "25e0ec85-92ab-4c6a-9cd9-b86ed1cc3493,cbe8aacd-a4f1-4a5d-99ed-11caeb7d5790"
+								},
+								{
+									"key": "templateCode",
+									"value": "orgId"
+								},
+								{
+									"key": "version",
+									"value": "v1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete template",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Tenant-ID",
+								"value": "pg"
+							},
+							{
+								"key": "X-User-ID",
+								"value": "550e8400-e29b-41d4-a716-446655440000",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8100/idgen/v3/template?templateCode=orgId&version=v2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8100",
+							"path": [
+								"idgen",
+								"v3",
+								"template"
+							],
+							"query": [
+								{
+									"key": "templateCode",
+									"value": "orgId"
+								},
+								{
+									"key": "version",
+									"value": "v2"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ID Generation",
+			"item": [
+				{
+					"name": "Generate ID",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-ID",
+								"value": "pg"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"templateCode\": \"orgId\",\n    \"variables\": {\n        \"ORG\": \"PG\"\n    }\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8100/idgen/v3/generate",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8100",
+							"path": [
+								"idgen",
+								"v3",
+								"generate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate IDs Bulk",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-ID",
+								"value": "pg"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"templateCode\": \"orgId\",\n    \"count\": 100,\n    \"variables\": {\n        \"ORG\": \"PG\"\n    }\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8100/idgen/v3/generate/bulk",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8100",
+							"path": [
+								"idgen",
+								"v3",
+								"generate",
+								"bulk"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Canonical Template Management",
+			"description": "Header-free twins of Template Management. Every X-* header moves into `requestMetadata`; the payload sits under `data`; query parameters stay query parameters. Responses are wrapped in `{responseMetadata, data}`.",
+			"item": [
+				{
+					"name": "Create template - Canonical",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"f98d1ed5-f978-40ca-b586-3f3567623225\",\n    \"correlationId\": \"5d9c1f60-6d0e-4c1e-9a4e-2b7a1f3c8e10\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"create-user\" }\n  },\n  \"data\": {\n    \"templateCode\": \"orgId\",\n    \"config\": {\n      \"template\": \"{ORG}-{DATE:yyyymmdd}-{SEQ}-{RAND}\",\n      \"sequence\": { \"scope\": \"GLOBAL\", \"start\": 1, \"padding\": { \"length\": 4, \"char\": \"0\" } },\n      \"random\": { \"length\": 2, \"charset\": \"A-Z0-9\" }\n    }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v3/canonical/template",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v3",
+								"canonical",
+								"template"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update template - Canonical",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"f98d1ed5-f978-40ca-b586-3f3567623225\",\n    \"correlationId\": \"5d9c1f60-6d0e-4c1e-9a4e-2b7a1f3c8e10\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"update-user\" }\n  },\n  \"data\": {\n    \"templateCode\": \"orgId\",\n    \"config\": { \"template\": \"{ORG}-{SEQ}\" }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v3/canonical/template",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v3",
+								"canonical",
+								"template"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search template - Canonical",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"f98d1ed5-f978-40ca-b586-3f3567623225\",\n    \"correlationId\": \"5d9c1f60-6d0e-4c1e-9a4e-2b7a1f3c8e10\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v3/canonical/template?ids=25e0ec85-92ab-4c6a-9cd9-b86ed1cc3493,cbe8aacd-a4f1-4a5d-99ed-11caeb7d5790&templateCode=orgId&version=v1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v3",
+								"canonical",
+								"template"
+							],
+							"query": [
+								{
+									"key": "ids",
+									"value": "25e0ec85-92ab-4c6a-9cd9-b86ed1cc3493,cbe8aacd-a4f1-4a5d-99ed-11caeb7d5790"
+								},
+								{
+									"key": "templateCode",
+									"value": "orgId"
+								},
+								{
+									"key": "version",
+									"value": "v1"
+								}
+							]
+						},
+						"description": "Search criteria stay query parameters, exactly as on the 3.0 route; the body carries requestMetadata alone. No user id is read.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+					},
+					"response": [],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					}
+				},
+				{
+					"name": "Delete template - Canonical",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"f98d1ed5-f978-40ca-b586-3f3567623225\",\n    \"correlationId\": \"5d9c1f60-6d0e-4c1e-9a4e-2b7a1f3c8e10\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"delete-user\" }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v3/canonical/template?templateCode=orgId&version=v2",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v3",
+								"canonical",
+								"template"
+							],
+							"query": [
+								{
+									"key": "templateCode",
+									"value": "orgId"
+								},
+								{
+									"key": "version",
+									"value": "v2"
+								}
+							]
+						},
+						"description": "templateCode and version stay query parameters. Requires requestMetadata.userInfo.userId, mirroring the 3.0 route's X-User-ID demand."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Canonical ID Generation",
+			"description": "Header-free twins of ID Generation. Neither operation reads a user id — generation writes no audit record.",
+			"item": [
+				{
+					"name": "Generate ID - Canonical",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"f98d1ed5-f978-40ca-b586-3f3567623225\",\n    \"correlationId\": \"5d9c1f60-6d0e-4c1e-9a4e-2b7a1f3c8e10\",\n    \"tenantId\": \"{{tenantId}}\"\n  },\n  \"data\": {\n    \"templateCode\": \"orgId\",\n    \"variables\": { \"ORG\": \"PB\" }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v3/canonical/generate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v3",
+								"canonical",
+								"generate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate IDs Bulk - Canonical",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"f98d1ed5-f978-40ca-b586-3f3567623225\",\n    \"correlationId\": \"5d9c1f60-6d0e-4c1e-9a4e-2b7a1f3c8e10\",\n    \"tenantId\": \"{{tenantId}}\"\n  },\n  \"data\": {\n    \"templateCode\": \"orgId\",\n    \"count\": 5,\n    \"variables\": { \"ORG\": \"PB\" }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v3/canonical/generate/bulk",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v3",
+								"canonical",
+								"generate",
+								"bulk"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// canonical requests carry the request time in requestMetadata.ts (epoch ms);",
+					"// Postman's built-in {{$timestamp}} is seconds, which fails the 13-digit minimum",
+					"pm.collectionVariables.set('ts', Date.now());"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8100/idgen"
+		},
+		{
+			"key": "tenantId",
+			"value": "pg"
+		},
+		{
+			"key": "ts",
+			"value": "1712830200000"
+		}
+	]
+}

@@ -87,7 +87,7 @@ def gateway_headers_spec(request):
 
 @pytest.fixture(scope="session")
 def swagger_schema(base_url):
-    schema_path = os.path.join(os.path.dirname(__file__), "schema.yaml")
+    schema_path = os.path.join(os.path.dirname(__file__), "employee.yaml")
     return schemathesis.openapi.from_path(schema_path)
 
 

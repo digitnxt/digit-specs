@@ -1,0 +1,3 @@
+ALTER TABLE IF EXISTS idgen_templates ADD COLUMN IF NOT EXISTS requestid TEXT;
+ALTER TABLE IF EXISTS idgen_sequence_lookup ADD COLUMN IF NOT EXISTS requestid TEXT;
+ALTER TABLE IF EXISTS idgen_sequence_resets ADD COLUMN IF NOT EXISTS requestid TEXT;

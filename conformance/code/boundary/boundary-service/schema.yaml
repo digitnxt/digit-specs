@@ -1,0 +1,1183 @@
+openapi: 3.0.3
+info:
+  title: Boundary Service
+  description: Boundary service APIs - to create, search and update boundaries along
+    with APIs for establishing relationships between boundaries. This service supports
+    n-level hierarchical boundary data.
+  contact:
+    name: eGov
+    email: info@egovernments.org
+  version: 3.0.0
+servers:
+- url: /boundary/v3
+  description: Relative path for all environments
+security:
+- BearerAuth: []
+paths:
+  /boundaries:
+    get:
+      tags:
+      - Boundary Entities
+      summary: API endpoint to search boundary entities.
+      operationId: searchBoundaries
+      description: 'Provides a list of boundary entities based on the provided search
+        criteria.
+
+        '
+      parameters:
+      - name: codes
+        in: query
+        description: unique list of boundary codes.
+        style: form
+        explode: false
+        required: true
+        schema:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+            format: varchar
+      - name: limit
+        in: query
+        description: Maximum number of results to return
+        required: false
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        description: Number of results to skip
+        required: false
+        schema:
+          type: integer
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Successful Response.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    post:
+      tags:
+      - Boundary Entities
+      summary: API endpoint to create Boundary.
+      operationId: createBoundary
+      description: 'Provides functionality to create boundary data.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoundaryRequest'
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '201':
+          description: Boundary created successfully.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - Duplicate boundary code exists.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+  /boundaries/{id}:
+    put:
+      tags:
+      - Boundary Entities
+      summary: API endpoint to update Boundary.
+      operationId: updateBoundary
+      description: 'Provides functionality to update boundary data.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        description: Boundary ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Boundary'
+      responses:
+        '200':
+          description: Boundary updated successfully.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Boundary not found.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+  /hierarchy:
+    post:
+      tags:
+      - Hierarchy Definition
+      summary: API endpoint to create boundary hierarchy.
+      operationId: createBoundaryHierarchy
+      description: 'Creates a new boundary type hierarchy definition.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoundaryHierarchyRequest'
+      responses:
+        '201':
+          description: Hierarchy created successfully.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryHierarchyResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate hierarchy type for tenant.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    get:
+      tags:
+      - Hierarchy Definition
+      summary: API endpoint to search boundary hierarchy.
+      operationId: searchBoundaryHierarchy
+      description: 'Provides boundary type hierarchy based on the provided search
+        criteria.
+
+        '
+      parameters:
+      - name: hierarchyType
+        in: query
+        description: Search by hierarchy type.
+        required: true
+        schema:
+          minLength: 1
+          maxLength: 256
+          type: string
+          format: varchar
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Successful Response.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryHierarchyResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+  /hierarchy/{id}:
+    put:
+      tags:
+      - Hierarchy Definition
+      summary: API endpoint to update boundary hierarchy.
+      operationId: updateBoundaryHierarchy
+      description: 'Updates an existing boundary type hierarchy definition.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        description: Hierarchy ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoundaryHierarchyRequest'
+      responses:
+        '200':
+          description: Hierarchy updated successfully.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryHierarchyResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Hierarchy not found.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+  /relationship:
+    post:
+      tags:
+      - Boundary Relationships
+      summary: API endpoint to create relationships between boundaries.
+      operationId: createBoundaryRelationship
+      description: 'Provides functionality to establish relationships between boundaries.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoundaryRelationshipRequest'
+      responses:
+        '201':
+          description: Relationship created successfully.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryRelationshipResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found - Referenced hierarchy type or boundary does not exist.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate relationship code for tenant and hierarchy type.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+    get:
+      tags:
+      - Boundary Relationships
+      summary: API endpoint to search linked boundaries.
+      operationId: searchBoundaryRelationships
+      description: 'Provides functionality to search linked boundaries based on the
+        provided search criteria
+
+        '
+      parameters:
+      - name: hierarchyType
+        in: query
+        description: Type Of the BoundaryType Like REVENUE, ADMIN
+        schema:
+          minLength: 1
+          maxLength: 128
+          type: string
+          format: varchar
+      - name: boundaryType
+        in: query
+        description: boundary type within the tenant boundary structure.
+        schema:
+          minLength: 1
+          maxLength: 64
+          type: string
+          format: varchar
+      - name: codes
+        in: query
+        description: unique List of boundary codes.
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: varchar
+      - name: parent
+        in: query
+        description: parent boundary code.
+        schema:
+          type: string
+      - name: includeChildren
+        in: query
+        description: boolean flag to inform the service if children need to be part
+          of search.
+        required: false
+        schema:
+          type: boolean
+      - name: includeParents
+        in: query
+        description: boolean flag to inform the service if parents need to be part
+          of search.
+        required: false
+        schema:
+          type: boolean
+      - name: limit
+        in: query
+        description: Maximum number of results to return
+        required: false
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        description: Number of results to skip
+        required: false
+        schema:
+          type: integer
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      responses:
+        '200':
+          description: Successful Response.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundarySearchResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+  /relationship/{id}:
+    put:
+      tags:
+      - Boundary Relationships
+      summary: API endpoint to update relationships between boundaries.
+      operationId: updateBoundaryRelationship
+      description: 'Provides functionality to update relationships between boundaries.
+
+        '
+      parameters:
+      - name: id
+        in: path
+        description: Relationship ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoundaryRelation'
+      responses:
+        '200':
+          description: Relationship updated successfully.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryRelationshipResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication token.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Relationship not found.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth
+  parameters:
+    RequestIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader
+    CorrelationIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader
+    UserAgentHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
+    TenantIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+    ForwardedForHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
+    ClientId:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
+    ClientSecret:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret
+    TimeStamp:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
+  headers:
+    X-Response-Time:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time
+    X-Response-Timestamp:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp
+    X-Request-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID
+    X-Correlation-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID
+    X-Tenant-ID:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID
+    X-Rate-Limit:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit
+    X-Rate-Limit-Remaining:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining
+    X-Rate-Limit-Reset:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset
+  schemas:
+    Error:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
+    Geometry:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - Polygon
+          - Point
+          - MultiPolygon
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: number
+    Boundary:
+      required:
+      - code
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+          description: read-only db entity uuid.
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: code of the boundary.
+        geometry:
+          $ref: '#/components/schemas/Geometry'
+        additionalAttributes:
+          type: object
+          description: Additional attributes for the boundary
+        requestId:
+          type: string
+          description: Request ID for tracking
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    AuditDetail:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
+    EnrichedBoundary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Boundary entity uuid.
+        code:
+          type: string
+          description: code of the boundary.
+        boundaryType:
+          type: string
+          description: type of the boundary.
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrichedBoundary'
+          description: children boundaries of the current boundary
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    BoundaryRelation:
+      required:
+      - code
+      - hierarchyType
+      - boundaryType
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+          description: read-only db entity uuid.
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Code of the boundary.
+        hierarchyType:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Code of the hierarchy type for which boundary relationship
+            is being created.
+        boundaryType:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Boundary type from master data.
+        parent:
+          type: string
+          description: Parent boundary code.
+        ancestralMaterializedPath:
+          type: string
+          description: Materialized path representing the ancestral hierarchy
+        requestId:
+          type: string
+          description: Request ID for tracking
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    HierarchyRelation:
+      type: object
+      properties:
+        hierarchyType:
+          type: string
+          description: Hierarchy type from master data
+        boundary:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrichedBoundary'
+          description: Root boundaries in the hierarchy
+    BoundaryRelationshipRequest:
+      type: object
+      required:
+      - relationship
+      additionalProperties: false
+      properties:
+        relationship:
+          $ref: '#/components/schemas/BoundaryRelation'
+    BoundaryRelationshipResponse:
+      type: object
+      properties:
+        relationship:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoundaryRelation'
+    BoundarySearchResponse:
+      type: object
+      properties:
+        tenantBoundary:
+          type: array
+          items:
+            $ref: '#/components/schemas/HierarchyRelation'
+    BoundaryTypeHierarchy:
+      type: object
+      required:
+        - boundaryType
+      properties:
+        id:
+          type: string
+          description: UUID
+        boundaryType:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: boundary type code.
+        parentBoundaryType:
+          type: string
+          nullable: true
+          description: unique code for parent boundary. Null for root level.
+        active:
+          type: boolean
+          description: attribute that defines if the given boundary hierarchy is active
+            or not
+    BoundaryHierarchyResponse:
+      type: object
+      properties:
+        hierarchy:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoundaryHierarchyDefinition'
+    BoundaryHierarchyDefinition:
+      type: object
+      required:
+        - hierarchyType
+        - boundaryHierarchy
+      properties:
+        id:
+          type: string
+          description: UUID of the hierarchy definition
+        hierarchyType:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Hierarchy type from master data
+        boundaryHierarchy:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/BoundaryTypeHierarchy'
+        requestId:
+          type: string
+          description: Request ID for tracking
+        auditDetails:
+          $ref: '#/components/schemas/AuditDetail'
+    BoundaryHierarchyRequest:
+      type: object
+      required:
+      - hierarchy
+      additionalProperties: false
+      properties:
+        hierarchy:
+          $ref: '#/components/schemas/BoundaryHierarchyDefinition'
+    BoundaryRequest:
+      type: object
+      required:
+      - boundary
+      additionalProperties: false
+      properties:
+        boundary:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Boundary'
+    BoundaryResponse:
+      type: object
+      properties:
+        boundary:
+          type: array
+          items:
+            $ref: '#/components/schemas/Boundary'

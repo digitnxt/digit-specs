@@ -1,0 +1,816 @@
+{
+ "info": {
+  "_postman_id": "7f3a9c41-52b8-4e6d-9a17-c04d5e88b210",
+  "name": "Boundary-3.0 (Java)",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "item": [
+  {
+   "name": "Boundary",
+   "item": [
+    {
+     "name": "Create boundaries",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-Request-ID",
+        "value": "req-{{ts}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/boundaries",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"boundary\": [\n    {\n      \"code\": \"{{rootBoundaryCode}}\",\n      \"geometry\": {\n        \"type\": \"Point\",\n        \"coordinates\": [77.5946, 12.9716]\n      },\n      \"additionalAttributes\": {\n        \"name\": \"Postman City\"\n      }\n    },\n    {\n      \"code\": \"{{childBoundaryCode}}\",\n      \"geometry\": {\n        \"type\": \"Point\",\n        \"coordinates\": [77.6, 12.98]\n      }\n    }\n  ]\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "const body = pm.response.json();",
+         "if (body.boundary && body.boundary.length) { pm.collectionVariables.set('boundaryId', body.boundary[0].id); }"
+        ],
+        "type": "text/javascript"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Search boundaries",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/boundaries?codes={{rootBoundaryCode}}&codes={{childBoundaryCode}}&limit=20&offset=0"
+     },
+     "response": []
+    },
+    {
+     "name": "Search boundaries by point (geo)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/boundaries?latitude={{latitude}}&longitude={{longitude}}&limit=20&offset=0",
+      "description": "PostGIS point-in-polygon search (ST_Contains on the geom column). Returns boundaries whose geometry contains the point. Boundaries created before the geo migration have geom NULL and never match until updated."
+     },
+     "response": []
+    },
+    {
+     "name": "Update boundary",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-Request-ID",
+        "value": "req-{{ts}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/boundaries/{{boundaryId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"code\": \"{{rootBoundaryCode}}\",\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [77.5946, 12.9716]\n  },\n  \"additionalAttributes\": {\n    \"name\": \"Postman City updated\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Hierarchy",
+   "item": [
+    {
+     "name": "Create hierarchy",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-Request-ID",
+        "value": "req-{{ts}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/hierarchy",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"hierarchy\": {\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryHierarchy\": [\n      {\n        \"boundaryType\": \"CITY\",\n        \"parentBoundaryType\": \"\",\n        \"active\": true\n      },\n      {\n        \"boundaryType\": \"WARD\",\n        \"parentBoundaryType\": \"CITY\",\n        \"active\": true\n      }\n    ]\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "const body = pm.response.json();",
+         "if (body.hierarchy && body.hierarchy.length) { pm.collectionVariables.set('hierarchyId', body.hierarchy[0].id); }"
+        ],
+        "type": "text/javascript"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Search hierarchy",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/hierarchy?hierarchyType={{hierarchyType}}"
+     },
+     "response": []
+    },
+    {
+     "name": "Update hierarchy",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-Request-ID",
+        "value": "req-{{ts}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/hierarchy/{{hierarchyId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"hierarchy\": {\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryHierarchy\": [\n      {\n        \"boundaryType\": \"CITY\",\n        \"parentBoundaryType\": \"\",\n        \"active\": true\n      },\n      {\n        \"boundaryType\": \"WARD\",\n        \"parentBoundaryType\": \"CITY\",\n        \"active\": true\n      }\n    ]\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Relationship",
+   "item": [
+    {
+     "name": "Create relationship (root)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-Request-ID",
+        "value": "req-{{ts}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/relationship",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"relationship\": {\n    \"code\": \"{{rootBoundaryCode}}\",\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryType\": \"CITY\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "const body = pm.response.json();",
+         "if (body.relationship && body.relationship.length) { pm.collectionVariables.set('relationshipId', body.relationship[0].id); }"
+        ],
+        "type": "text/javascript"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Create relationship (child)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-Request-ID",
+        "value": "req-{{ts}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/relationship",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"relationship\": {\n    \"code\": \"{{childBoundaryCode}}\",\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryType\": \"WARD\",\n    \"parent\": \"{{rootBoundaryCode}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    },
+    {
+     "name": "Search relationships",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/relationship?hierarchyType={{hierarchyType}}&includeChildren=true"
+     },
+     "response": []
+    },
+    {
+     "name": "Search relationships by point (geo)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/relationship?hierarchyType={{hierarchyType}}&latitude={{latitude}}&longitude={{longitude}}&includeParents=true",
+      "description": "Resolves the point to the boundary codes containing it, then runs the relationship search on those codes. Supplying codes alongside narrows (intersects) the spatial matches."
+     },
+     "response": []
+    },
+    {
+     "name": "Update relationship",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-Request-ID",
+        "value": "req-{{ts}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/relationship/{{relationshipId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"code\": \"{{rootBoundaryCode}}\",\n  \"hierarchyType\": \"{{hierarchyType}}\",\n  \"boundaryType\": \"CITY\"\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Canonical",
+   "item": [
+    {
+     "name": "Canonical create boundaries",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/boundaries",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"boundary\": [\n    {\n      \"code\": \"{{rootBoundaryCode}}\",\n      \"geometry\": {\n        \"type\": \"Point\",\n        \"coordinates\": [77.5946, 12.9716]\n      },\n      \"additionalAttributes\": {\n        \"name\": \"Postman City\"\n      }\n    },\n    {\n      \"code\": \"{{childBoundaryCode}}\",\n      \"geometry\": {\n        \"type\": \"Point\",\n        \"coordinates\": [77.6, 12.98]\n      }\n    }\n  ]\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "const body = pm.response.json();",
+         "if (body.boundary && body.boundary.length) { pm.collectionVariables.set('boundaryId', body.boundary[0].id); }"
+        ],
+        "type": "text/javascript"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Canonical search boundaries",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/boundaries",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"boundarySearchCriteria\": {\n    \"codes\": [\"{{rootBoundaryCode}}\", \"{{childBoundaryCode}}\"],\n    \"limit\": 20,\n    \"offset\": 0\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Canonical search boundaries by point (geo)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/boundaries",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"boundarySearchCriteria\": {\n    \"latitude\": {{latitude}},\n    \"longitude\": {{longitude}},\n    \"limit\": 20,\n    \"offset\": 0\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Canonical update boundary",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/boundaries/{{boundaryId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"boundary\": {\n    \"code\": \"{{rootBoundaryCode}}\",\n    \"geometry\": {\n      \"type\": \"Point\",\n      \"coordinates\": [77.5946, 12.9716]\n    },\n    \"additionalAttributes\": {\n      \"name\": \"Postman City updated (canonical)\"\n    }\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    },
+    {
+     "name": "Canonical create hierarchy",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/hierarchy",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"hierarchy\": {\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryHierarchy\": [\n      {\n        \"boundaryType\": \"CITY\",\n        \"parentBoundaryType\": \"\",\n        \"active\": true\n      },\n      {\n        \"boundaryType\": \"WARD\",\n        \"parentBoundaryType\": \"CITY\",\n        \"active\": true\n      }\n    ]\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "const body = pm.response.json();",
+         "if (body.hierarchy && body.hierarchy.length) { pm.collectionVariables.set('hierarchyId', body.hierarchy[0].id); }"
+        ],
+        "type": "text/javascript"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Canonical search hierarchy",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/hierarchy",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"boundaryHierarchySearchCriteria\": {\n    \"hierarchyType\": \"{{hierarchyType}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Canonical update hierarchy",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/hierarchy/{{hierarchyId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"hierarchy\": {\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryHierarchy\": [\n      {\n        \"boundaryType\": \"CITY\",\n        \"parentBoundaryType\": \"\",\n        \"active\": true\n      },\n      {\n        \"boundaryType\": \"WARD\",\n        \"parentBoundaryType\": \"CITY\",\n        \"active\": true\n      }\n    ]\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    },
+    {
+     "name": "Canonical create relationship (root)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/relationship",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"relationship\": {\n    \"code\": \"{{rootBoundaryCode}}\",\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryType\": \"CITY\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "exec": [
+         "const body = pm.response.json();",
+         "if (body.relationship && body.relationship.length) { pm.collectionVariables.set('relationshipId', body.relationship[0].id); }"
+        ],
+        "type": "text/javascript"
+       }
+      }
+     ]
+    },
+    {
+     "name": "Canonical create relationship (child)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/relationship",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"relationship\": {\n    \"code\": \"{{childBoundaryCode}}\",\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryType\": \"WARD\",\n    \"parent\": \"{{rootBoundaryCode}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    },
+    {
+     "name": "Canonical search relationships",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/relationship",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"boundaryRelationshipSearchCriteria\": {\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"includeChildren\": true\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Canonical search relationships by point (geo)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/relationship",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"boundaryRelationshipSearchCriteria\": {\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"latitude\": {{latitude}},\n    \"longitude\": {{longitude}},\n    \"includeParents\": true\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Canonical update relationship",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/relationship/{{relationshipId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"RequestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"req-{{ts}}\",\n    \"correlationId\": \"corr-{{ts}}\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"sub\": \"{{userId}}\" }\n  },\n  \"relationship\": {\n    \"code\": \"{{rootBoundaryCode}}\",\n    \"hierarchyType\": \"{{hierarchyType}}\",\n    \"boundaryType\": \"CITY\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      }
+     },
+     "response": []
+    }
+   ],
+   "description": "Header-free boundary APIs: request metadata travels in a top-level RequestMetadata body object (userInfo.sub becomes the audit user); search parameters move into criteria objects (boundarySearchCriteria, boundaryHierarchySearchCriteria, boundaryRelationshipSearchCriteria). GET requests carry a JSON body, so they set protocolProfileBehavior.disableBodyPruning."
+  }
+ ],
+ "event": [
+  {
+   "listen": "prerequest",
+   "script": {
+    "type": "text/javascript",
+    "exec": [
+     "pm.collectionVariables.set('ts', Date.now());"
+    ]
+   }
+  }
+ ],
+ "variable": [
+  {
+   "key": "baseUrl",
+   "value": "http://localhost:8081/boundary"
+  },
+  {
+   "key": "tenantId",
+   "value": "ESMAGICO"
+  },
+  {
+   "key": "userId",
+   "value": "postman-user"
+  },
+  {
+   "key": "hierarchyType",
+   "value": "POSTMAN-ADMIN"
+  },
+  {
+   "key": "rootBoundaryCode",
+   "value": "PM-CITY-001"
+  },
+  {
+   "key": "childBoundaryCode",
+   "value": "PM-WARD-001"
+  },
+  {
+   "key": "boundaryId",
+   "value": ""
+  },
+  {
+   "key": "hierarchyId",
+   "value": ""
+  },
+  {
+   "key": "relationshipId",
+   "value": ""
+  },
+  {
+   "key": "ts",
+   "value": "1712830200000"
+  },
+  {
+   "key": "latitude",
+   "value": "12.9716"
+  },
+  {
+   "key": "longitude",
+   "value": "77.5946"
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/model/ConfigJsonTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/repo/LegacyConfigJsonTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/repo/SequenceNamesTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/service/GenerationServiceTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/service/ParseVersionTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/service/TemplateRendererTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/service/TemplateServiceTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/web/CanonicalPathConfigTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/web/CanonicalWebLayerTest.java
+/home/admin/Desktop/java25/digit3/src/services/idgen/src/test/java/org/digit/idgen/web/WebLayerTest.java

@@ -1,0 +1,10 @@
+org/digit/idgen/model/ConfigJsonTest.class
+org/digit/idgen/repo/LegacyConfigJsonTest.class
+org/digit/idgen/repo/SequenceNamesTest.class
+org/digit/idgen/web/CanonicalWebLayerTest.class
+org/digit/idgen/web/CanonicalPathConfigTest.class
+org/digit/idgen/service/GenerationServiceTest.class
+org/digit/idgen/service/TemplateRendererTest.class
+org/digit/idgen/service/ParseVersionTest.class
+org/digit/idgen/service/TemplateServiceTest.class
+org/digit/idgen/web/WebLayerTest.class

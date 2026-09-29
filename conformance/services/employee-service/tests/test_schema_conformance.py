@@ -14,7 +14,7 @@ from schemathesis.specs.openapi.checks import (
 )
 from tests.helpers.curl_builder import build_curl
 
-_schema_path = os.path.join(os.path.dirname(__file__), "..", "schema.yaml")
+_schema_path = os.path.join(os.path.dirname(__file__), "..", "employee.yaml")
 schema = schemathesis.openapi.from_path(os.path.abspath(_schema_path))
 
 # These checks are excluded because they fire on gateway/environment artifacts
