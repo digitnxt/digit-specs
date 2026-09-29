@@ -1,0 +1,25 @@
+-- Email is NOT unique on tenant_v1.
+--
+-- An earlier draft of this file added `UNIQUE (email)` as a backstop for
+-- the duplicate-email race on POST /v3/tenants. That draft is reversed:
+-- the product decision is that the same admin email may legitimately
+-- administer multiple tenants (multi-tenant operator pattern), and some
+-- environments already contain duplicates the constraint cannot be
+-- applied to without destructive cleanup.
+--
+-- This migration is now an idempotent drop:
+--   - Fresh environments  → no-op.
+--   - Environments where the earlier draft of this file did manage to
+--     create the constraint → it is removed here.
+--
+-- Race-safety for concurrent same-NAME POSTs (the actual original bug)
+-- is still guaranteed by the pre-existing `UNIQUE (code)` constraint
+-- declared inline on the column in V20250917145015. Since `code` is
+-- server-derived from `name` (uppercase + strip spaces), two concurrent
+-- posts of the same tenant name fold to the same code and are serialised
+-- by the database — the loser receives `tenant_v1_code_key` violation
+-- (23505) which the repository layer maps to DUPLICATE_RECORD → 409.
+-- Same-email + different-name requests are explicitly allowed; each
+-- ends up with a distinct code and its own Keycloak realm.
+
+ALTER TABLE tenant_v1 DROP CONSTRAINT IF EXISTS tenant_v1_email_unique;

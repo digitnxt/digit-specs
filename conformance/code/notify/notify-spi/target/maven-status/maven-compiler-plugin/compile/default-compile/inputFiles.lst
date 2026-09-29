@@ -1,0 +1,9 @@
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/module-info.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/Channel.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/ChannelMessage.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/DispatchResult.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/DispatchStatus.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/NotificationChannelProvider.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/Priority.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/Recipient.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-spi/src/main/java/org/digit/notify/spi/package-info.java

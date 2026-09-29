@@ -6,6 +6,7 @@ import com.digit.employee.repository.EmployeeRepository;
 import org.digit.tracer.model.CustomException;
 import org.springframework.http.HttpStatus;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionOperations;
 import org.mockito.Mockito;
 
 import java.util.List;
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class EmployeeLifecycleTest {
 
     private EmployeeService svc(EmployeeRepository repo) {
-        return new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null);
+        return new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null, TransactionOperations.withoutTransaction());
     }
 
     @Test
@@ -69,9 +70,9 @@ class EmployeeLifecycleTest {
         JurisdictionService js = Mockito.mock(JurisdictionService.class);
         com.digit.employee.observability.BusinessMetrics m =
                 Mockito.mock(com.digit.employee.observability.BusinessMetrics.class);
-        EmployeeService svc = new EmployeeService(repo, js, null, null, null, new EmployeeProperties(), null, m);
-        Mockito.when(js.createJurisdiction(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-                .thenThrow(new CustomException("VALIDATION_ERROR", "bad boundary"));
+        EmployeeService svc = new EmployeeService(repo, js, null, null, null, new EmployeeProperties(), null, m, TransactionOperations.withoutTransaction());
+        Mockito.doThrow(new CustomException("VALIDATION_ERROR", "bad boundary"))
+                .when(js).validateRelations(Mockito.any(), Mockito.any());
 
         com.digit.employee.model.CreateEmployeeRequest r = new com.digit.employee.model.CreateEmployeeRequest();
         r.setCode("C1"); // set so idgen isn't called
@@ -80,9 +81,11 @@ class EmployeeLifecycleTest {
         r.setDesignation("DE");
         r.setJurisdictions(List.of(new com.digit.employee.model.Jurisdiction()));
 
-        // Jurisdiction failure must propagate (so @Transactional rolls back) — not be swallowed.
+        // Jurisdiction failure must propagate — not be swallowed — and, being a validation failure,
+        // must stop the batch before anything is written.
         assertThrows(CustomException.class,
                 () -> svc.createEmployees(List.of(r), "t1", "Bearer x", "u1"));
+        Mockito.verify(repo, Mockito.never()).create(Mockito.any());
     }
 
     @Test
@@ -95,5 +98,37 @@ class EmployeeLifecycleTest {
         CustomException ex = assertThrows(CustomException.class,
                 () -> svc(null).createEmployees(List.of(r), "t1", "Bearer x", "u1"));
         assertEquals("VALIDATION_ERROR", ex.getCode());
+    }
+
+    @Test
+    void hardDelete_isOneStatement_jurisdictionsLeftToTheCascade() {
+        EmployeeRepository repo = Mockito.mock(EmployeeRepository.class);
+        JurisdictionService js = Mockito.mock(JurisdictionService.class);
+        com.digit.employee.pubsub.EventPublisher events = Mockito.mock(com.digit.employee.pubsub.EventPublisher.class);
+        EmployeeService svc = new EmployeeService(repo, js, null, null, null, new EmployeeProperties(), events,
+                Mockito.mock(com.digit.employee.observability.BusinessMetrics.class),
+                TransactionOperations.withoutTransaction());
+
+        svc.hardDeleteEmployee("e1", "t1");
+
+        Mockito.verify(repo).delete("e1", "t1");
+        Mockito.verifyNoMoreInteractions(repo);
+        Mockito.verifyNoInteractions(js);
+        Mockito.verify(events).publishEvent(Mockito.any(), Mockito.eq("DELETE"), Mockito.eq("t1"), Mockito.any(),
+                Mockito.any(), Mockito.eq(1));
+    }
+
+    @Test
+    void hardDelete_missingEmployee_is404_andPublishesNothing() {
+        EmployeeRepository repo = Mockito.mock(EmployeeRepository.class);
+        com.digit.employee.pubsub.EventPublisher events = Mockito.mock(com.digit.employee.pubsub.EventPublisher.class);
+        Mockito.doThrow(new CustomException("NOT_FOUND", "The requested resource was not found", HttpStatus.NOT_FOUND))
+                .when(repo).delete("e1", "t1");
+        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), events,
+                null, TransactionOperations.withoutTransaction());
+
+        CustomException ex = assertThrows(CustomException.class, () -> svc.hardDeleteEmployee("e1", "t1"));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getHttpStatus());
+        Mockito.verifyNoInteractions(events);
     }
 }

@@ -7,7 +7,6 @@ import com.digit.individual.model.Individual;
 import com.digit.individual.model.SearchCriteria;
 import com.digit.individual.constants.ErrorCodes;
 import org.digit.tracer.model.CustomException;
-import org.digit.tracer.observability.ObservabilityMetrics;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
@@ -21,9 +20,11 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * JDBC repository for individuals and their nested entities. Mirrors Go
@@ -39,12 +40,10 @@ public class IndividualRepository {
 
     private final JdbcTemplate jdbc;
     private final JsonMapper mapper;
-    private final ObservabilityMetrics metrics;
 
-    public IndividualRepository(JdbcTemplate jdbc, JsonMapper mapper, ObservabilityMetrics metrics) {
+    public IndividualRepository(JdbcTemplate jdbc, JsonMapper mapper) {
         this.jdbc = jdbc;
         this.mapper = mapper;
-        this.metrics = metrics;
     }
 
     // ----------------------------------------------------------------- mappers
@@ -93,6 +92,7 @@ public class IndividualRepository {
     private final RowMapper<Address> addressMapper = (RowMapper<Address>) (ResultSet rs, int n) -> {
         Address a = new Address();
         a.setId(rs.getString("id"));
+        a.setIndividualId(rs.getString("individualid"));
         a.setTenantId(rs.getString("tenantid"));
         a.setType(rs.getString("type"));
         a.setDoorNo(rs.getString("doorno"));
@@ -193,7 +193,6 @@ public class IndividualRepository {
      */
     @Transactional
     public void create(Individual ind) {
-        boolean ok = true;
         try {
             jdbc.update("INSERT INTO " + T + " (id, individualid, tenantid, givenname, familyname, othernames, "
                             + "dateofbirth, gender, age, mobilenumber, hashedmobilenumber, mobilenumberverified, "
@@ -224,13 +223,7 @@ public class IndividualRepository {
         } catch (DuplicateKeyException e) {
             // Postgres 23505 unique-constraint violation → 409 (race backstop behind the app-level
             // uniqueness check). Translated here in the repo so the tracer doesn't report a 500.
-            ok = false;
             throw duplicateConflict();
-        } catch (RuntimeException e) {
-            ok = false;
-            throw e;
-        } finally {
-            metrics.recordDbOperation("INSERT", T, ok);
         }
     }
 
@@ -270,7 +263,6 @@ public class IndividualRepository {
      */
     @Transactional
     public boolean update(Individual ind, int expectedVersion) {
-        boolean ok = true;
         try {
             // Optimistic compare-and-swap: only write if the row's version still matches what the
             // client read. Zero rows affected => it changed in the meantime => version conflict
@@ -331,13 +323,7 @@ public class IndividualRepository {
 
             return true;
         } catch (DuplicateKeyException e) {
-            ok = false;
             throw duplicateConflict();
-        } catch (RuntimeException e) {
-            ok = false;
-            throw e;
-        } finally {
-            metrics.recordDbOperation("UPDATE", T, ok);
         }
     }
 
@@ -348,33 +334,35 @@ public class IndividualRepository {
                 HttpStatus.CONFLICT);
     }
 
+    // Child updates never write createdBy/createdTime: creation audit is immutable, and a PUT body
+    // carries none (auditDetail is read-only), so writing it would blank the stored values.
     private int updateAddress(Address a) {
         return jdbc.update("UPDATE " + T_ADDR + " SET tenantid=?, type=?, doorno=?, buildingname=?, street=?, landmark=?, "
                         + "addressline1=?, addressline2=?, city=?, region=?, country=?, pincode=?, localitycode=?, "
-                        + "latitude=?, longitude=?, locationaccuracy=?, active=?, \"createdBy\"=?, \"modifiedBy\"=?, "
-                        + "\"createdTime\"=?, \"modifiedTime\"=?, requestid=? WHERE id=? AND individualid=?",
+                        + "latitude=?, longitude=?, locationaccuracy=?, active=?, \"modifiedBy\"=?, "
+                        + "\"modifiedTime\"=?, requestid=? WHERE id=? AND individualid=?",
                 a.getTenantId(), a.getType(), a.getDoorNo(), a.getBuildingName(), a.getStreet(), a.getLandmark(),
                 a.getAddressLine1(), a.getAddressLine2(), a.getCity(), a.getRegion(), a.getCountry(),
                 a.getPincode(), a.getBoundaryCode(), a.getLatitude(), a.getLongitude(), a.getLocationAccuracy(),
-                a.isActive(), a.getCreatedBy(), a.getModifiedBy(), a.getCreatedTime(), a.getModifiedTime(), a.getRequestId(),
+                a.isActive(), a.getModifiedBy(), a.getModifiedTime(), a.getRequestId(),
                 a.getId(), a.getIndividualId());
     }
 
     private int updateIdentifier(Identifier i) {
         return jdbc.update("UPDATE " + T_IDENT + " SET individualid=?, identifiertype=?, identifierid=?, verified=?, "
-                        + "documenttype=?, filestoreid=?, active=?, \"createdBy\"=?, \"modifiedBy\"=?, "
-                        + "\"createdTime\"=?, \"modifiedTime\"=?, requestid=? WHERE id=? AND individualid=?",
+                        + "documenttype=?, filestoreid=?, active=?, \"modifiedBy\"=?, "
+                        + "\"modifiedTime\"=?, requestid=? WHERE id=? AND individualid=?",
                 i.getIndividualId(), i.getIdentifierType(), i.getIdentifierId(), i.isVerified(),
-                i.getDocumentType(), i.getFileStoreId(), i.isActive(), i.getCreatedBy(), i.getModifiedBy(),
-                i.getCreatedTime(), i.getModifiedTime(), i.getRequestId(), i.getId(), i.getIndividualId());
+                i.getDocumentType(), i.getFileStoreId(), i.isActive(), i.getModifiedBy(),
+                i.getModifiedTime(), i.getRequestId(), i.getId(), i.getIndividualId());
     }
 
     private int updateDocument(Document d) {
         return jdbc.update("UPDATE " + T_DOC + " SET individualid=?, documenttype=?, filestoreid=?, documentuid=?, active=?, "
-                        + "\"createdBy\"=?, \"modifiedBy\"=?, \"createdTime\"=?, \"modifiedTime\"=?, requestid=? "
+                        + "\"modifiedBy\"=?, \"modifiedTime\"=?, requestid=? "
                         + "WHERE id=? AND individualid=?",
                 d.getIndividualId(), d.getDocumentType(), d.getFileStoreId(), d.getDocumentUid(), d.isActive(),
-                d.getCreatedBy(), d.getModifiedBy(), d.getCreatedTime(), d.getModifiedTime(), d.getRequestId(),
+                d.getModifiedBy(), d.getModifiedTime(), d.getRequestId(),
                 d.getId(), d.getIndividualId());
     }
 
@@ -398,60 +386,71 @@ public class IndividualRepository {
      */
     @Transactional
     public void delete(String id, String tenantId, long now) {
-        boolean ok = true;
-        try {
-            jdbc.update("UPDATE " + T + " SET active=?, \"modifiedTime\"=? WHERE id=? AND tenantid=?",
-                    false, now, id, tenantId);
-            jdbc.update("UPDATE " + T_IDENT + " SET active=? WHERE individualid=?", false, id);
-            jdbc.update("UPDATE " + T_DOC + " SET active=? WHERE individualid=?", false, id);
-            jdbc.update("UPDATE " + T_ADDR + " SET active=? WHERE individualid=?", false, id);
-        } catch (RuntimeException e) {
-            ok = false;
-            throw e;
-        } finally {
-            metrics.recordDbOperation("UPDATE", T, ok);
-        }
+        jdbc.update("UPDATE " + T + " SET active=?, \"modifiedTime\"=? WHERE id=? AND tenantid=?",
+                false, now, id, tenantId);
+        jdbc.update("UPDATE " + T_IDENT + " SET active=? WHERE individualid=?", false, id);
+        jdbc.update("UPDATE " + T_DOC + " SET active=? WHERE individualid=?", false, id);
+        jdbc.update("UPDATE " + T_ADDR + " SET active=? WHERE individualid=?", false, id);
     }
 
     // ----------------------------------------------------------------- reads
 
     /** Loads an active individual by id+tenant, with addresses/identifiers/documents. Mirrors Go FindByID. */
     public Individual findById(String id, String tenantId) {
-        try {
-            List<Individual> rows = jdbc.query(
-                    "SELECT " + IND_COLS + " FROM " + T + " WHERE id=? AND tenantid=? AND active=? LIMIT 1",
-                    individualMapper, id, tenantId, true);
-            if (rows.isEmpty()) {
-                metrics.recordDbOperation("SELECT", T, true);
-                return null;
-            }
-            Individual ind = rows.get(0);
-            loadChildren(ind);
-            metrics.recordDbOperation("SELECT", T, true);
-            return ind;
-        } catch (RuntimeException e) {
-            metrics.recordDbOperation("SELECT", T, false);
-            throw e;
+        List<Individual> rows = jdbc.query(
+                "SELECT " + IND_COLS + " FROM " + T + " WHERE id=? AND tenantid=? AND active=? LIMIT 1",
+                individualMapper, id, tenantId, true);
+        if (rows.isEmpty()) {
+            return null;
+        }
+        loadChildren(rows);
+        return rows.get(0);
+    }
+
+    /**
+     * Loads the active addresses, identifiers and documents of every given individual in three
+     * queries, one per child table, rather than three per individual.
+     */
+    private void loadChildren(List<Individual> individuals) {
+        if (individuals.isEmpty()) {
+            return;
+        }
+        List<Object> args = new ArrayList<>(individuals.size() + 1);
+        for (Individual ind : individuals) {
+            args.add(ind.getId());
+        }
+        args.add(true);
+        String owned = " WHERE individualid IN (" + placeholders(individuals.size()) + ") AND active = ?";
+
+        Map<String, List<Address>> addresses = byOwner(jdbc.query(
+                "SELECT id, individualid, tenantid, type, doorno, buildingname, street, landmark, addressline1, "
+                        + "addressline2, city, region, country, pincode, localitycode, latitude, "
+                        + "longitude, locationaccuracy, \"createdBy\", \"modifiedBy\", \"createdTime\", "
+                        + "\"modifiedTime\", requestid FROM " + T_ADDR + owned,
+                addressMapper, args.toArray()), Address::getIndividualId);
+        Map<String, List<Identifier>> identifiers = byOwner(jdbc.query(
+                "SELECT id, individualid, identifiertype, identifierid, verified, documenttype, filestoreid, "
+                        + "active, \"createdBy\", \"modifiedBy\", \"createdTime\", \"modifiedTime\", requestid "
+                        + "FROM " + T_IDENT + owned,
+                identifierMapper, args.toArray()), Identifier::getIndividualId);
+        Map<String, List<Document>> documents = byOwner(jdbc.query(
+                "SELECT id, individualid, documenttype, filestoreid, documentuid, \"createdBy\", \"modifiedBy\", "
+                        + "\"createdTime\", \"modifiedTime\", requestid FROM " + T_DOC + owned,
+                documentMapper, args.toArray()), Document::getIndividualId);
+
+        for (Individual ind : individuals) {
+            ind.setAddresses(addresses.getOrDefault(ind.getId(), new ArrayList<>()));
+            ind.setIdentifiers(identifiers.getOrDefault(ind.getId(), new ArrayList<>()));
+            ind.setDocuments(documents.getOrDefault(ind.getId(), new ArrayList<>()));
         }
     }
 
-    private void loadChildren(Individual ind) {
-        ind.setAddresses(jdbc.query(
-                "SELECT id, tenantid, type, doorno, buildingname, street, landmark, addressline1, "
-                        + "addressline2, city, region, country, pincode, localitycode, latitude, "
-                        + "longitude, locationaccuracy, \"createdBy\", \"modifiedBy\", \"createdTime\", "
-                        + "\"modifiedTime\", requestid FROM " + T_ADDR
-                        + " WHERE individualid = ? AND active = ?",
-                addressMapper, ind.getId(), true));
-        ind.setIdentifiers(jdbc.query(
-                "SELECT id, individualid, identifiertype, identifierid, verified, documenttype, filestoreid, "
-                        + "active, \"createdBy\", \"modifiedBy\", \"createdTime\", \"modifiedTime\", requestid "
-                        + "FROM " + T_IDENT + " WHERE individualid = ? AND active = ?",
-                identifierMapper, ind.getId(), true));
-        ind.setDocuments(jdbc.query(
-                "SELECT id, individualid, documenttype, filestoreid, documentuid, \"createdBy\", \"modifiedBy\", "
-                        + "\"createdTime\", \"modifiedTime\", requestid FROM " + T_DOC + " WHERE individualid = ? AND active = ?",
-                documentMapper, ind.getId(), true));
+    private static <T> Map<String, List<T>> byOwner(List<T> rows, Function<T, String> owner) {
+        Map<String, List<T>> byOwner = new HashMap<>();
+        for (T row : rows) {
+            byOwner.computeIfAbsent(owner.apply(row), k -> new ArrayList<>()).add(row);
+        }
+        return byOwner;
     }
 
     /** Builds the shared WHERE clause + args for Search/Exists. Mirrors Go buildSearchQuery. */
@@ -486,7 +485,7 @@ public class IndividualRepository {
             sql.append(" AND gender = ?");
             args.add(c.getGender());
         }
-        if (c.getDateOfBirth() != null && !c.getDateOfBirth().isEmpty()) {
+        if (c.getDateOfBirth() != null) {
             sql.append(" AND dateofbirth = ?");
             args.add(c.getDateOfBirth());
         }
@@ -508,84 +507,51 @@ public class IndividualRepository {
         return String.join(",", java.util.Collections.nCopies(n, "?"));
     }
 
-    /** Two-phase paginated search (count → page of ids → full rows with children). Mirrors Go Search. */
+    /** Paginated search: the count, the page of rows, then the page's children in one batch. Mirrors Go Search. */
     public SearchResult search(SearchCriteria c, String tenantId, int page, int size, boolean includeDeleted) {
-        try {
-            StringBuilder where = new StringBuilder();
-            List<Object> args = new ArrayList<>();
-            buildWhere(c, tenantId, includeDeleted, where, args);
+        StringBuilder where = new StringBuilder();
+        List<Object> args = new ArrayList<>();
+        buildWhere(c, tenantId, includeDeleted, where, args);
 
-            Long total = jdbc.queryForObject("SELECT COUNT(*) FROM " + T + where, Long.class, args.toArray());
-            long totalCount = total == null ? 0 : total;
-            if (totalCount == 0) {
-                metrics.recordDbOperation("SELECT", T, true);
-                return new SearchResult(new ArrayList<>(), 0);
-            }
-
-            int limit = size;
-            int offset = (page - 1) * size;
-            List<Object> idArgs = new ArrayList<>(args);
-            idArgs.add(limit);
-            idArgs.add(offset);
-            List<String> ids = jdbc.queryForList(
-                    "SELECT id FROM " + T + where + " ORDER BY \"createdTime\" DESC LIMIT ? OFFSET ?",
-                    String.class, idArgs.toArray());
-            if (ids.isEmpty()) {
-                metrics.recordDbOperation("SELECT", T, true);
-                return new SearchResult(new ArrayList<>(), totalCount);
-            }
-
-            List<Individual> individuals = jdbc.query(
-                    "SELECT " + IND_COLS + " FROM " + T + " WHERE id IN (" + placeholders(ids.size())
-                            + ") ORDER BY \"createdTime\" DESC",
-                    individualMapper, ids.toArray());
-            for (Individual ind : individuals) {
-                loadChildren(ind);
-            }
-            metrics.recordDbOperation("SELECT", T, true);
-            return new SearchResult(individuals, totalCount);
-        } catch (RuntimeException e) {
-            metrics.recordDbOperation("SELECT", T, false);
-            throw e;
+        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM " + T + where, Long.class, args.toArray());
+        long totalCount = total == null ? 0 : total;
+        if (totalCount == 0) {
+            return new SearchResult(new ArrayList<>(), 0);
         }
+
+        int limit = size;
+        // long: page is capped at int32 max, so (page-1)*size can exceed int range.
+        long offset = (long) (page - 1) * size;
+        List<Object> pageArgs = new ArrayList<>(args);
+        pageArgs.add(limit);
+        pageArgs.add(offset);
+        List<Individual> individuals = jdbc.query(
+                "SELECT " + IND_COLS + " FROM " + T + where + " ORDER BY \"createdTime\" DESC LIMIT ? OFFSET ?",
+                individualMapper, pageArgs.toArray());
+        loadChildren(individuals);
+        return new SearchResult(individuals, totalCount);
     }
 
     /** True if at least one row matches (LIMIT 1). Mirrors Go Exists. */
     public boolean exists(SearchCriteria c, String tenantId, boolean includeDeleted) {
-        try {
-            StringBuilder where = new StringBuilder();
-            List<Object> args = new ArrayList<>();
-            buildWhere(c, tenantId, includeDeleted, where, args);
-            List<String> ids = jdbc.queryForList(
-                    "SELECT id FROM " + T + where + " LIMIT 1", String.class, args.toArray());
-            metrics.recordDbOperation("SELECT", T, true);
-            return !ids.isEmpty();
-        } catch (RuntimeException e) {
-            metrics.recordDbOperation("SELECT", T, false);
-            throw e;
-        }
+        StringBuilder where = new StringBuilder();
+        List<Object> args = new ArrayList<>();
+        buildWhere(c, tenantId, includeDeleted, where, args);
+        List<String> ids = jdbc.queryForList(
+                "SELECT id FROM " + T + where + " LIMIT 1", String.class, args.toArray());
+        return !ids.isEmpty();
     }
 
     public Individual findByMobileHash(String hash, String tenantId) {
         return firstActive("hashedmobilenumber = ?", hash, tenantId);
     }
 
-    public Individual findByMobilePlain(String mobile, String tenantId) {
-        return firstActive("mobilenumber = ?", mobile, tenantId);
-    }
-
     private Individual firstActive(String predicate, String value, String tenantId) {
-        try {
-            List<Individual> rows = jdbc.query(
-                    "SELECT " + IND_COLS + " FROM " + T + " WHERE " + predicate
-                            + " AND tenantid = ? AND active = ? LIMIT 1",
-                    individualMapper, value, tenantId, true);
-            metrics.recordDbOperation("SELECT", T, true);
-            return rows.isEmpty() ? null : rows.get(0);
-        } catch (RuntimeException e) {
-            metrics.recordDbOperation("SELECT", T, false);
-            throw e;
-        }
+        List<Individual> rows = jdbc.query(
+                "SELECT " + IND_COLS + " FROM " + T + " WHERE " + predicate
+                        + " AND tenantid = ? AND active = ? LIMIT 1",
+                individualMapper, value, tenantId, true);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     /**
@@ -595,22 +561,16 @@ public class IndividualRepository {
      * (Uses the real v3 tables; Go's raw query referenced non-existent {@code _v1} tables.)
      */
     public Individual findByIdentifier(String identifierType, String identifierId, String tenantId) {
-        try {
-            List<String> individualIds = jdbc.queryForList(
-                    "SELECT i.individualid FROM " + T_IDENT + " i JOIN " + T + " ind "
-                            + "ON i.individualid = ind.id "
-                            + "WHERE i.identifiertype = ? AND i.identifierid = ? AND ind.tenantid = ? "
-                            + "AND i.active = ? AND ind.active = ? LIMIT 1",
-                    String.class, identifierType, identifierId, tenantId, true, true);
-            metrics.recordDbOperation("SELECT", T_IDENT, true);
-            if (individualIds.isEmpty()) {
-                return null;
-            }
-            return findById(individualIds.get(0), tenantId);
-        } catch (RuntimeException e) {
-            metrics.recordDbOperation("SELECT", T_IDENT, false);
-            throw e;
+        List<String> individualIds = jdbc.queryForList(
+                "SELECT i.individualid FROM " + T_IDENT + " i JOIN " + T + " ind "
+                        + "ON i.individualid = ind.id "
+                        + "WHERE i.identifiertype = ? AND i.identifierid = ? AND ind.tenantid = ? "
+                        + "AND i.active = ? AND ind.active = ? LIMIT 1",
+                String.class, identifierType, identifierId, tenantId, true, true);
+        if (individualIds.isEmpty()) {
+            return null;
         }
+        return findById(individualIds.get(0), tenantId);
     }
 
     /** Finds an active individual by given+family name (case-insensitive). Mirrors Go FindByName. */
@@ -631,14 +591,9 @@ public class IndividualRepository {
             }
             sql.append(" LIMIT 1");
             List<Individual> rows = jdbc.query(sql.toString(), individualMapper, args.toArray());
-            metrics.recordDbOperation("SELECT", T, true);
             return rows.isEmpty() ? null : rows.get(0);
         } catch (EmptyResultDataAccessException e) {
-            metrics.recordDbOperation("SELECT", T, true);
             return null;
-        } catch (RuntimeException e) {
-            metrics.recordDbOperation("SELECT", T, false);
-            throw e;
         }
     }
 

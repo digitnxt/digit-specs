@@ -5,7 +5,6 @@ import com.digit.employee.model.BoundaryRef;
 import com.digit.employee.model.CreateJurisdictionRequest;
 import com.digit.employee.model.Employee;
 import com.digit.employee.model.Jurisdiction;
-import com.digit.employee.model.JurisdictionSearchCriteria;
 import com.digit.employee.model.PatchEmployeeRequest;
 import com.digit.employee.model.UpdateEmployeeRequest;
 import com.digit.employee.model.UpdateJurisdictionRequest;
@@ -14,6 +13,7 @@ import com.digit.employee.repository.JurisdictionRepository;
 import com.digit.employee.repository.EmployeeRepository;
 import org.digit.tracer.model.CustomException;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionOperations;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
@@ -57,7 +57,7 @@ class EmployeeVersioningTest {
         existing.setId("e1");
         existing.setVersion(5);
         Mockito.when(repo.findByUUID("e1", "t1")).thenReturn(existing);
-        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null);
+        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null, TransactionOperations.withoutTransaction());
 
         UpdateEmployeeRequest req = fullPutBody();
         req.setVersion(3); // stale
@@ -75,7 +75,7 @@ class EmployeeVersioningTest {
         Employee existing = new Employee();
         existing.setVersion(5);
         Mockito.when(repo.findByUUID("e1", "t1")).thenReturn(existing);
-        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null);
+        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null, TransactionOperations.withoutTransaction());
 
         UpdateEmployeeRequest req = fullPutBody(); // version left null
 
@@ -90,7 +90,7 @@ class EmployeeVersioningTest {
         Employee existing = new Employee();
         existing.setVersion(5);
         Mockito.when(repo.findByUUID("e1", "t1")).thenReturn(existing);
-        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null);
+        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null, TransactionOperations.withoutTransaction());
 
         PatchEmployeeRequest req = new PatchEmployeeRequest();
         req.setStatus("ACTIVE");
@@ -148,7 +148,7 @@ class EmployeeVersioningTest {
         existing.setId("j1");
         existing.setEmployeeId("EMP-A");
         existing.setVersion(2);
-        Mockito.when(repo.search(Mockito.eq("t1"), Mockito.eq("EMP-A"), Mockito.any(JurisdictionSearchCriteria.class)))
+        Mockito.when(repo.findByEmployeeIds("t1", List.of("EMP-A")))
                 .thenReturn(List.of(existing));
         JurisdictionService svc = new JurisdictionService(repo, null, new EmployeeProperties(), null, Mockito.mock(BusinessMetrics.class));
 
@@ -156,7 +156,7 @@ class EmployeeVersioningTest {
         item.setId("j1"); // owned, but no version supplied
 
         CustomException ex = assertThrows(CustomException.class,
-                () -> svc.reconcileJurisdictions("EMP-A", List.of(item), "t1", "u1"));
+                () -> svc.applyReconcile("EMP-A", svc.planReconcile("EMP-A", List.of(item), "t1"), "t1", "u1"));
         assertEquals("VALIDATION_ERROR", ex.getCode());
     }
 
@@ -166,7 +166,7 @@ class EmployeeVersioningTest {
         Jurisdiction existing = new Jurisdiction();
         existing.setId("j1");
         existing.setEmployeeId("EMP-A");
-        Mockito.when(repo.search(Mockito.eq("t1"), Mockito.eq("EMP-A"), Mockito.any(JurisdictionSearchCriteria.class)))
+        Mockito.when(repo.findByEmployeeIds("t1", List.of("EMP-A")))
                 .thenReturn(List.of(existing));
         JurisdictionService svc = new JurisdictionService(repo, null, new EmployeeProperties(), null, Mockito.mock(BusinessMetrics.class));
 
@@ -175,7 +175,7 @@ class EmployeeVersioningTest {
         item.setVersion(1);
 
         CustomException ex = assertThrows(CustomException.class,
-                () -> svc.reconcileJurisdictions("EMP-A", List.of(item), "t1", "u1"));
+                () -> svc.applyReconcile("EMP-A", svc.planReconcile("EMP-A", List.of(item), "t1"), "t1", "u1"));
         assertEquals("NOT_FOUND", ex.getCode());
         assertEquals(HttpStatus.NOT_FOUND, ex.getHttpStatus());
     }
@@ -183,11 +183,11 @@ class EmployeeVersioningTest {
     @Test
     void reconcile_emptyArray_deactivatesAll() {
         JurisdictionRepository repo = Mockito.mock(JurisdictionRepository.class);
-        Mockito.when(repo.search(Mockito.eq("t1"), Mockito.eq("EMP-A"), Mockito.any(JurisdictionSearchCriteria.class)))
+        Mockito.when(repo.findByEmployeeIds("t1", List.of("EMP-A")))
                 .thenReturn(List.of());
         JurisdictionService svc = new JurisdictionService(repo, null, new EmployeeProperties(), null, Mockito.mock(BusinessMetrics.class));
 
-        svc.reconcileJurisdictions("EMP-A", List.of(), "t1", "u1");
+        svc.applyReconcile("EMP-A", svc.planReconcile("EMP-A", List.of(), "t1"), "t1", "u1");
 
         // Empty keep-list → deactivate every active jurisdiction of the employee.
         Mockito.verify(repo).deactivateOmitted("EMP-A", "t1", "u1", List.of());
@@ -198,7 +198,7 @@ class EmployeeVersioningTest {
         // Regression: a newly-inserted (id-less) jurisdiction must be added to the keep-set, else the
         // deactivate-omitted sweep immediately deactivates it.
         JurisdictionRepository repo = Mockito.mock(JurisdictionRepository.class);
-        Mockito.when(repo.search(Mockito.eq("t1"), Mockito.eq("EMP-A"), Mockito.any(JurisdictionSearchCriteria.class)))
+        Mockito.when(repo.findByEmployeeIds("t1", List.of("EMP-A")))
                 .thenReturn(List.of()); // no existing jurisdictions
         EmployeeProperties props = new EmployeeProperties();
         props.getBoundary().setEnabled(false); // skip boundary validation
@@ -208,7 +208,7 @@ class EmployeeVersioningTest {
         Jurisdiction item = new Jurisdiction();
         item.setBoundaryRelation(List.of(ref("B1"))); // id-less → insert
 
-        svc.reconcileJurisdictions("EMP-A", List.of(item), "t1", "u1");
+        svc.applyReconcile("EMP-A", svc.planReconcile("EMP-A", List.of(item), "t1"), "t1", "u1");
 
         // The freshly-created id must be in the keep-list passed to deactivateOmitted.
         @SuppressWarnings("unchecked")

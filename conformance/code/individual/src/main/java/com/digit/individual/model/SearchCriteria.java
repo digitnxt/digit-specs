@@ -1,5 +1,6 @@
 package com.digit.individual.model;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -13,7 +14,7 @@ public class SearchCriteria {
     private String givenName;
     private List<String> mobileNumber;
     private String gender;
-    private String dateOfBirth;
+    private LocalDate dateOfBirth;
     private List<String> userId;
     private List<String> userUuid;
     private List<String> username;
@@ -30,8 +31,8 @@ public class SearchCriteria {
     public void setMobileNumber(List<String> mobileNumber) { this.mobileNumber = mobileNumber; }
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
-    public String getDateOfBirth() { return dateOfBirth; }
-    public void setDateOfBirth(String dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
     public List<String> getUserId() { return userId; }
     public void setUserId(List<String> userId) { this.userId = userId; }
     public List<String> getUserUuid() { return userUuid; }

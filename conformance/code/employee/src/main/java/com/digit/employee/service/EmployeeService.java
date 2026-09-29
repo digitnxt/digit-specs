@@ -5,8 +5,11 @@ import org.springframework.http.HttpStatus;
 import com.digit.employee.constants.ErrorCodes;
 
 import com.digit.employee.client.IdGenClient;
+import com.digit.employee.client.IndividualApiException;
 import com.digit.employee.client.IndividualClient;
+import com.digit.employee.client.KeycloakApiException;
 import com.digit.employee.client.KeycloakClient;
+import com.digit.employee.client.KeycloakUserRequest;
 import com.digit.employee.config.EmployeeProperties;
 import com.digit.employee.constants.ValidationConstants;
 import com.digit.employee.model.CreateEmployeeRequest;
@@ -16,10 +19,14 @@ import com.digit.employee.model.EmployeeResponse;
 import com.digit.employee.model.EmployeePatch;
 import com.digit.employee.model.EmployeeSearchCriteria;
 import com.digit.employee.model.Jurisdiction;
+import com.digit.employee.model.OnboardRequest;
+import com.digit.employee.model.OnboardResponse;
+import com.digit.employee.model.OnboardUser;
+import com.digit.employee.model.OnboardUserResponse;
 import com.digit.employee.model.PatchEmployeeRequest;
 import com.digit.employee.model.JurisdictionResponse;
-import com.digit.employee.model.JurisdictionSearchCriteria;
 import com.digit.employee.model.UpdateEmployeeRequest;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.digit.employee.observability.BusinessMetrics;
 import com.digit.employee.pubsub.EventPublisher;
 import com.digit.employee.repository.EmployeeRepository;
@@ -28,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +58,13 @@ public class EmployeeService {
     private final EmployeeProperties config;
     private final EventPublisher eventPublisher;
     private final BusinessMetrics businessMetrics;
+    /**
+     * Writes run in an explicit transaction around their SQL only, never around the downstream calls
+     * that validate them: a transaction holds a pooled connection from start to commit. Explicit
+     * rather than {@code @Transactional} because onboard reaches create through a self-call, which
+     * the proxy never sees.
+     */
+    private final TransactionOperations tx;
 
     public EmployeeService(EmployeeRepository repo,
                            JurisdictionService jurisdictionSvc,
@@ -58,7 +73,8 @@ public class EmployeeService {
                            KeycloakClient keycloakClient,
                            EmployeeProperties config,
                            EventPublisher eventPublisher,
-                           BusinessMetrics businessMetrics) {
+                           BusinessMetrics businessMetrics,
+                           TransactionOperations tx) {
         this.repo = repo;
         this.jurisdictionSvc = jurisdictionSvc;
         this.idGenClient = idGenClient;
@@ -67,6 +83,7 @@ public class EmployeeService {
         this.config = config;
         this.eventPublisher = eventPublisher;
         this.businessMetrics = businessMetrics;
+        this.tx = tx;
     }
 
     private String generateEmployeeCode(String tenantId) {
@@ -76,6 +93,11 @@ public class EmployeeService {
         try {
             ids = idGenClient.generateIDs(tenantId, 1, null);
         } catch (Exception e) {
+            // Log the cause before flattening to a client-safe error: IdGenClient builds the only
+            // message that says *why* (status + response body, or the transport failure), and the
+            // CustomException message is echoed to the caller, so it must not carry it. Without
+            // this the failure is undiagnosable.
+            log.error("idgen employee-code generation failed tenantId={}", tenantId, e);
             throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to generate employee code", HttpStatus.BAD_GATEWAY);
         }
         if (ids.isEmpty()) {
@@ -132,18 +154,31 @@ public class EmployeeService {
     }
 
     EmployeeResponse toEmployeeResponse(Employee emp, String tenantId) {
-        if (emp == null) {
-            return null;
-        }
-        List<JurisdictionResponse> jurisdictions = null;
-        try {
-            JurisdictionSearchCriteria criteria = new JurisdictionSearchCriteria();
-            criteria.setTenantId(tenantId);
-            jurisdictions = jurisdictionSvc.searchJurisdictions(emp.getId(), criteria);
-        } catch (Exception e) {
-            // Continue without jurisdictions if there's an error (mirrors Go).
-        }
+        return toEmployeeResponses(List.of(emp), tenantId).get(0);
+    }
 
+    /**
+     * Maps employees to responses, loading every jurisdiction of every employee in one query. A
+     * failed load propagates: answering with no jurisdictions would be indistinguishable from an
+     * employee that has none.
+     */
+    List<EmployeeResponse> toEmployeeResponses(List<Employee> employees, String tenantId) {
+        if (employees.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<String> ids = new ArrayList<>(employees.size());
+        for (Employee emp : employees) {
+            ids.add(emp.getId());
+        }
+        Map<String, List<JurisdictionResponse>> jurisdictions = jurisdictionSvc.jurisdictionsByEmployee(tenantId, ids);
+        List<EmployeeResponse> responses = new ArrayList<>(employees.size());
+        for (Employee emp : employees) {
+            responses.add(buildResponse(emp, jurisdictions.getOrDefault(emp.getId(), new ArrayList<>())));
+        }
+        return responses;
+    }
+
+    private static EmployeeResponse buildResponse(Employee emp, List<JurisdictionResponse> jurisdictions) {
         EmployeeResponse r = new EmployeeResponse();
         r.setId(emp.getId());
         r.setCode(emp.getCode());
@@ -161,7 +196,14 @@ public class EmployeeService {
         return r;
     }
 
-    @Transactional
+    /** A create-batch item that passed every check, including the downstream ones, but is not yet written. */
+    private record PendingEmployee(Employee employee, List<CreateJurisdictionRequest> jurisdictions) {}
+
+    /**
+     * Creates a batch all-or-nothing. Every downstream call (Keycloak, individual, idgen, boundary)
+     * runs first, with no connection held; only then do the inserts run, in one short transaction.
+     * Events go out after the commit, so a rolled-back batch publishes nothing.
+     */
     public List<EmployeeResponse> createEmployees(List<CreateEmployeeRequest> req, String tenantId,
                                                   String authHeader, String userId) {
         // Batch bounds mirror Go (OpenAPI minItems:1 / maxItems:100).
@@ -173,9 +215,13 @@ public class EmployeeService {
                     "at most " + ValidationConstants.MAX_CREATE_BATCH + " employee records may be created per request");
         }
 
-        List<EmployeeResponse> responses = new ArrayList<>(req.size());
+        List<PendingEmployee> pending = new ArrayList<>(req.size());
 
         for (CreateEmployeeRequest r : req) {
+            // A null element in the batch array (POST /employees [null]) → 400, not an NPE → 500.
+            if (r == null) {
+                throw new CustomException(ErrorCodes.VALIDATION_ERROR, "employee entries must not be null");
+            }
             validateCreateRequest(r);
             validateUserID(tenantId, r.getUserId(), authHeader);
             validateIndividualID(tenantId, r.getIndividualId());
@@ -205,24 +251,43 @@ public class EmployeeService {
                 employee.setActive(r.getIsActive());
             }
 
-            repo.create(employee);
-
-            if (r.getJurisdictions() != null && !r.getJurisdictions().isEmpty()) {
+            List<CreateJurisdictionRequest> jurisdictions = new ArrayList<>();
+            if (r.getJurisdictions() != null) {
                 for (Jurisdiction j : r.getJurisdictions()) {
+                    // A null array element (jurisdictions: [null]) → 400, not an NPE → 500.
+                    if (j == null) {
+                        throw new CustomException(ErrorCodes.VALIDATION_ERROR, "jurisdictions entries must not be null");
+                    }
+                    jurisdictionSvc.validateRelations(tenantId, j.getBoundaryRelation());
                     CreateJurisdictionRequest jurisReq = new CreateJurisdictionRequest();
                     jurisReq.setBoundaryRelation(j.getBoundaryRelation());
                     jurisReq.setIsActive(j.isActive());
-                    // Do NOT swallow: a jurisdiction failure must propagate so the surrounding
-                    // @Transactional rolls back the employee insert too (mirrors Go — no silent
-                    // partial success where an employee persists without its jurisdictions).
-                    jurisdictionSvc.createJurisdiction(employee.getId(), jurisReq, tenantId, userId);
+                    jurisdictions.add(jurisReq);
                 }
             }
-
-            Employee temp = repo.findByUUID(employee.getId(), tenantId);
-            responses.add(toEmployeeResponse(temp, tenantId));
+            pending.add(new PendingEmployee(employee, jurisdictions));
         }
 
+        // One transaction for the whole batch: any failure rolls back every insert, so no employee
+        // persists without its jurisdictions (mirrors Go — no silent partial success).
+        List<JurisdictionResponse> createdJurisdictions = new ArrayList<>();
+        List<Employee> created = tx.execute(status -> {
+            List<Employee> rows = new ArrayList<>(pending.size());
+            for (PendingEmployee p : pending) {
+                Employee stored = repo.create(p.employee());
+                for (CreateJurisdictionRequest jurisReq : p.jurisdictions()) {
+                    createdJurisdictions.add(
+                            jurisdictionSvc.insertJurisdiction(stored.getId(), jurisReq, tenantId, userId));
+                }
+                rows.add(stored);
+            }
+            return rows;
+        });
+        List<EmployeeResponse> responses = toEmployeeResponses(created, tenantId);
+
+        for (JurisdictionResponse j : createdJurisdictions) {
+            jurisdictionSvc.publishCreated(tenantId, j);
+        }
         eventPublisher.publishEvent(config.getPubsub().getTopics().getCreateEmployee(), "CREATE",
                 tenantId, "", responses, responses.size());
 
@@ -234,13 +299,17 @@ public class EmployeeService {
         // Role search: resolve the Keycloak realm role to its member user IDs, then filter user_id IN.
         // Mirrors Go SearchEmployees — a role nobody holds short-circuits to an empty result before the
         // DB (an empty userIds would otherwise be skipped as "no filter" and return every employee).
+        //
+        // When the client also supplied userIds the two are intersected: role + userIds means "these
+        // users, but only the ones holding the role", consistent with every other filter pair ANDing.
+        // Intersecting before the query (rather than filtering results afterwards) is what keeps
+        // limit/offset correct — Postgres pages over the fully-filtered set.
         if (criteria.getRole() != null && !criteria.getRole().isEmpty()) {
-            // The role filter's only purpose is to resolve members via keycloak; if keycloak is
-            // disabled the feature is unavailable — fail loudly rather than return empty/over-broad.
-            if (!config.getKeycloak().isEnabled()) {
-                throw new CustomException(ErrorCodes.VALIDATION_ERROR,
-                        "role-based search requires keycloak to be enabled");
-            }
+            // Deliberately NOT gated on keycloak.enabled: that flag controls whether an id supplied
+            // in a request body is validated against its owning service, not whether the service is
+            // reachable. Resolving role members is what this filter *is* — the data lives only in
+            // Keycloak — so the call is unconditional and a failure surfaces as DOWNSTREAM_ERROR
+            // rather than being silently skipped or rejected as invalid input.
             List<String> userIds;
             try {
                 userIds = keycloakClient.getUserIDsByRole(criteria.getTenantId(), criteria.getRole(), authHeader);
@@ -251,14 +320,21 @@ public class EmployeeService {
                 businessMetrics.recordEmployeeSearched(criteria.getTenantId(), 0);
                 return new ArrayList<>();
             }
+            List<String> requested = criteria.getUserIds();
+            if (requested != null && !requested.isEmpty()) {
+                java.util.Set<String> members = new java.util.HashSet<>(userIds);
+                userIds = requested.stream().filter(members::contains).toList();
+                // None of the requested users holds the role — an empty IN list would be dropped as
+                // "no filter", so short-circuit rather than returning every employee.
+                if (userIds.isEmpty()) {
+                    businessMetrics.recordEmployeeSearched(criteria.getTenantId(), 0);
+                    return new ArrayList<>();
+                }
+            }
             criteria.setUserIds(userIds);
         }
 
-        List<Employee> employees = repo.search(criteria);
-        List<EmployeeResponse> responses = new ArrayList<>(employees.size());
-        for (Employee emp : employees) {
-            responses.add(toEmployeeResponse(emp, criteria.getTenantId()));
-        }
+        List<EmployeeResponse> responses = toEmployeeResponses(repo.search(criteria), criteria.getTenantId());
         businessMetrics.recordEmployeeSearched(criteria.getTenantId(), responses.size());
         return responses;
     }
@@ -269,12 +345,186 @@ public class EmployeeService {
     }
 
     /**
+     * Onboarding: provisions a Keycloak user, an individual, and an employee in one call. Mirrors Go
+     * {@code OnboardEmployee}. Order is user → individual → employee (dependency order: both downstream
+     * records need the new userId, and the employee needs the individual's UUID). Roles are validated
+     * to exist before any write, so a bad role name fails with no orphan. On a downstream failure,
+     * compensations run in reverse order (individual soft-deleted, then Keycloak user deleted).
+     *
+     * Deliberately not {@code @Transactional}: that would hold a pooled connection across every
+     * Keycloak and individual call below. The employee+jurisdiction insert gets its all-or-nothing
+     * behaviour from createEmployees' own short transaction; the external Keycloak/individual calls
+     * are not transactional either way and are undone by the explicit compensations.
+     */
+    public OnboardResponse onboardEmployee(OnboardRequest req, String tenantId, String authHeader, String userId) {
+        // --- validate the user slice (Keycloak has no domain validator; the service owns it) ---
+        OnboardUser user = req.getUser();
+        if (user == null) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, "user is required");
+        }
+        if (user.getMobileNumber() == null || user.getMobileNumber().isEmpty()) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, "user.mobileNumber is required");
+        }
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, "user.password is required");
+        }
+        if (req.getEmployee() == null) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, "employee is required");
+        }
+        JsonNode individual = req.getIndividual();
+        if (individual == null || !individual.isObject()) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, "individual is required and must be a JSON object");
+        }
+
+        // --- validate that every requested role exists BEFORE creating anything (fail fast, no orphan).
+        // Escalation is guarded by Keycloak itself: the caller's token is forwarded, so a caller can
+        // only assign roles it is permitted to grant. ---
+        List<JsonNode> roleReps = new ArrayList<>();
+        if (user.getRoles() != null) {
+            for (String name : user.getRoles()) {
+                if (name == null || name.isEmpty()) {
+                    continue;
+                }
+                JsonNode role;
+                try {
+                    role = keycloakClient.getRealmRole(tenantId, name, authHeader);
+                } catch (Exception e) {
+                    throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to look up realm role", HttpStatus.BAD_GATEWAY);
+                }
+                if (role == null) {
+                    throw new CustomException(ErrorCodes.INVALID_REQUEST, "role '" + name + "' does not exist in realm");
+                }
+                roleReps.add(role);
+            }
+        }
+
+        // --- step 1: create the Keycloak user (username = mobile, password inline, no forced reset) ---
+        String kcUserID;
+        try {
+            KeycloakUserRequest kcReq = new KeycloakUserRequest(
+                    user.getMobileNumber(), user.getEmail(), user.getFirstName(), user.getLastName(),
+                    user.getPassword(), user.isEmailVerified());
+            kcUserID = keycloakClient.createUser(tenantId, kcReq, authHeader);
+        } catch (KeycloakApiException e) {
+            if (e.getStatusCode() == 409) {
+                throw new CustomException(ErrorCodes.CONFLICT, "a user with this mobile number or email already exists", HttpStatus.CONFLICT);
+            }
+            throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to create user in keycloak", HttpStatus.BAD_GATEWAY);
+        } catch (Exception e) {
+            throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to create user in keycloak", HttpStatus.BAD_GATEWAY);
+        }
+
+        // --- step 2: assign roles; compensate (delete user) on failure ---
+        if (!roleReps.isEmpty()) {
+            try {
+                keycloakClient.assignRealmRoles(tenantId, kcUserID, roleReps, authHeader);
+            } catch (Exception e) {
+                compensateUser(tenantId, kcUserID, authHeader);
+                if (e instanceof KeycloakApiException && ((KeycloakApiException) e).getStatusCode() == 403) {
+                    throw new CustomException(ErrorCodes.FORBIDDEN, "not permitted to assign one of the requested roles", HttpStatus.FORBIDDEN);
+                }
+                throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to assign roles to user", HttpStatus.BAD_GATEWAY);
+            }
+        }
+
+        // --- step 3: create the individual (inject the new userId; forward caller as audit actor) ---
+        Map<String, Object> indResp;
+        try {
+            indResp = individualClient.createIndividual(tenantId, userId, kcUserID, individual);
+        } catch (Exception e) {
+            compensateUser(tenantId, kcUserID, authHeader);
+            throw mapIndividualError(e, "failed to create individual");
+        }
+        Object idVal = indResp.get("id");
+        String individualUuid = idVal == null ? "" : idVal.toString();
+        if (individualUuid.isEmpty()) {
+            compensateUser(tenantId, kcUserID, authHeader);
+            throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "individual service returned an empty id", HttpStatus.BAD_GATEWAY);
+        }
+
+        // --- step 4: create the employee (inject userId + individual UUID) ---
+        CreateEmployeeRequest emp = req.getEmployee();
+        emp.setUserId(kcUserID);
+        emp.setIndividualId(individualUuid); // the UUID, not the human individualId code
+        List<EmployeeResponse> created;
+        try {
+            created = createEmployees(List.of(emp), tenantId, authHeader, userId);
+        } catch (RuntimeException e) {
+            // Reverse order: soft-delete the individual, then delete the Keycloak user. Any employee
+            // insert was already rolled back by createEmployees' own transaction.
+            compensateIndividual(tenantId, userId, individualUuid);
+            compensateUser(tenantId, kcUserID, authHeader);
+            throw e;
+        }
+
+        // --- assemble the minimal response (server-decided facts only) ---
+        List<String> roleNames = new ArrayList<>(roleReps.size());
+        for (JsonNode r : roleReps) {
+            JsonNode n = r.get("name");
+            if (n != null) {
+                roleNames.add(n.asText());
+            }
+        }
+        OnboardUserResponse userResp = new OnboardUserResponse();
+        userResp.setId(kcUserID);
+        userResp.setUsername(user.getMobileNumber()); // username = mobileNumber (our derivation rule)
+        userResp.setRoles(roleNames);
+
+        OnboardResponse resp = new OnboardResponse();
+        resp.setUser(userResp);
+        resp.setIndividual(indResp);
+        resp.setEmployee(created.get(0));
+        return resp;
+    }
+
+    /**
+     * Maps an individual-service create failure: a 409 is a conflict, any other 4xx is a bad request
+     * (the client's individual payload), and everything else (5xx, transport) is a downstream failure.
+     * Mirrors Go {@code mapIndividualErrCode}.
+     */
+    private CustomException mapIndividualError(Exception e, String message) {
+        if (e instanceof IndividualApiException) {
+            int sc = ((IndividualApiException) e).getStatusCode();
+            if (sc == 409) {
+                return new CustomException(ErrorCodes.CONFLICT, message, HttpStatus.CONFLICT);
+            }
+            if (sc >= 400 && sc < 500) {
+                return new CustomException(ErrorCodes.INVALID_REQUEST, message);
+            }
+        }
+        return new CustomException(ErrorCodes.DOWNSTREAM_ERROR, message, HttpStatus.BAD_GATEWAY);
+    }
+
+    /**
+     * Best-effort deletes a Keycloak user created earlier in the saga. A failure here is the "manual
+     * cleanup required" case: logged loudly with the ids but never masks the original error.
+     */
+    private void compensateUser(String tenantId, String userID, String authHeader) {
+        try {
+            keycloakClient.deleteUser(tenantId, userID, authHeader);
+        } catch (Exception e) {
+            log.error("onboarding compensation failed: could not delete keycloak user (manual cleanup required) tenantId={} keycloakUserId={}",
+                    tenantId, userID, e);
+        }
+    }
+
+    /** Best-effort soft-deletes an individual created earlier in the saga. Same semantics as {@link #compensateUser}. */
+    private void compensateIndividual(String tenantId, String auditUserId, String individualId) {
+        try {
+            individualClient.deleteIndividual(tenantId, auditUserId, individualId);
+        } catch (Exception e) {
+            log.error("onboarding compensation failed: could not delete individual (manual cleanup required) tenantId={} individualId={}",
+                    tenantId, individualId, e);
+        }
+    }
+
+    /**
      * PUT — strict full-state overwrite of the mutable surface. Mirrors Go UpdateEmployee: no auth
      * and no userId/individualId validation (those are immutable and absent from the body); immutable
      * fields are carried forward from the loaded row; jurisdictions are reconciled against the request
-     * array; version is required and the write is CAS-guarded (409 on staleness).
+     * array; version is required and the write is CAS-guarded (409 on staleness). The jurisdiction
+     * array is fully validated, boundary lookups included, before the write transaction opens.
      */
-    @Transactional
     public EmployeeResponse updateEmployee(String uuid, UpdateEmployeeRequest req, String tenantId, String userId) {
         // Body validation first — mirrors Go, where bind-time validation returns 400 before the
         // row is loaded (so PUT to a missing id with an invalid body is 400, not 404).
@@ -309,12 +559,16 @@ public class EmployeeService {
         existing.getAuditDetails().setModifiedBy(userId);
         existing.getAuditDetails().setModifiedTime(System.currentTimeMillis());
 
-        repo.update(existing, expectedVersion);
-        existing.setVersion(expectedVersion + 1); // reflect the bump in the response
         // Reconcile: id+version → update in place, id-less → insert, omitted → deactivate.
-        jurisdictionSvc.reconcileJurisdictions(uuid, req.getJurisdictions(), tenantId, userId);
+        JurisdictionService.ReconcilePlan plan = jurisdictionSvc.planReconcile(uuid, req.getJurisdictions(), tenantId);
+        JurisdictionService.ReconcileResult reconciled = tx.execute(status -> {
+            repo.update(existing, expectedVersion);
+            return jurisdictionSvc.applyReconcile(uuid, plan, tenantId, userId);
+        });
+        existing.setVersion(expectedVersion + 1); // reflect the bump in the response
 
         EmployeeResponse resp = toEmployeeResponse(existing, tenantId);
+        jurisdictionSvc.publishReconciled(tenantId, reconciled);
         eventPublisher.publishEvent(config.getPubsub().getTopics().getUpdateEmployee(), "UPDATE",
                 tenantId, "", resp, 1);
         businessMetrics.recordEmployeeUpdated(tenantId, 1);
@@ -371,24 +625,12 @@ public class EmployeeService {
         }
     }
 
-    @Transactional
+    /**
+     * Hard delete in a single statement: the employee's jurisdictions go with it through the foreign
+     * key's ON DELETE CASCADE, so the statement is atomic on its own and the event only goes out
+     * once it has committed.
+     */
     public void hardDeleteEmployee(String uuid, String tenantId) {
-        // Best-effort detach jurisdictions first (mirrors Go: errors logged, not fatal).
-        try {
-            JurisdictionSearchCriteria criteria = new JurisdictionSearchCriteria();
-            criteria.setTenantId(tenantId);
-            List<JurisdictionResponse> jurs = jurisdictionSvc.searchJurisdictions(uuid, criteria);
-            for (JurisdictionResponse jur : jurs) {
-                try {
-                    jurisdictionSvc.deleteJurisdiction(jur.getId(), tenantId);
-                } catch (Exception e) {
-                    log.error("Failed to delete jurisdiction jurisdictionId={}", jur.getId(), e);
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to fetch jurisdictions for deletion employeeId={}", uuid, e);
-        }
-
         repo.delete(uuid, tenantId); // throws NOT_FOUND
 
         Map<String, String> data = new HashMap<>();
@@ -402,9 +644,8 @@ public class EmployeeService {
     /**
      * PATCH — partial update. Mirrors Go PatchEmployee: empty body → 400; version required and CAS-
      * guarded; only supplied fields are written (via repo.patch); jurisdictions reconciled when
-     * supplied (null → left untouched).
+     * supplied (null → left untouched), validated before the write transaction opens, as for PUT.
      */
-    @Transactional
     public EmployeeResponse patchEmployee(String uuid, PatchEmployeeRequest req, String tenantId, String userId) {
         if (!req.hasAnyField()) {
             throw new CustomException(ErrorCodes.VALIDATION_ERROR,
@@ -437,13 +678,17 @@ public class EmployeeService {
         patch.setModifiedBy(userId);
         patch.setModifiedTime(System.currentTimeMillis());
 
-        repo.patch(uuid, tenantId, patch, expectedVersion);
-
-        if (req.getJurisdictions() != null) {
-            jurisdictionSvc.reconcileJurisdictions(uuid, req.getJurisdictions(), tenantId, userId);
-        }
+        JurisdictionService.ReconcilePlan plan = req.getJurisdictions() == null
+                ? null : jurisdictionSvc.planReconcile(uuid, req.getJurisdictions(), tenantId);
+        JurisdictionService.ReconcileResult reconciled = tx.execute(status -> {
+            repo.patch(uuid, tenantId, patch, expectedVersion);
+            return plan == null ? null : jurisdictionSvc.applyReconcile(uuid, plan, tenantId, userId);
+        });
 
         EmployeeResponse resp = getEmployeeByUUID(uuid, tenantId);
+        if (reconciled != null) {
+            jurisdictionSvc.publishReconciled(tenantId, reconciled);
+        }
         eventPublisher.publishEvent(config.getPubsub().getTopics().getUpdateEmployee(), "UPDATE",
                 tenantId, "", resp, 1);
         businessMetrics.recordEmployeeUpdated(tenantId, 1);

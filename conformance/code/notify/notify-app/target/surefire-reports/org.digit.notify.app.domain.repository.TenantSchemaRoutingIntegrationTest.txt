@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.digit.notify.app.domain.repository.TenantSchemaRoutingIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.65 s -- in org.digit.notify.app.domain.repository.TenantSchemaRoutingIntegrationTest

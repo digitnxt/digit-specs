@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.digit.notify</groupId>
+    <artifactId>notify-provider-smscountry</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <description>SMSCountry SMS provider for notify-service</description>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <notify.spi.version>1.0.0-SNAPSHOT</notify.spi.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.digit.notify</groupId>
+            <artifactId>notify-spi</artifactId>
+            <version>${notify.spi.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.16</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.26.3</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>repo.digit.org</id>
+            <url>https://nexus-repo.digit.org/nexus/content/repositories/snapshots/</url>
+            <snapshots><enabled>true</enabled></snapshots>
+            <releases><enabled>false</enabled></releases>
+        </repository>
+    </repositories>
+
+    <build>
+        <plugins>
+            <!-- Pinned: these projects have no parent, and Maven 3.8's default compiler
+                 plugin (3.1) predates maven.compiler.release, so it falls back to source 5. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <!-- Pinned for the same reason as the compiler plugin above: with no parent, Maven
+                 falls back to surefire 2.12.4, which cannot run JUnit 5 and reaches for a
+                 surefire-junit3 artifact that is not in the local repository. The tests in these
+                 modules were unrunnable until this was set. 3.5.2 matches the notify parent. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <!-- The provider reads its credentials from the environment in its constructor,
+                         so the tests could not even construct it. These are placeholders: the cases
+                         that run here return before any network call, and the one test that really
+                         does reach the gateway is skipped unless TEST_PHONE is set. -->
+                    <environmentVariables>
+                        <SMSCOUNTRY_USERNAME>test-user</SMSCOUNTRY_USERNAME>
+                        <SMSCOUNTRY_PASSWORD>test-pass</SMSCOUNTRY_PASSWORD>
+                        <SMSCOUNTRY_API_URL>http://localhost:1/unused</SMSCOUNTRY_API_URL>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.digit.notify:notify-spi</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

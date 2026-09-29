@@ -1,0 +1,8 @@
+org/digit/notify/app/template/TemplateRendererTest.class
+org/digit/notify/app/dispatch/DispatchEngineTest.class
+org/digit/notify/app/service/NotificationServiceTest.class
+org/digit/notify/app/domain/repository/RepositoryIntegrationTest.class
+org/digit/notify/app/messaging/NotifyTopicConsumerTest.class
+org/digit/notify/app/plugin/PluginLoaderTest.class
+org/digit/notify/app/controller/NotifyControllerIT.class
+org/digit/notify/app/domain/repository/TenantSchemaRoutingIntegrationTest.class

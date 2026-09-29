@@ -1,0 +1,12 @@
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/clients/DownstreamUrlTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/clients/keycloak/SmtpAndResetPasswordTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/clients/keycloak/TokenLifespanConfigTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/model/TenantConfigUpdateActiveTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/model/TenantUpdateActiveTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/security/PlatformAuthFilterTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/service/TenantConfigUpdateValidationTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/service/TenantDeactivationTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/service/TenantIdScopeTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/service/TenantRealmPhoneTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/util/CodeDerivationTest.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/test/java/com/digit/account/validator/IsActiveFilterTest.java

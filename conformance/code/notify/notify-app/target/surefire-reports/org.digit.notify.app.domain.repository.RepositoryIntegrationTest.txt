@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.digit.notify.app.domain.repository.RepositoryIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.252 s -- in org.digit.notify.app.domain.repository.RepositoryIntegrationTest

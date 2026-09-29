@@ -1,5 +1,8 @@
 package com.digit.individual.model;
 
+import com.digit.individual.constants.ErrorCodes;
+import org.digit.tracer.model.CustomException;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -15,7 +18,11 @@ public final class ModelMappers {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    /** Flexible parse: accepts YYYY-MM-DD (preferred) or full RFC3339. Returns null when blank/unparseable. */
+    /**
+     * Flexible parse: accepts YYYY-MM-DD (preferred) or full RFC3339; null/blank/{@code "null"} → null.
+     * An unparseable non-blank value is a client input error → 400 (matches Go, whose date Unmarshal
+     * returns a bind error), not a raw exception that would surface as 500.
+     */
     public static LocalDate parseDate(String s) {
         if (s == null) {
             return null;
@@ -37,7 +44,7 @@ public final class ModelMappers {
         try {
             return LocalDate.parse(s);
         } catch (Exception e) {
-            throw new IllegalArgumentException("invalid date: " + s);
+            throw new CustomException(ErrorCodes.VALIDATION_ERROR, "invalid dateOfBirth: " + s);
         }
     }
 

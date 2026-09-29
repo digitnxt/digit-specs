@@ -22,25 +22,55 @@ final class ControllerSupport {
         if (body == null || body.length == 0) {
             throw new CustomException(ErrorCodes.INVALID_REQUEST, "EOF");
         }
+        T value;
         try {
-            return mapper.readValue(body, type);
+            value = mapper.readValue(body, type);
         } catch (Exception e) {
             throw new CustomException(ErrorCodes.INVALID_REQUEST, e.getMessage());
         }
+        // A literal JSON `null` body parses to a null object — reject it as a 400 rather than letting
+        // a downstream NPE surface as a 500.
+        if (value == null) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, "request body is required");
+        }
+        return value;
     }
 
     static <T> T parseBody(ObjectMapper mapper, byte[] body, com.fasterxml.jackson.core.type.TypeReference<T> type) {
         if (body == null || body.length == 0) {
             throw new CustomException(ErrorCodes.INVALID_REQUEST, "EOF");
         }
+        T value;
         try {
-            return mapper.readValue(body, type);
+            value = mapper.readValue(body, type);
         } catch (Exception e) {
             throw new CustomException(ErrorCodes.INVALID_REQUEST, e.getMessage());
         }
+        if (value == null) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, "request body is required");
+        }
+        return value;
     }
 
     /** Enforces search pagination bounds (Go binding: limit 1..100, offset >= 0) → 400 otherwise. */
+    /**
+     * Parses a pagination query param. Blank/absent → default; non-numeric or out of int range
+     * (e.g. > 2147483647) → 400 INVALID_REQUEST, mirroring Go (which returns 400 for such values
+     * rather than overflowing). Binding these as raw String avoids Spring's int-conversion throwing
+     * a 500 before the bounds check runs. Since int max == the offset upper bound (2147483647), a
+     * parse failure naturally caps the range.
+     */
+    static int parsePagingParam(String name, String raw, int defaultVal) {
+        if (raw == null || raw.isBlank()) {
+            return defaultVal;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new CustomException(ErrorCodes.INVALID_REQUEST, name + " must be a valid integer");
+        }
+    }
+
     static void validatePaging(int limit, int offset) {
         if (limit < ValidationConstants.MIN_LIMIT || limit > ValidationConstants.MAX_LIMIT) {
             throw new CustomException(ErrorCodes.VALIDATION_ERROR,

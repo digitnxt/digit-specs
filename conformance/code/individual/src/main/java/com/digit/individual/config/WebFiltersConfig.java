@@ -1,30 +1,43 @@
 package com.digit.individual.config;
 
-import com.digit.individual.web.HeaderValidationFilter;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
+import com.digit.individual.web.HeaderInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Registers the header-validation filter on the API group only (mirrors Go: ExtractHeaders is
- * applied to the {@code api} group, keeping it off /health and /internal/migrate). Order 35 places
- * it after observability filters and before the shared TenantTransactionFilter (order 40), matching
- * the Go middleware order (ExtractHeaders → tenantdb.GinMiddleware).
+ * Registers required-header enforcement on the API group only, keeping it off health, actuator and
+ * /internal/*. Patterns are relative to the servlet context path, so {@code /v3/**} resolves to
+ * {@code /individuals/v3/**}.
+ *
+ * <p>The canonical path group is excluded: it carries tenant/user in the request body's
+ * RequestMetadata block rather than in headers, and reproduces the same checks against that block.
  */
 @Configuration
-public class WebFiltersConfig {
+public class WebFiltersConfig implements WebMvcConfigurer {
 
-    @Bean
-    public FilterRegistrationBean<HeaderValidationFilter> headerValidationFilter(IndividualProperties props) {
-        FilterRegistrationBean<HeaderValidationFilter> reg =
-                new FilterRegistrationBean<>(new HeaderValidationFilter());
-        String ctx = props.getServer().getContextPath();
-        if (ctx == null || ctx.isEmpty()) {
-            ctx = "";
+    private final String canonicalApiPrefix;
+
+    public WebFiltersConfig(@Value("${individual.server.canonical-api-prefix:canonical}") String canonicalApiPrefix) {
+        this.canonicalApiPrefix = canonicalApiPrefix;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new HeaderInterceptor())
+                .addPathPatterns("/v3/**")
+                .excludePathPatterns("/v3/" + segment(canonicalApiPrefix) + "/**");
+    }
+
+    private static String segment(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        while (trimmed.startsWith("/")) {
+            trimmed = trimmed.substring(1);
         }
-        // API group lives under <context-path>/v3/... — scope the filter to that subtree.
-        reg.addUrlPatterns(ctx + "/v3/*");
-        reg.setOrder(35);
-        return reg;
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed.isBlank() ? "canonical" : trimmed;
     }
 }

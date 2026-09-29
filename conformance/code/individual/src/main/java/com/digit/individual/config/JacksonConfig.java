@@ -1,11 +1,15 @@
 package com.digit.individual.config;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.cfg.CoercionAction;
+import tools.jackson.databind.cfg.CoercionInputShape;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.type.LogicalType;
 
 /**
  * Spring Boot 4 uses Jackson 3 (tools.jackson.databind) for MVC. This service standardizes on the
@@ -22,7 +26,9 @@ public class JacksonConfig {
     /** Customizes the MVC mapper to ignore unknown fields (used for response serialization + jsonb). */
     @Bean
     public JsonMapperBuilderCustomizer lenientJsonMapperCustomizer() {
-        return builder -> builder.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return builder -> builder
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .changeDefaultPropertyInclusion(incl -> incl.withValueInclusion(JsonInclude.Include.NON_NULL));
     }
 
     /**
@@ -31,9 +37,17 @@ public class JacksonConfig {
      */
     @Bean(name = "strictJsonMapper")
     public JsonMapper strictJsonMapper() {
-        return JsonMapper.builder()
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
-                .build();
+        // Disable scalar coercion for boolean/number types: a wrong-typed value (e.g. isActive:"" or
+        // age:"5") is a parse error → 400, not a silently-coerced value that slips past validation
+        // into business logic / an external call. Mirrors Go, which rejects any non-matching JSON type.
+        JsonMapper.Builder b = JsonMapper.builder()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
+        for (LogicalType t : new LogicalType[]{LogicalType.Boolean, LogicalType.Integer, LogicalType.Float}) {
+            b.withCoercionConfig(t, cfg -> cfg
+                    .setCoercion(CoercionInputShape.EmptyString, CoercionAction.Fail)
+                    .setCoercion(CoercionInputShape.String, CoercionAction.Fail));
+        }
+        return b.build();
     }
 
     /**

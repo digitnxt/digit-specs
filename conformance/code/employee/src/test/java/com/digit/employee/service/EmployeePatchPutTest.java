@@ -7,6 +7,7 @@ import com.digit.employee.model.UpdateEmployeeRequest;
 import com.digit.employee.repository.EmployeeRepository;
 import org.digit.tracer.model.CustomException;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionOperations;
 import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,7 +28,7 @@ class EmployeePatchPutTest {
 
     @Test
     void patch_emptyBody_is400() {
-        EmployeeService svc = new EmployeeService(null, null, null, null, null, new EmployeeProperties(), null, null);
+        EmployeeService svc = new EmployeeService(null, null, null, null, null, new EmployeeProperties(), null, null, TransactionOperations.withoutTransaction());
         CustomException ex = assertThrows(CustomException.class,
                 () -> svc.patchEmployee("id", new PatchEmployeeRequest(), "t1", "u1"));
         assertEquals("VALIDATION_ERROR", ex.getCode());
@@ -37,7 +38,7 @@ class EmployeePatchPutTest {
     void put_missingRequiredField_is400() {
         EmployeeRepository repo = Mockito.mock(EmployeeRepository.class);
         Mockito.when(repo.findByUUID("id", "t1")).thenReturn(new Employee());
-        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null);
+        EmployeeService svc = new EmployeeService(repo, null, null, null, null, new EmployeeProperties(), null, null, TransactionOperations.withoutTransaction());
 
         UpdateEmployeeRequest req = new UpdateEmployeeRequest();
         req.setEmployeeType("PERMANENT"); // department/designation/status missing

@@ -1,0 +1,13 @@
+com/digit/account/validator/IsActiveFilterTest.class
+com/digit/account/service/TenantDeactivationTest.class
+com/digit/account/clients/keycloak/SmtpAndResetPasswordTest.class
+com/digit/account/clients/DownstreamUrlTest.class
+com/digit/account/service/TenantIdScopeTest.class
+com/digit/account/model/TenantConfigUpdateActiveTest.class
+com/digit/account/util/CodeDerivationTest.class
+com/digit/account/service/TenantRealmPhoneTest$1.class
+com/digit/account/service/TenantConfigUpdateValidationTest.class
+com/digit/account/clients/keycloak/TokenLifespanConfigTest.class
+com/digit/account/model/TenantUpdateActiveTest.class
+com/digit/account/security/PlatformAuthFilterTest.class
+com/digit/account/service/TenantRealmPhoneTest.class

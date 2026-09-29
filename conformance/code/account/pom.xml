@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.digit</groupId>
+    <artifactId>account</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>account</name>
+    <description>DIGIT Account (tenant) service (Java port of the Go account service)</description>
+
+    <properties>
+        <java.version>25</java.version>
+    </properties>
+
+    <!-- DIGIT Nexus: the official org.digit:tracer artifact is published here.
+         egovernments.org 301-redirects to digit.org; use the canonical digit.org host. -->
+    <repositories>
+        <repository>
+            <id>repo.digit.org</id>
+            <name>eGov ERP Releases Repository</name>
+            <url>https://nexus-repo.digit.org/nexus/content/repositories/releases/</url>
+        </repository>
+        <repository>
+            <id>repo.digit.org.snapshots</id>
+            <name>eGov ERP Snapshots Repository</name>
+            <url>https://nexus-repo.digit.org/nexus/content/repositories/snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- JDBC (no JPA/Hibernate) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!-- Postgres -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+        <!-- JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <!-- Official DIGIT tracer library -->
+        <dependency>
+            <groupId>org.digit</groupId>
+            <artifactId>tracer</artifactId>
+            <version>3.0.0-SNAPSHOT</version>
+        </dependency>
+        <!-- Actuator: provides the Micrometer MeterRegistry the tracer's ObservabilityMetrics bean needs -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Redis (Lettuce) for the signup payload cache (transitively present via tracer-java; declared for clarity) -->
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+        </dependency>
+
+        <!-- Test -->
+        <!-- JOSE/JWT only, deliberately not spring-boot-starter-oauth2-resource-server: that pulls in
+             Spring Security, whose auto-configuration applies a filter chain to every endpoint. The
+             reads and the signup flow are meant to stay open, so a framework-wide default is a
+             liability here. This gives real RS256/JWKS verification and nothing else. -->
+        <!-- Version pinned explicitly: spring-boot-starter-parent does not manage this artifact
+             (it arrives through the Spring Security BOM, which this pom does not import). -->
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>10.9.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>account</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -49,7 +49,7 @@ public class IndividualService {
 
     public Individual createIndividual(Individual ind, RequestContext reqContext) {
         enrichmentService.enrichForCreate(ind, reqContext);
-        encryptionService.encryptIndividual(ind);
+        Runnable restorePlaintext = encryptionService.encryptIndividual(ind);
         // A unique-constraint violation (concurrent create racing the app-level check) is translated
         // to a 409 in the repository layer; other DB failures propagate to tracer's 500 handler.
         repo.create(ind);
@@ -57,26 +57,17 @@ public class IndividualService {
         eventPublisher.publishEvent(props.getPubsub().getTopics().getCreateIndividual(),
                 props.getPubsub().getTopics().getCreateIndividual(),
                 reqContext.getTenantId(), reqContext.getUserId(), ind, 1);
-        try {
-            encryptionService.decryptIndividual(ind);
-        } catch (RuntimeException ignore) {
-            // decrypt-for-response failure: return encrypted values (Go logs + continues)
-        }
+        // The response carries the plaintext the client sent; the event above carried ciphertext.
+        restorePlaintext.run();
         return ind;
     }
 
-    public Individual updateIndividual(Individual ind, RequestContext reqContext) {
-        Individual existing = repo.findById(ind.getId(), reqContext.getTenantId());
-        if (existing == null) {
-            throw new CustomException(ErrorCodes.NON_EXISTENT_ENTITY, "Individual not found", HttpStatus.NOT_FOUND);
-        }
-        // Optimistic-concurrency fast-fail: reject an obviously stale write before enrichment/
-        // encryption. The authoritative guard is the version-checked update (CAS) in the repository,
-        // which also closes the race in the read->write window.
-        if (existing.getRowVersion() != ind.getRowVersion()) {
-            throw new CustomException(ErrorCodes.ROW_VERSION_MISMATCH, "Row version mismatch", HttpStatus.CONFLICT);
-        }
-
+    /**
+     * Applies a validated PUT. {@code existing} is the stored record the validator loaded and
+     * version-checked; the authoritative guard is the version-checked update (CAS) in the repository,
+     * which also closes the race in the read->write window.
+     */
+    public Individual updateIndividual(Individual ind, Individual existing, RequestContext reqContext) {
         // Reconcile children: resolve id-less identifiers by type (B14) and reject any child id that
         // isn't an existing active child of this individual (B15).
         reconcileChildren(ind, existing);
@@ -121,22 +112,15 @@ public class IndividualService {
         eventPublisher.publishEvent(props.getPubsub().getTopics().getUpdateIndividual(),
                 props.getPubsub().getTopics().getUpdateIndividual(),
                 reqContext.getTenantId(), reqContext.getUserId(), result, result.getRowVersion());
-        try {
-            encryptionService.decryptIndividual(result);
-        } catch (RuntimeException ignore) {
-            // continue with encrypted values
-        }
+        encryptionService.decryptIndividual(result);
         return result;
     }
 
-    public Individual deleteIndividual(Individual ind, RequestContext reqContext) {
-        Individual existing = repo.findById(ind.getId(), reqContext.getTenantId());
-        if (existing == null) {
-            throw new CustomException(ErrorCodes.NON_EXISTENT_ENTITY, "Individual not found", HttpStatus.NOT_FOUND);
-        }
+    /** Soft-deletes {@code existing}, the stored record the validator loaded. */
+    public Individual deleteIndividual(Individual existing, RequestContext reqContext) {
         enrichmentService.enrichForDelete(existing, reqContext);
         // DB failures are genuine infra errors; let them propagate to the tracer 500 handler.
-        repo.delete(ind.getId(), reqContext.getTenantId(), System.currentTimeMillis());
+        repo.delete(existing.getId(), reqContext.getTenantId(), System.currentTimeMillis());
         businessMetrics.recordIndividualDeleted(reqContext.getTenantId(), 1);
         eventPublisher.publishEvent(props.getPubsub().getTopics().getDeleteIndividual(),
                 props.getPubsub().getTopics().getDeleteIndividual(),
@@ -166,13 +150,20 @@ public class IndividualService {
 
         // DB failures are genuine infra errors; let them propagate to the tracer 500 handler.
         IndividualRepository.SearchResult result = repo.search(criteria, tenantId, p, s, includeDeleted);
-        try {
-            encryptionService.decryptIndividuals(result.individuals());
-        } catch (RuntimeException ignore) {
-            // continue
-        }
+        encryptionService.decryptIndividuals(result.individuals());
         businessMetrics.recordIndividualSearched(tenantId, result.individuals().size());
         return result;
+    }
+
+    /** Loads one active individual by id, decrypted; null when absent. Counted as a search of one. */
+    public Individual getIndividual(String id, String tenantId) {
+        // DB failures are genuine infra errors; let them propagate to the tracer 500 handler.
+        Individual ind = repo.findById(id, tenantId);
+        if (ind != null) {
+            encryptionService.decryptIndividual(ind);
+        }
+        businessMetrics.recordIndividualSearched(tenantId, ind == null ? 0 : 1);
+        return ind;
     }
 
     public boolean individualExists(SearchCriteria criteria, String tenantId, boolean includeDeleted) {

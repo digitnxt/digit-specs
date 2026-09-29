@@ -24,10 +24,10 @@ import java.util.List;
 
 /**
  * Tenant validation config resource. Mirrors Go internal/handlers/config_handler.go + routes.
- * Mounted under {@code <context-path>/v3/configs} (default /individuals/v3/configs).
+ * Mounted at {@code /v3/configs} under the servlet context path (default /individuals).
  */
 @RestController
-@RequestMapping("${individual.server.context-path:/individuals}/v3/configs")
+@RequestMapping("/v3/configs")
 public class ConfigController {
 
     private final ConfigService service;
@@ -58,6 +58,10 @@ public class ConfigController {
             dto = strictMapper.readValue(body, ConfigDTO.class);
         } catch (Exception e) {
             throw new CustomException(ErrorCodes.VALIDATION_ERROR, "Invalid request body: " + e.getMessage());
+        }
+        // A literal JSON `null` body parses to null — reject as 400 instead of NPE-ing into a 500.
+        if (dto == null) {
+            throw new CustomException(ErrorCodes.VALIDATION_ERROR, "Invalid request body: request body is required");
         }
 
         // Reject empty body (matches Go bug.md #15).
@@ -132,9 +136,10 @@ public class ConfigController {
         return d;
     }
 
+    /** See IndividualController.ctx — blank X-Request-Id stays null, because the value is persisted. */
     private RequestContext ctx(HttpServletRequest req, String tenantId, String userId) {
-        Object rid = req.getAttribute(ForwardHeadersFilter.REQUEST_ID_ATTR);
-        return new RequestContext(tenantId, userId, rid == null ? null : rid.toString());
+        String rid = req.getHeader(Headers.REQUEST_ID);
+        return new RequestContext(tenantId, userId, (rid == null || rid.isBlank()) ? null : rid);
     }
 
     private static boolean isBlank(String s) {

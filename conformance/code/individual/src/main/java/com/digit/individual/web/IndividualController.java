@@ -36,10 +36,10 @@ import java.util.UUID;
 
 /**
  * Individuals REST resource. Mirrors Go internal/handlers/individual_handler.go + routes.
- * Mounted under {@code <context-path>/v3/individuals} (default /individuals/v3/individuals).
+ * Mounted at {@code /v3/individuals} under the servlet context path (default /individuals).
  */
 @RestController
-@RequestMapping("${individual.server.context-path:/individuals}/v3/individuals")
+@RequestMapping("/v3/individuals")
 public class IndividualController {
 
     private static final int DEFAULT_PAGE = 1;
@@ -57,9 +57,14 @@ public class IndividualController {
         this.strictMapper = strictMapper;
     }
 
+    /**
+     * X-Request-Id is read straight off the request rather than from a filter-set attribute. A blank
+     * header stays null: the value is persisted (individual_v3.requestid), so a non-null column always
+     * identifies a real caller-supplied correlation value.
+     */
     private RequestContext ctx(HttpServletRequest req, String tenantId, String userId) {
-        Object rid = req.getAttribute(ForwardHeadersFilter.REQUEST_ID_ATTR);
-        return new RequestContext(tenantId, userId, rid == null ? null : rid.toString());
+        String rid = req.getHeader(Headers.REQUEST_ID);
+        return new RequestContext(tenantId, userId, (rid == null || rid.isBlank()) ? null : rid);
     }
 
     @PostMapping
@@ -86,13 +91,15 @@ public class IndividualController {
             @RequestHeader(value = Headers.TENANT_ID, required = false) String tenantId,
             @RequestParam(value = "id", required = false) List<String> id,
             @RequestParam(value = "individualId", required = false) List<String> individualId,
+            @RequestParam(value = "userId", required = false) List<String> userId,
             @RequestParam(value = "givenName", required = false) String givenName,
             @RequestParam(value = "mobileNumber", required = false) String mobileNumber,
             @RequestParam(value = "gender", required = false) String gender,
             @RequestParam(value = "dateOfBirth", required = false) String dateOfBirth,
             @RequestParam(value = "includeDeleted", required = false, defaultValue = "false") String includeDeletedRaw,
             @RequestParam(value = "page", required = false) String pageRaw,
-            @RequestParam(value = "size", required = false) String sizeRaw) {
+            @RequestParam(value = "size", required = false) String sizeRaw,
+            HttpServletRequest request) {
 
         // Binding validation (mirrors go-playground tags on IndividualSearchFilter). page/size/
         // includeDeleted are taken as String and parsed here so a non-numeric/non-boolean value
@@ -101,8 +108,12 @@ public class IndividualController {
         boolean includeDeleted = parseBoolParam(errs, "includeDeleted", includeDeletedRaw);
         Integer page = parseIntParam(errs, "page", pageRaw);
         Integer size = parseIntParam(errs, "size", sizeRaw);
-        if (id != null) {
-            for (String s : id) {
+        // Validate against the RAW query values, not the bound List: Spring silently drops an
+        // empty-valued param (?id=) from a List<String>, so an empty id would otherwise skip the
+        // uuid check and pass. Gin binds it as "" and rejects via dive,uuid → 400.
+        String[] rawIds = request.getParameterValues("id");
+        if (rawIds != null) {
+            for (String s : rawIds) {
                 if (!isUuid(s)) {
                     bindingError(errs, "id", "uuid");
                 }
@@ -112,6 +123,13 @@ public class IndividualController {
             for (String s : individualId) {
                 if (s.length() > 64) {
                     bindingError(errs, "individualId", "max");
+                }
+            }
+        }
+        if (userId != null) {
+            for (String s : userId) {
+                if (s.length() > 64) {
+                    bindingError(errs, "userId", "max");
                 }
             }
         }
@@ -143,12 +161,15 @@ public class IndividualController {
         SearchCriteria criteria = new SearchCriteria();
         criteria.setGivenName(givenName);
         criteria.setGender(gender);
-        criteria.setDateOfBirth(dateOfBirth);
+        criteria.setDateOfBirth(parseDob(dateOfBirth));
         if (id != null && !id.isEmpty()) {
             criteria.setId(id);
         }
         if (individualId != null && !individualId.isEmpty()) {
             criteria.setIndividualId(individualId);
+        }
+        if (userId != null && !userId.isEmpty()) {
+            criteria.setUserId(userId);
         }
         if (mobileNumber != null && !mobileNumber.isEmpty()) {
             criteria.setMobileNumber(List.of(mobileNumber));
@@ -167,6 +188,7 @@ public class IndividualController {
             @RequestHeader(value = Headers.TENANT_ID, required = false) String tenantId,
             @RequestParam(value = "id", required = false) String id,
             @RequestParam(value = "individualId", required = false) String individualId,
+            @RequestParam(value = "userId", required = false) String userId,
             @RequestParam(value = "givenName", required = false) String givenName,
             @RequestParam(value = "mobileNumber", required = false) String mobileNumber,
             @RequestParam(value = "gender", required = false) String gender,
@@ -180,6 +202,9 @@ public class IndividualController {
         }
         if (individualId != null && individualId.length() > 64) {
             bindingError(errs, "individualId", "max");
+        }
+        if (userId != null && userId.length() > 64) {
+            bindingError(errs, "userId", "max");
         }
         if (givenName != null && (givenName.isEmpty() || givenName.length() > 128)) {
             bindingError(errs, "givenName", givenName.isEmpty() ? "min" : "max");
@@ -197,8 +222,9 @@ public class IndividualController {
             throw new CustomException(errs);
         }
 
-        boolean hasFilter = nonEmpty(id) || nonEmpty(individualId) || nonEmpty(givenName)
-                || nonEmpty(mobileNumber) || nonEmpty(gender) || nonEmpty(dateOfBirth);
+        boolean hasFilter = nonEmpty(id) || nonEmpty(individualId) || nonEmpty(userId)
+                || nonEmpty(givenName) || nonEmpty(mobileNumber) || nonEmpty(gender)
+                || nonEmpty(dateOfBirth);
         if (!hasFilter) {
             throw new CustomException(ErrorCodes.VALIDATION_ERROR, "At least one filter parameter is required");
         }
@@ -206,12 +232,15 @@ public class IndividualController {
         SearchCriteria criteria = new SearchCriteria();
         criteria.setGivenName(givenName);
         criteria.setGender(gender);
-        criteria.setDateOfBirth(dateOfBirth);
+        criteria.setDateOfBirth(parseDob(dateOfBirth));
         if (nonEmpty(id)) {
             criteria.setId(List.of(id));
         }
         if (nonEmpty(individualId)) {
             criteria.setIndividualId(List.of(individualId));
+        }
+        if (nonEmpty(userId)) {
+            criteria.setUserId(List.of(userId));
         }
         if (nonEmpty(mobileNumber)) {
             criteria.setMobileNumber(List.of(mobileNumber));
@@ -226,13 +255,11 @@ public class IndividualController {
             @RequestHeader(value = Headers.TENANT_ID, required = false) String tenantId,
             @PathVariable("id") String id) {
         requireValidId(id);
-        SearchCriteria criteria = new SearchCriteria();
-        criteria.setId(List.of(id));
-        IndividualRepository.SearchResult result = service.searchIndividuals(criteria, 1, 1, false, tenantId);
-        if (result.individuals().isEmpty()) {
+        Individual found = service.getIndividual(id, tenantId);
+        if (found == null) {
             throw new CustomException(ErrorCodes.NON_EXISTENT_ENTITY, "Individual not found", HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.ok(ModelMappers.toDto(result.individuals().get(0)));
+        return ResponseEntity.ok(ModelMappers.toDto(found));
     }
 
     @PutMapping(value = "/{id}")
@@ -248,9 +275,9 @@ public class IndividualController {
         ind.setTenantId(tenantId);
         ind.setId(id);
 
-        validator.validateUpdate(ind);
+        Individual existing = validator.validateUpdate(ind);
         RequestContext rc = ctx(request, tenantId, userId);
-        Individual updated = service.updateIndividual(ind, rc);
+        Individual updated = service.updateIndividual(ind, existing, rc);
         return ResponseEntity.ok(ModelMappers.toDto(updated));
     }
 
@@ -265,9 +292,9 @@ public class IndividualController {
         ind.setId(id);
         ind.setTenantId(tenantId);
 
-        validator.validateDelete(ind);
+        Individual existing = validator.validateDelete(ind);
         RequestContext rc = ctx(request, tenantId, userId);
-        service.deleteIndividual(ind, rc);
+        service.deleteIndividual(existing, rc);
         return ResponseEntity.noContent().build();
     }
 
@@ -277,10 +304,33 @@ public class IndividualController {
         if (body == null || body.length == 0) {
             throw new CustomException(ErrorCodes.VALIDATION_ERROR, "Invalid request body: EOF");
         }
+        IndividualDTO dto;
         try {
-            return strictMapper.readValue(body, IndividualDTO.class);
+            dto = strictMapper.readValue(body, IndividualDTO.class);
         } catch (Exception e) {
             throw new CustomException(ErrorCodes.VALIDATION_ERROR, "Invalid request body: " + e.getMessage());
+        }
+        // A literal JSON `null` body parses to null — reject as 400 instead of NPE-ing into a 500.
+        if (dto == null) {
+            throw new CustomException(ErrorCodes.VALIDATION_ERROR, "Invalid request body: request body is required");
+        }
+        // A null element inside a child array (e.g. "identifiers":[null]) would otherwise be silently
+        // dropped by the entity mapper, so schema-invalid input would be accepted as 201. Reject it up
+        // front — matching the Go reference, which returns 400 for the same input.
+        rejectNullChildElements("identifiers", dto.getIdentifiers());
+        rejectNullChildElements("address", dto.getAddresses());
+        rejectNullChildElements("documents", dto.getDocuments());
+        return dto;
+    }
+
+    private static void rejectNullChildElements(String field, List<?> items) {
+        if (items == null) {
+            return;
+        }
+        for (Object item : items) {
+            if (item == null) {
+                throw new CustomException(ErrorCodes.VALIDATION_ERROR, field + " entries must not be null");
+            }
         }
     }
 
@@ -313,6 +363,16 @@ public class IndividualController {
         return g != null && ValidationConstants.VALID_GENDERS.contains(g);
     }
 
+    /**
+     * Converts an already-validated (see {@link #isIsoDate}) date string into a LocalDate for the
+     * search criteria; null/blank → null. Carrying a real date (not a String) into SearchCriteria lets
+     * the JDBC driver bind it to the DATE column — a raw String triggers "operator does not exist:
+     * date = character varying" at query time.
+     */
+    private static java.time.LocalDate parseDob(String s) {
+        return (s == null || s.isEmpty()) ? null : java.time.LocalDate.parse(s);
+    }
+
     private static boolean isIsoDate(String s) {
         try {
             java.time.LocalDate.parse(s, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
@@ -327,9 +387,17 @@ public class IndividualController {
         errors.put(fieldName, "field '" + fieldName + "' failed '" + tag + "' validation");
     }
 
-    /** Parses an optional integer query param; blank/absent → null, non-numeric → recorded 400 binding error. */
+    /**
+     * Parses an optional integer query param. Absent (null) → null so the caller applies the default;
+     * present-but-empty ("") or non-numeric/out-of-int-range → recorded 400 binding error (mirrors Gin,
+     * which cannot bind "" or an over-int32 value to a required int).
+     */
     private static Integer parseIntParam(Map<String, String> errors, String fieldName, String raw) {
-        if (raw == null || raw.isEmpty()) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw.isEmpty()) {
+            bindingError(errors, fieldName, "int");
             return null;
         }
         try {

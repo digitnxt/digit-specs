@@ -1,0 +1,1486 @@
+{
+  "info": {
+    "name": "notify-service",
+    "description": "notify: send notifications over SMS, Email, WhatsApp and Push.\n\nRun the requests in this order the first time:\n  1. Notification Configs > Create config - welcome-email\n  2. Providers > List providers   (confirm a provider loaded)\n  3. Provider Mappings > Create mapping - EMAIL to gmail\n  4. Notify > Send notification (Email only)\n\nbaseUrl: use http://localhost:8080 locally (no context path). In a deployment the service runs under /notify, so use https://<host>/notify.\n\nEvery request takes X-Tenant-ID as a header; it is never read from the body.\n\nSee README.md for the full guide, including how to write a provider.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "description": "Local: http://localhost:8080. Deployed: https://<host>/notify"
+    },
+    {
+      "key": "tenantId",
+      "value": "default",
+      "description": "Sent as X-Tenant-ID"
+    },
+    {
+      "key": "providerId",
+      "value": "",
+      "description": "Captured by List providers"
+    },
+    {
+      "key": "freshTenantId",
+      "value": ""
+    },
+    {
+      "key": "welcomeConfigId",
+      "value": ""
+    },
+    {
+      "key": "otpConfigId",
+      "value": ""
+    },
+    {
+      "key": "localisedConfigId",
+      "value": ""
+    },
+    {
+      "key": "emailMappingId",
+      "value": ""
+    },
+    {
+      "key": "usMappingId",
+      "value": ""
+    },
+    {
+      "key": "healthPath",
+      "value": "/actuator/health"
+    },
+    {
+      "key": "throwawayConfigId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "description": "Run first. Provisions the tenant this run uses so the rest of the collection has tables to read. Harmless when tenant migration is off -- the 409 just says this service serves the shared schema.",
+      "item": [
+        {
+          "name": "Provision the run tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 provisioned, or 409 when migration is off',",
+                  "  () => pm.expect([200, 409]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/internal/migrate",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "Idempotent. Without this, every request below fails against a schema that has no tables -- which is what a fresh tenant looks like."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Configs",
+      "description": "What a message says, per channel. One config per (tenant, templateCode). Templates render flat {{placeholders}} only -- anything nested is flattened by a payloadBindings JSONPath.",
+      "item": [
+        {
+          "name": "Create config - welcome-email",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Quick-start config: one channel, one variable bound from a nested payload field.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"welcome-email\",\n  \"tag\": \"onboarding\",\n  \"channels\": {\n    \"email\": {\n      \"enabled\": true,\n      \"subject\": {\n        \"default\": \"Welcome, {{name}}\"\n      },\n      \"body\": {\n        \"default\": \"Hello {{name}}, your account is ready.\"\n      },\n      \"payloadBindings\": {\n        \"name\": \"$.user.firstName\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('welcomeConfigId', body.id);",
+                  "pm.test('id is a UUID', () => pm.expect(body.id).to.match(/^[0-9a-f-]{36}$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create config - otp-login (SMS + Email)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Two channels in one config. Email adds a subject; SMS has no subject. Both bind their own variables. Sending this delivers two messages when the recipient has phone and email.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"otp-login\",\n  \"tag\": \"auth\",\n  \"channels\": {\n    \"sms\": {\n      \"enabled\": true,\n      \"body\": {\n        \"default\": \"Your code is {{otp}}. Do not share it.\"\n      },\n      \"payloadBindings\": {\n        \"otp\": \"$.otp\"\n      }\n    },\n    \"email\": {\n      \"enabled\": true,\n      \"subject\": {\n        \"default\": \"Your login code\"\n      },\n      \"body\": {\n        \"default\": \"Hello {{name}},\\n\\nYour code is {{otp}}.\"\n      },\n      \"payloadBindings\": {\n        \"otp\": \"$.otp\",\n        \"name\": \"$.user.firstName\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('otpConfigId', body.id);",
+                  "pm.test('id is a UUID', () => pm.expect(body.id).to.match(/^[0-9a-f-]{36}$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create config - with locales",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "body is keyed by locale. A request with locale 'hi' uses that entry; anything else uses 'default'. A config with no 'default' fails to render.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"otp-login-localised\",\n  \"tag\": \"auth\",\n  \"channels\": {\n    \"sms\": {\n      \"enabled\": true,\n      \"body\": {\n        \"default\": \"Your code is {{otp}}.\",\n        \"hi\": \"\u0906\u092a\u0915\u093e \u0915\u094b\u0921 {{otp}} \u0939\u0948\u0964\"\n      },\n      \"payloadBindings\": {\n        \"otp\": \"$.otp\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('localisedConfigId', body.id);",
+                  "pm.test('id is a UUID', () => pm.expect(body.id).to.match(/^[0-9a-f-]{36}$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List configs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "All configs for the tenant."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search configs by tag",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/notification-configs?tag=auth",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "tag is a free-form grouping label, matched exactly. It plays no part in sending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('all results carry the tag', () => pm.response.json().forEach(c => pm.expect(c.tag).to.eql('auth')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search configs by tag + isActive",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/notification-configs?tag=auth&isActive=true",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "Filters combine. A filter left out is not applied."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('all results are active', () => pm.response.json().forEach(c => pm.expect(c.isActive).to.be.true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search configs by templateCode",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/notification-configs?templateCode=otp-login",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "Exact match on the code used when sending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get config by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/notification-configs/{{welcomeConfigId}}",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "404 when the config belongs to another tenant."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('id matches', () => pm.expect(pm.response.json().id)",
+                  "  .to.eql(pm.collectionVariables.get('welcomeConfigId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update config",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/v3/notification-configs/{{welcomeConfigId}}",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "A full replace of the content. channels is overwritten wholesale, so a PUT omitting a channel deletes that channel's template. templateCode is immutable -- it must match the config being updated (see the error case for a mismatch). isActive is not touched; there is no API to enable or disable a config.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"welcome-email\",\n  \"tag\": \"onboarding\",\n  \"channels\": {\n    \"email\": {\n      \"enabled\": true,\n      \"subject\": {\n        \"default\": \"Welcome aboard, {{name}}\"\n      },\n      \"body\": {\n        \"default\": \"Hello {{name}}, your account is ready. Sign in to get started.\"\n      },\n      \"payloadBindings\": {\n        \"name\": \"$.user.firstName\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('tag was replaced', () => pm.expect(body.tag).to.eql('onboarding'));",
+                  "// An update must not change the active flag.",
+                  "pm.test('isActive unchanged by the update', () => pm.expect(body.isActive).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create config - to be deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('throwawayConfigId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Exists so the delete below has its own target. Deleting one of the demo configs would break the sends and the error cases that still reference them.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"templateCode\": \"to-be-deleted\",\n  \"tag\": \"housekeeping\",\n  \"channels\": {\n    \"email\": {\n      \"enabled\": true,\n      \"subject\": {\n        \"default\": \"x\"\n      },\n      \"body\": {\n        \"default\": \"x\"\n      },\n      \"payloadBindings\": {}\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete config",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/v3/notification-configs/{{throwawayConfigId}}",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "Removes the throwaway config created just above."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Provider Mappings",
+      "description": "Which vendor a channel uses, per tenant. providers is an ordered fallback chain. An optional country routes on the recipient's countryCode; a mapping without one is the catch-all. Creating a mapping that names a provider which is not loaded is rejected with 400.",
+      "item": [
+        {
+          "name": "Create mapping - EMAIL to gmail",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/provider-mappings",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "The catch-all EMAIL mapping (no country). One per tenant -- the unique index covers (tenant, channel) where country is null.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"EMAIL\",\n  \"providers\": [\n    \"gmail\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('emailMappingId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create mapping - EMAIL with fallback",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/provider-mappings",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "A country-specific EMAIL mapping, which is why it does not collide with the catch-all above. The providers array is ordered: had a second EMAIL provider been loaded it would be tried when the first fails. Only gmail is loaded here, so the list has one entry.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"EMAIL\",\n  \"country\": \"US\",\n  \"providers\": [\n    \"gmail\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('usMappingId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create mapping - SMS for India",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/provider-mappings",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Country-specific SMS. Preferred over the catch-all for a recipient whose countryCode is IN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"SMS\",\n  \"country\": \"IN\",\n  \"providers\": [\n    \"smscountry\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('mappingId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create mapping - SMS catch-all",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/provider-mappings",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Used for any country with no specific mapping. Names smscountry because that is what is actually loaded -- a provider absent from GET /v3/providers is rejected with 400.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"SMS\",\n  \"providers\": [\n    \"smscountry\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('mappingId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List mappings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/provider-mappings",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "All mappings for the tenant."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List mappings (by channel)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/provider-mappings?channel=EMAIL",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "Optional channel filter."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update mapping",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/v3/provider-mappings/{{emailMappingId}}",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Reorder the chain or swap a provider.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"EMAIL\",\n  \"providers\": [\n    \"gmail\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete mapping",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/v3/provider-mappings/{{usMappingId}}",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "Removes the US-specific mapping. The catch-alls are left in place because the sends need them."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notify",
+      "description": "Sending. Always answers 202 if the request was accepted -- read channels[].status to see what was actually delivered. Requires a notification config and a provider mapping for the tenant.",
+      "item": [
+        {
+          "name": "Send notification (SMS + Email)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "The full example from the README. Sends on every channel the otp-login config enables.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"otp-login\",\n  \"recipient\": {\n    \"phone\": \"+919876543210\",\n    \"email\": \"asha@example.com\",\n    \"countryCode\": \"IN\",\n    \"deviceTokens\": [\n      \"fcm-token-1\"\n    ]\n  },\n  \"payload\": {\n    \"otp\": \"123456\",\n    \"user\": {\n      \"firstName\": \"Asha\"\n    }\n  },\n  \"locale\": \"default\",\n  \"metadata\": {\n    \"requestId\": \"abc-123\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 202', () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test('notificationId is a ntf_ ULID', () => pm.expect(body.notificationId).to.match(/^ntf_/));",
+                  "pm.test('one entry per channel', () => pm.expect(body.channels).to.have.lengthOf(4));",
+                  "// A send is 202 even when nothing was delivered -- the outcome is per channel.",
+                  "console.log(body.channels.map(c => `${c.channel}=${c.status}` + (c.reason ? ` (${c.reason})` : '')).join('\\n'));",
+                  "// A tenant's provider_mapping rows are read inside dispatch, which fans out across",
+                  "// virtual threads. If the tenant binding is not carried into them those reads hit the",
+                  "// shared schema and every channel reports this \u2014 for a mapping the API lists happily.",
+                  "// Asserting on the reason works whatever the vendor does with the address.",
+                  "pm.response.json().channels.forEach(c => pm.test(",
+                  "  `${c.channel} resolved a provider mapping`,",
+                  "  () => pm.expect(c.reason || '').to.not.include('No provider mapping found')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send notification (Email only)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "The quick-start example. Needs the 'Create config - welcome-email' request run first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"welcome-email\",\n  \"recipient\": {\n    \"email\": \"someone@example.com\"\n  },\n  \"payload\": {\n    \"user\": {\n      \"firstName\": \"Asha\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 202', () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test('notificationId is a ntf_ ULID', () => pm.expect(body.notificationId).to.match(/^ntf_/));",
+                  "pm.test('one entry per channel', () => pm.expect(body.channels).to.have.lengthOf(4));",
+                  "// A send is 202 even when nothing was delivered -- the outcome is per channel.",
+                  "console.log(body.channels.map(c => `${c.channel}=${c.status}` + (c.reason ? ` (${c.reason})` : '')).join('\\n'));",
+                  "// A tenant's provider_mapping rows are read inside dispatch, which fans out across",
+                  "// virtual threads. If the tenant binding is not carried into them those reads hit the",
+                  "// shared schema and every channel reports this \u2014 for a mapping the API lists happily.",
+                  "// Asserting on the reason works whatever the vendor does with the address.",
+                  "pm.response.json().channels.forEach(c => pm.test(",
+                  "  `${c.channel} resolved a provider mapping`,",
+                  "  () => pm.expect(c.reason || '').to.not.include('No provider mapping found')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send notification (locale hi)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Picks the 'hi' entry from the body map, falling back to 'default' when absent. Needs the 'Create config - with locales' request run first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"otp-login-localised\",\n  \"recipient\": {\n    \"phone\": \"+919876543210\"\n  },\n  \"payload\": {\n    \"otp\": \"123456\"\n  },\n  \"locale\": \"hi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 202', () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test('notificationId is a ntf_ ULID', () => pm.expect(body.notificationId).to.match(/^ntf_/));",
+                  "pm.test('one entry per channel', () => pm.expect(body.channels).to.have.lengthOf(4));",
+                  "// A send is 202 even when nothing was delivered -- the outcome is per channel.",
+                  "console.log(body.channels.map(c => `${c.channel}=${c.status}` + (c.reason ? ` (${c.reason})` : '')).join('\\n'));",
+                  "// A tenant's provider_mapping rows are read inside dispatch, which fans out across",
+                  "// virtual threads. If the tenant binding is not carried into them those reads hit the",
+                  "// shared schema and every channel reports this \u2014 for a mapping the API lists happily.",
+                  "// Asserting on the reason works whatever the vendor does with the address.",
+                  "pm.response.json().channels.forEach(c => pm.test(",
+                  "  `${c.channel} resolved a provider mapping`,",
+                  "  () => pm.expect(c.reason || '').to.not.include('No provider mapping found')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send to one channel only (others SKIPPED)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Same otp-login config, but only an email address is supplied. SMS, WHATSAPP and PUSH come back SKIPPED with \"No <address> on recipient\" -- not FAILED -- and no notification_attempt row is written for them. This is how you send on some of a template's channels and not others: supply only the addresses you want used.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"otp-login\",\n  \"recipient\": {\n    \"email\": \"asha@example.com\"\n  },\n  \"payload\": {\n    \"otp\": \"123456\",\n    \"user\": {\n      \"firstName\": \"Asha\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 202', () => pm.response.to.have.status(202));",
+                  "const by = {}; pm.response.json().channels.forEach(c => by[c.channel] = c);",
+                  "// EMAIL was attempted -- whether the vendor accepted it depends on the address, so this",
+                  "// asserts it was not skipped rather than that it was delivered.",
+                  "pm.test('EMAIL was attempted', () => pm.expect(by.EMAIL.status).to.not.eql('SKIPPED'));",
+                  "// The point: an address the caller did not supply is a choice, not a failure.",
+                  "['SMS','WHATSAPP','PUSH'].forEach(ch =>",
+                  "  pm.test(`${ch} is SKIPPED, not FAILED`, () => pm.expect(by[ch].status).to.eql('SKIPPED')));",
+                  "pm.test('SMS names the missing address', () => pm.expect(by.SMS.reason).to.include('phone number'));",
+                  "// A tenant's provider_mapping rows are read inside dispatch, which fans out across",
+                  "// virtual threads. If the tenant binding is not carried into them those reads hit the",
+                  "// shared schema and every channel reports this \u2014 for a mapping the API lists happily.",
+                  "// Asserting on the reason works whatever the vendor does with the address.",
+                  "pm.response.json().channels.forEach(c => pm.test(",
+                  "  `${c.channel} resolved a provider mapping`,",
+                  "  () => pm.expect(c.reason || '').to.not.include('No provider mapping found')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Providers",
+      "description": "Read-only view of the jars that loaded. Providers are not created through the API -- they appear because their jar is in NOTIFY_PLUGINS_DIR and their credentials are set. A provider missing from this list has credentials missing; the startup log names the variable.",
+      "item": [
+        {
+          "name": "List providers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/providers",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "What is actually usable. Compare against the startup summary."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "const body = pm.response.json();",
+                  "if (body.length > 0) pm.collectionVariables.set('providerId', body[0].id);",
+                  "console.log(body.map(p => `${p.providerName} ${JSON.stringify(p.channels)} active=${p.isActive}`).join('\\n'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List providers (by channel)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/providers?channel=EMAIL&isActive=true",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "Optional channel and isActive filters."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Re-activate a provider (idempotent)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/v3/providers/{{providerId}}/status",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Sets isActive true, deliberately. The provider registry lives in the SHARED schema, not a tenant's -- it describes which jars this pod loaded -- so flipping a provider off here disables it for every tenant on the cluster, and a collection run would leave it that way. If you want to test deactivation, do it by hand and turn it back on.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('isActive is true', () => pm.expect(pm.response.json().isActive).to.be.true);",
+                  "// Deliberately re-activating, not deactivating: this table is shared across tenants."
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}{{healthPath}}",
+            "header": [],
+            "description": "Actuator's base path moves between environments. Locally it is /actuator/health; a deployment that sets MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/ serves it at /health. Set the healthPath variable to match."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Error cases",
+      "description": "Each of these maps to an entry in the README troubleshooting section.",
+      "item": [
+        {
+          "name": "Unknown templateCode -> 404",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "No config for that templateCode under this tenant. Configs are per tenant: one created under 'default' is invisible to tenant 'acme'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"does-not-exist\",\n  \"recipient\": {\n    \"email\": \"someone@example.com\"\n  },\n  \"payload\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error body is a platform array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('code is NOT_FOUND', () => pm.expect(pm.response.json()[0].code).to.eql('NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing X-Tenant-ID -> 400",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "The tenant is always a header and is never read from the body.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"otp-login\",\n  \"recipient\": {\n    \"email\": \"someone@example.com\"\n  },\n  \"payload\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Blank templateCode -> 400",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "templateCode, recipient and payload are all required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"\",\n  \"recipient\": {\n    \"email\": \"someone@example.com\"\n  },\n  \"payload\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate templateCode -> 409",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "One config per (tenant, templateCode). Run after 'Create config - welcome-email'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"welcome-email\",\n  \"channels\": {\n    \"email\": {\n      \"enabled\": true,\n      \"subject\": {\n        \"default\": \"Welcome, {{name}}\"\n      },\n      \"body\": {\n        \"default\": \"Hello {{name}}, your account is ready.\"\n      },\n      \"payloadBindings\": {\n        \"name\": \"$.user.firstName\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('error body is a platform array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('code is CONFLICT', () => pm.expect(pm.response.json()[0].code).to.eql('CONFLICT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mapping an unloaded provider -> 400",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/provider-mappings",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "WHATSAPP, not EMAIL: with an EMAIL mapping already created above, the duplicate check fires first and you get 409 instead of the 400 this is demonstrating. Provider names are validated against the shared registry.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"providers\": [\n    \"not-a-real-provider\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error body is a platform array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('names the provider', () => pm.expect(pm.response.json()[0].message).to.include('not-a-real-provider'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unresolvable binding -> 202 with FAILED channel",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/v3/notifications",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "otp-login binds name to $.user.firstName; this payload omits it. The request is accepted but the channel fails rather than sending a message with a hole in it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateCode\": \"otp-login\",\n  \"recipient\": {\n    \"email\": \"someone@example.com\"\n  },\n  \"payload\": {\n    \"otp\": \"123456\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 202', () => pm.response.to.have.status(202));",
+                  "const failed = pm.response.json().channels.filter(c => c.status === 'FAILED');",
+                  "pm.test('a channel failed to render', () => pm.expect(failed.length).to.be.above(0));",
+                  "console.log(failed.map(c => `${c.channel}: ${c.reason}`).join('\\n'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown endpoint -> 404",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/no-such-thing",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "description": "An unmapped path is a 404, not a 500."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('error body is a platform array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('code is NOT_FOUND', () => pm.expect(pm.response.json()[0].code).to.eql('NOT_FOUND'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Renaming templateCode -> 400",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/v3/notification-configs/{{welcomeConfigId}}",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"templateCode\": \"welcome-email-renamed\",\n  \"tag\": \"onboarding\",\n  \"channels\": {\n    \"email\": {\n      \"enabled\": true,\n      \"subject\": {\n        \"default\": \"Welcome, {{name}}\"\n      },\n      \"body\": {\n        \"default\": \"Hello {{name}}.\"\n      },\n      \"payloadBindings\": {\n        \"name\": \"$.user.firstName\"\n      }\n    }\n  }\n}"
+            },
+            "description": "templateCode is immutable. A mismatch is rejected rather than ignored, so a caller that meant to rename finds out. Create the new code and delete the old one instead."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error body is a platform array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('says templateCode cannot be changed', () => pm.expect(pm.response.json()[0].message).to.include('templateCode cannot be changed'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tenant provisioning",
+      "description": "Proves tenant-migration is actually in effect, not just configured. Uses a tenant name generated per run, so it is repeatable: the first call must FAIL because that tenant has no schema, and the same call must succeed once it does.\n\nIf the first call returned data instead of erroring, requests would be reaching the shared schema and separation would not be working. Only relevant when TENANT_MIGRATION_ENABLED=true.",
+      "item": [
+        {
+          "name": "1. Unprovisioned tenant -> 500 (negative control)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// A name unique to this run, so the negative control is still negative on a re-run.",
+                  "pm.collectionVariables.set('freshTenantId', 'pmfresh' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The shared schema holds configs for other tenants. If separation is working this tenant",
+                  "// cannot see them -- its own schema does not exist yet, so the query has no table to read.",
+                  "pm.test('Status is 500', () => pm.response.to.have.status(500));",
+                  "pm.test('did NOT return another tenant\\'s configs', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('templateCode');",
+                  "});",
+                  "// Known gap: the body is a generic INTERNAL_ERROR. The cause -- SQLSTATE 42P01, relation",
+                  "// \"notification_config\" does not exist -- is only in the service log.",
+                  "console.log('unprovisioned tenant response:', pm.response.text());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{freshTenantId}}"
+              }
+            ],
+            "description": "Expected to fail. This is the control that proves separation is real."
+          }
+        },
+        {
+          "name": "2. Migrate that tenant -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "// Synchronous: the 200 comes back only after Flyway has finished, so nothing can race it.",
+                  "// 409 here would mean tenant migration is disabled on this service."
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/internal/migrate",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{freshTenantId}}"
+              }
+            ],
+            "description": "Creates the tenant's schema and runs every migration in it. Idempotent. No body -- the tenant comes from the header. 200 done, 409 migration disabled, 400 unusable tenant id (blank, over 63 chars, lowercase 'public', or a pg_ prefix). Exempt from the tenant filter, because the schema it creates does not exist yet."
+          }
+        },
+        {
+          "name": "3. Same call now works, and is empty (isolation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "// Empty, not populated: a brand-new schema sees neither the shared schema's configs nor any",
+                  "// other tenant's. That is the isolation separation is for.",
+                  "pm.test('new tenant starts empty', () => pm.expect(body).to.be.an('array').that.is.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/v3/notification-configs",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{freshTenantId}}"
+              }
+            ],
+            "description": "The identical request from step 1, now that the schema exists."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/controller/NotifyControllerIT.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/dispatch/DispatchEngineTest.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/domain/repository/RepositoryIntegrationTest.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/domain/repository/TenantSchemaRoutingIntegrationTest.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/messaging/NotifyTopicConsumerTest.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/plugin/PluginLoaderTest.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/service/NotificationServiceTest.java
+/home/admin/Desktop/java25/digit3/src/services/notify/notify-app/src/test/java/org/digit/notify/app/template/TemplateRendererTest.java

@@ -1,2 +1,0 @@
-ALTER TABLE IF EXISTS employee_v3 ADD COLUMN IF NOT EXISTS requestid TEXT;
-ALTER TABLE IF EXISTS employee_jurisdiction_v3 ADD COLUMN IF NOT EXISTS requestid TEXT;

@@ -3,13 +3,27 @@ import pytest
 import schemathesis
 from tests.helpers.curl_builder import build_curl
 
+# Hypothesis profiles for the schemathesis module. The default 200ms per-example
+# deadline is unusable against a remote gateway; disable it. Select with
+# `--hypothesis-profile=bounded` (fast smoke) or `=full` (thorough).
+try:
+    from hypothesis import HealthCheck, settings
+
+    _SUPPRESS = [HealthCheck.too_slow, HealthCheck.filter_too_much]
+    settings.register_profile("bounded", max_examples=25, deadline=None, suppress_health_check=_SUPPRESS)
+    settings.register_profile("full", max_examples=100, deadline=None, suppress_health_check=_SUPPRESS)
+except Exception:
+    pass
+
 GATEWAY_HEADER_PROFILES = {
+    # Rate-limit headers appear only when the rate-limiting plugin is enabled on
+    # the route, so they are optional to avoid false failures.
     "kong": {
-        "X-RateLimit-Limit-Minute":     {"required": True,  "type": int},
-        "X-RateLimit-Remaining-Minute": {"required": True,  "type": int},
         "X-Kong-Request-Id":            {"required": True,  "type": str},
         "X-Kong-Upstream-Latency":      {"required": False, "type": int},
         "X-Kong-Proxy-Latency":         {"required": False, "type": int},
+        "X-RateLimit-Limit-Minute":     {"required": False, "type": int},
+        "X-RateLimit-Remaining-Minute": {"required": False, "type": int},
     },
     "aws": {
         "x-amzn-RequestId":               {"required": True,  "type": str},

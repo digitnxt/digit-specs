@@ -59,7 +59,8 @@ public class RequestValidator {
         validateBusinessRules(ind, cfg, true);
     }
 
-    public void validateUpdate(Individual ind) {
+    /** Validates a PUT and returns the stored record it was checked against, for the update to reuse. */
+    public Individual validateUpdate(Individual ind) {
         if (ind.getId() == null || ind.getId().isEmpty()) {
             throw validation("id is required for update");
         }
@@ -82,9 +83,11 @@ public class RequestValidator {
         Config cfg = tenantConfig(ind.getTenantId());
         validateFormats(ind, cfg);
         validateBusinessRules(ind, cfg, false);
+        return existing;
     }
 
-    public void validateDelete(Individual ind) {
+    /** Validates a DELETE and returns the stored record, for the delete to reuse. */
+    public Individual validateDelete(Individual ind) {
         if (ind.getId() == null || ind.getId().isEmpty()) {
             throw validation("id is required for delete");
         }
@@ -92,6 +95,7 @@ public class RequestValidator {
         if (existing == null || !existing.isActive()) {
             throw new CustomException(ErrorCodes.NON_EXISTENT_ENTITY, "Individual not found", HttpStatus.NOT_FOUND);
         }
+        return existing;
     }
 
     public void validateConfig(Config cfg) {
@@ -142,9 +146,8 @@ public class RequestValidator {
         if (isEmpty(ind.getTenantId())) {
             throw field("tenantId", "tenantId is required (from X-Tenant-ID header)");
         }
-        if (ind.getGender() == null || ind.getGender().trim().isEmpty()) {
-            throw field("gender", "gender is required");
-        }
+        // gender is optional; when supplied it must be one of the enum values,
+        // which validateFormats enforces.
     }
 
     private void validateFormats(Individual ind, Config cfg) {
@@ -272,21 +275,14 @@ public class RequestValidator {
     /**
      * Returns an existing individual sharing this mobile number in the tenant, or null. Validation
      * runs before the mobile is encrypted, so hashedMobileNumber is usually empty here — we compute
-     * the hash on the fly and try the hash lookup first (covers encrypted-at-rest tenants), then fall
-     * back to the plaintext lookup for tenants that store plaintext.
+     * the hash on the fly. The hash is the only lookup: every write stores it, and the mobile column
+     * itself holds Vault ciphertext, which a plaintext comparison can never match.
      */
     private Individual mobileDuplicate(Individual ind) {
         if (isEmpty(ind.getMobileNumber())) {
             return null;
         }
-        String hash = HashUtil.hashMobileNumber(hmacSecret, ind.getMobileNumber());
-        if (!hash.isEmpty()) {
-            Individual existing = repo.findByMobileHash(hash, ind.getTenantId());
-            if (existing != null) {
-                return existing;
-            }
-        }
-        return repo.findByMobilePlain(ind.getMobileNumber(), ind.getTenantId());
+        return repo.findByMobileHash(HashUtil.hashMobileNumber(hmacSecret, ind.getMobileNumber()), ind.getTenantId());
     }
 
     /**

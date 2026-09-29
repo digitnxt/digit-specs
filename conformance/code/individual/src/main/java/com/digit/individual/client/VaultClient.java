@@ -13,8 +13,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -68,65 +70,80 @@ public class VaultClient {
         return addr.substring(0, end);
     }
 
-    /** Encrypts plaintext via Vault Transit. Returns plaintext unchanged when disabled/empty/already-encrypted. */
-    public String encrypt(String plaintext, String key) {
-        if (!enabled) {
-            return plaintext;
+    /**
+     * Encrypts every plaintext in one Transit request ({@code batch_input}); the ciphertexts come back
+     * in input order. The caller passes only values that need encrypting. Returns the input unchanged
+     * when Vault is disabled, and makes no call for an empty list.
+     */
+    public List<String> encryptBatch(List<String> plaintexts, String key) {
+        if (!enabled || plaintexts.isEmpty()) {
+            return plaintexts;
         }
-        if (plaintext == null || plaintext.isEmpty()) {
-            return "";
+        List<Map<String, Object>> items = new ArrayList<>(plaintexts.size());
+        for (String plaintext : plaintexts) {
+            items.add(Map.of("plaintext",
+                    Base64.getEncoder().encodeToString(plaintext.getBytes(StandardCharsets.UTF_8))));
         }
-        // Already encrypted (vault:v1: prefix) - return as-is.
-        if (plaintext.startsWith("vault:v1:")) {
-            return plaintext;
+        List<String> ciphertexts = new ArrayList<>(plaintexts.size());
+        for (JsonNode result : batch("/v1/transit/encrypt/" + key, items, "encrypt")) {
+            JsonNode ciphertext = result.get("ciphertext");
+            if (ciphertext == null || ciphertext.asString().isEmpty()) {
+                throw new RuntimeException("empty ciphertext in response");
+            }
+            ciphertexts.add(ciphertext.asString());
         }
-
-        String encoded = Base64.getEncoder().encodeToString(plaintext.getBytes(StandardCharsets.UTF_8));
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("plaintext", encoded);
-
-        String url = baseAddress() + "/v1/transit/encrypt/" + key;
-        JsonNode data = call(url, requestBody, "encrypt");
-
-        JsonNode ciphertextNode = data.get("ciphertext");
-        String ciphertext = ciphertextNode == null ? null : ciphertextNode.asString();
-        if (ciphertext == null || ciphertext.isEmpty()) {
-            throw new RuntimeException("empty ciphertext in response");
-        }
-        return ciphertext;
+        return ciphertexts;
     }
 
-    /** Decrypts ciphertext via Vault Transit. Returns ciphertext unchanged when disabled/empty/not-encrypted. */
-    public String decrypt(String ciphertext, String key) {
-        if (!enabled) {
-            return ciphertext;
+    /**
+     * Decrypts every {@code vault:v1:} ciphertext in one Transit request; the plaintexts come back in
+     * input order. The caller passes only encrypted values. Returns the input unchanged when Vault is
+     * disabled, and makes no call for an empty list.
+     */
+    public List<String> decryptBatch(List<String> ciphertexts, String key) {
+        if (!enabled || ciphertexts.isEmpty()) {
+            return ciphertexts;
         }
-        if (ciphertext == null || ciphertext.isEmpty()) {
-            return "";
+        List<Map<String, Object>> items = new ArrayList<>(ciphertexts.size());
+        for (String ciphertext : ciphertexts) {
+            items.add(Map.of("ciphertext", ciphertext));
         }
-        // Not encrypted (no vault:v1: prefix) - return as-is.
-        if (!ciphertext.startsWith("vault:v1:")) {
-            return ciphertext;
+        List<String> plaintexts = new ArrayList<>(ciphertexts.size());
+        for (JsonNode result : batch("/v1/transit/decrypt/" + key, items, "decrypt")) {
+            JsonNode plaintext = result.get("plaintext");
+            if (plaintext == null || plaintext.asString().isEmpty()) {
+                throw new RuntimeException("empty plaintext in response");
+            }
+            try {
+                plaintexts.add(new String(Base64.getDecoder().decode(plaintext.asString()), StandardCharsets.UTF_8));
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("failed to decode plaintext: " + e.getMessage());
+            }
         }
+        return plaintexts;
+    }
 
+    /**
+     * Sends one batch request and returns its {@code batch_results}, one per input item and in input
+     * order. Vault answers a batch containing any failed item with a non-200 status; an item-level
+     * {@code error} is still checked in case a partial failure is reported with 200.
+     */
+    private List<JsonNode> batch(String path, List<Map<String, Object>> items, String op) {
         Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("ciphertext", ciphertext);
-
-        String url = baseAddress() + "/v1/transit/decrypt/" + key;
-        JsonNode data = call(url, requestBody, "decrypt");
-
-        JsonNode plaintextNode = data.get("plaintext");
-        String plaintextB64 = plaintextNode == null ? null : plaintextNode.asString();
-        if (plaintextB64 == null || plaintextB64.isEmpty()) {
-            throw new RuntimeException("empty plaintext in response");
+        requestBody.put("batch_input", items);
+        JsonNode results = call(baseAddress() + path, requestBody, op).get("batch_results");
+        if (results == null || !results.isArray() || results.size() != items.size()) {
+            throw new RuntimeException("vault " + op + ": expected " + items.size() + " batch results");
         }
-        byte[] decoded;
-        try {
-            decoded = Base64.getDecoder().decode(plaintextB64);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("failed to decode plaintext: " + e.getMessage());
+        List<JsonNode> out = new ArrayList<>(items.size());
+        for (JsonNode result : results) {
+            JsonNode error = result.get("error");
+            if (error != null && !error.asString().isEmpty()) {
+                throw new RuntimeException("vault " + op + " item failed: " + error.asString());
+            }
+            out.add(result);
         }
-        return new String(decoded, StandardCharsets.UTF_8);
+        return out;
     }
 
     private JsonNode call(String url, Map<String, Object> requestBody, String op) {

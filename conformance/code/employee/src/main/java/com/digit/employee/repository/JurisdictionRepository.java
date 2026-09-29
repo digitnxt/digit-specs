@@ -9,7 +9,6 @@ import com.digit.employee.model.BoundaryRef;
 import com.digit.employee.model.Jurisdiction;
 import com.digit.employee.model.JurisdictionSearchCriteria;
 import org.digit.tracer.model.CustomException;
-import org.digit.tracer.observability.ObservabilityMetrics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,12 +34,10 @@ public class JurisdictionRepository {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
-    private final ObservabilityMetrics metrics;
 
-    public JurisdictionRepository(JdbcTemplate jdbc, ObjectMapper objectMapper, ObservabilityMetrics metrics) {
+    public JurisdictionRepository(JdbcTemplate jdbc, ObjectMapper objectMapper) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
-        this.metrics = metrics;
     }
 
     private static final String SELECT_COLS =
@@ -97,7 +94,6 @@ public class JurisdictionRepository {
             j.getAuditDetails().setModifiedBy("system");
         }
 
-        boolean ok = true;
         try {
             jdbc.update(
                     "INSERT INTO " + TABLE + " (id, employee_id, boundary_relation, is_active, version, tenant_id, "
@@ -112,23 +108,18 @@ public class JurisdictionRepository {
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             // FK violation on employee_id — the client referenced an unknown employee. Mirrors Go
             // pgerr 23503 → NOT_FOUND (404) instead of a generic 500.
-            ok = false;
             String m = ex.getMostSpecificCause().getMessage();
             if (m != null && (m.toLowerCase().contains("foreign key") || m.toLowerCase().contains("employee"))) {
                 throw new CustomException(ErrorCodes.EMPLOYEE_NOT_FOUND, "employee not found", HttpStatus.NOT_FOUND);
             }
             throw ex;
         } catch (RuntimeException ex) {
-            ok = false;
             throw ex;
-        } finally {
-            metrics.recordDbOperation("INSERT", "jurisdictions", ok);
         }
     }
 
     /** Finds a jurisdiction by id within the tenant; throws NOT_FOUND when absent. */
     public Jurisdiction findByUUID(String uuid, String tenantId) {
-        boolean ok = true;
         try {
             List<Jurisdiction> rows = jdbc.query(
                     "SELECT " + SELECT_COLS + " FROM " + TABLE + " WHERE id = ? AND tenant_id = ? LIMIT 1",
@@ -138,13 +129,9 @@ public class JurisdictionRepository {
             }
             return rows.get(0);
         } catch (CustomException ce) {
-            ok = (ce.getCode() != null && ce.getCode().equals(ErrorCodes.NOT_FOUND));
             throw ce;
         } catch (RuntimeException ex) {
-            ok = false;
             throw ex;
-        } finally {
-            metrics.recordDbOperation("SELECT", "jurisdictions", ok);
         }
     }
 
@@ -164,7 +151,6 @@ public class JurisdictionRepository {
         if (modifiedBy == null || modifiedBy.isEmpty()) {
             modifiedBy = "system";
         }
-        boolean ok = true;
         try {
             int affected = jdbc.update(
                     "UPDATE " + TABLE + " SET boundary_relation = ?::jsonb, is_active = ?, version = ?, "
@@ -175,13 +161,9 @@ public class JurisdictionRepository {
                 throw new CustomException(ErrorCodes.ROW_VERSION_MISMATCH, "jurisdiction was modified concurrently", HttpStatus.CONFLICT);
             }
         } catch (CustomException ce) {
-            ok = ErrorCodes.ROW_VERSION_MISMATCH.equals(ce.getCode());
             throw ce;
         } catch (RuntimeException ex) {
-            ok = false;
             throw ex;
-        } finally {
-            metrics.recordDbOperation("UPDATE", "jurisdictions", ok);
         }
     }
 
@@ -209,34 +191,10 @@ public class JurisdictionRepository {
             sql.append(" AND id NOT IN (").append(placeholders(keepIds.size())).append(")");
             for (String k : keepIds) { args.add(UUID.fromString(k)); }
         }
-        boolean ok = true;
         try {
             jdbc.update(sql.toString(), args.toArray());
         } catch (RuntimeException ex) {
-            ok = false;
             throw ex;
-        } finally {
-            metrics.recordDbOperation("UPDATE", "jurisdictions", ok);
-        }
-    }
-
-    /** Hard-deletes a jurisdiction by id within the tenant; throws NOT_FOUND when no row matches. */
-    public void delete(String id, String tenantId) {
-        boolean ok = true;
-        try {
-            int affected = jdbc.update("DELETE FROM " + TABLE + " WHERE id = ? AND tenant_id = ?",
-                    UUID.fromString(id), tenantId);
-            if (affected == 0) {
-                throw new CustomException(ErrorCodes.NOT_FOUND, "The requested resource was not found", HttpStatus.NOT_FOUND);
-            }
-        } catch (CustomException ce) {
-            ok = (ce.getCode() != null && ce.getCode().equals(ErrorCodes.NOT_FOUND));
-            throw ce;
-        } catch (RuntimeException ex) {
-            ok = false;
-            throw ex;
-        } finally {
-            metrics.recordDbOperation("DELETE", "jurisdictions", ok);
         }
     }
 
@@ -279,15 +237,29 @@ public class JurisdictionRepository {
             args.add(c.getOffset());
         }
 
-        boolean ok = true;
         try {
             return jdbc.query(sql.toString(), rowMapper, args.toArray());
         } catch (RuntimeException ex) {
-            ok = false;
             throw ex;
-        } finally {
-            metrics.recordDbOperation("SELECT", "jurisdictions", ok);
         }
+    }
+
+    /**
+     * Every jurisdiction (active and inactive) owned by any of {@code employeeIds}, newest first, in
+     * one query. Deliberately unpaged: this loads an employee's whole collection for embedding and
+     * reconcile, where a page limit would silently drop the oldest rows. The caller bounds the id
+     * list (one search page or one create batch).
+     */
+    public List<Jurisdiction> findByEmployeeIds(String tenantId, List<String> employeeIds) {
+        if (employeeIds == null || employeeIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Object> args = new ArrayList<>();
+        args.add(tenantId);
+        for (String id : employeeIds) { args.add(UUID.fromString(id)); }
+        String sql = "SELECT " + SELECT_COLS + " FROM " + TABLE + " WHERE tenant_id = ? AND employee_id IN ("
+                + placeholders(employeeIds.size()) + ") ORDER BY \"createdTime\" DESC";
+        return jdbc.query(sql, rowMapper, args.toArray());
     }
 
     private static boolean notEmpty(String s) {

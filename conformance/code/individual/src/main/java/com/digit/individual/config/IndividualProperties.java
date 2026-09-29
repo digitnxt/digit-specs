@@ -16,7 +16,6 @@ public class IndividualProperties {
     private Otel otel = new Otel();
     private Logging logging = new Logging();
     @NestedConfigurationProperty
-    private TenantMigration tenantMigration = new TenantMigration();
     private PubSub pubsub = new PubSub();
 
     /**
@@ -39,20 +38,20 @@ public class IndividualProperties {
     public void setOtel(Otel otel) { this.otel = otel; }
     public Logging getLogging() { return logging; }
     public void setLogging(Logging logging) { this.logging = logging; }
-    public TenantMigration getTenantMigration() { return tenantMigration; }
-    public void setTenantMigration(TenantMigration tenantMigration) { this.tenantMigration = tenantMigration; }
     public PubSub getPubsub() { return pubsub; }
     public void setPubsub(PubSub pubsub) { this.pubsub = pubsub; }
 
     public static class Server {
-        private String contextPath = "/individuals";
-        public String getContextPath() { return contextPath; }
-        public void setContextPath(String contextPath) { this.contextPath = contextPath; }
+        private String canonicalApiPrefix = "canonical";
+        public String getCanonicalApiPrefix() { return canonicalApiPrefix; }
+        public void setCanonicalApiPrefix(String canonicalApiPrefix) { this.canonicalApiPrefix = canonicalApiPrefix; }
     }
 
     public static class Idgen {
-        private String host = "http://idgen:8080";
-        private String path = "/idgen/v3/generate";
+        // Internal service convention: the host carries the trailing slash and the path carries none,
+        // so the client can concatenate the two directly.
+        private String host = "http://idgen:8080/";
+        private String path = "idgen/v3/generate";
         private boolean enabled = true;
         private String format = "individual.id";
         public String getHost() { return host; }
@@ -113,37 +112,14 @@ public class IndividualProperties {
         public void setConsoleLogsEnabled(boolean consoleLogsEnabled) { this.consoleLogsEnabled = consoleLogsEnabled; }
     }
 
-    public static class TenantMigration {
-        private boolean enabled = false;
-        private String topic = "account-migration";
-        private String flywayLocations = "classpath:db/migration";
-        private String schemaTable = "individual_schema";
-        public boolean isEnabled() { return enabled; }
-        public void setEnabled(boolean enabled) { this.enabled = enabled; }
-        public String getTopic() { return topic; }
-        public void setTopic(String topic) { this.topic = topic; }
-        public String getFlywayLocations() { return flywayLocations; }
-        public void setFlywayLocations(String flywayLocations) { this.flywayLocations = flywayLocations; }
-        public String getSchemaTable() { return schemaTable; }
-        public void setSchemaTable(String schemaTable) { this.schemaTable = schemaTable; }
-    }
 
     public static class PubSub {
         private boolean enabled = true;
-        private String type = "kafka";
         private Topics topics = new Topics();
-        private Kafka kafka = new Kafka();
-        private Redis redis = new Redis();
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
-        public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
         public Topics getTopics() { return topics; }
         public void setTopics(Topics topics) { this.topics = topics; }
-        public Kafka getKafka() { return kafka; }
-        public void setKafka(Kafka kafka) { this.kafka = kafka; }
-        public Redis getRedis() { return redis; }
-        public void setRedis(Redis redis) { this.redis = redis; }
     }
 
     public static class Topics {
@@ -161,48 +137,5 @@ public class IndividualProperties {
         public void setUpsertConfig(String upsertConfig) { this.upsertConfig = upsertConfig; }
     }
 
-    public static class Kafka {
-        private String brokers = "localhost:9092";
-        private boolean autoCreate = true;
-        private int partitions = 1;
-        private int replication = 1;
-        private String consumerGroup = "individual-service";
-        public String getBrokers() { return brokers; }
-        public void setBrokers(String brokers) { this.brokers = brokers; }
-        public boolean isAutoCreate() { return autoCreate; }
-        public void setAutoCreate(boolean autoCreate) { this.autoCreate = autoCreate; }
-        public int getPartitions() { return partitions; }
-        public void setPartitions(int partitions) { this.partitions = partitions; }
-        public int getReplication() { return replication; }
-        public void setReplication(int replication) { this.replication = replication; }
-        public String getConsumerGroup() { return consumerGroup; }
-        public void setConsumerGroup(String consumerGroup) { this.consumerGroup = consumerGroup; }
-    }
 
-    public static class Redis {
-        private String address = "localhost:6379";
-        private String password = "";
-        private int db = 0;
-        private String consumerGroup = "individual-service";
-        private String consumerId = "individual-service-1";
-        private int retentionDays = 7;
-        private long maxStreamLength = 1_000_000L;
-        private long cleanupIntervalSeconds = 3600L;
-        public String getAddress() { return address; }
-        public void setAddress(String address) { this.address = address; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-        public int getDb() { return db; }
-        public void setDb(int db) { this.db = db; }
-        public String getConsumerGroup() { return consumerGroup; }
-        public void setConsumerGroup(String consumerGroup) { this.consumerGroup = consumerGroup; }
-        public String getConsumerId() { return consumerId; }
-        public void setConsumerId(String consumerId) { this.consumerId = consumerId; }
-        public int getRetentionDays() { return retentionDays; }
-        public void setRetentionDays(int retentionDays) { this.retentionDays = retentionDays; }
-        public long getMaxStreamLength() { return maxStreamLength; }
-        public void setMaxStreamLength(long maxStreamLength) { this.maxStreamLength = maxStreamLength; }
-        public long getCleanupIntervalSeconds() { return cleanupIntervalSeconds; }
-        public void setCleanupIntervalSeconds(long cleanupIntervalSeconds) { this.cleanupIntervalSeconds = cleanupIntervalSeconds; }
-    }
 }

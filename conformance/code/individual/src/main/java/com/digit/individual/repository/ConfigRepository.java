@@ -1,7 +1,6 @@
 package com.digit.individual.repository;
 
 import com.digit.individual.model.Config;
-import org.digit.tracer.observability.ObservabilityMetrics;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -22,11 +21,9 @@ public class ConfigRepository {
     private static final String T = "individual_config_v3";
 
     private final JdbcTemplate jdbc;
-    private final ObservabilityMetrics metrics;
 
-    public ConfigRepository(JdbcTemplate jdbc, ObservabilityMetrics metrics) {
+    public ConfigRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
-        this.metrics = metrics;
     }
 
     private final RowMapper<Config> mapper = (RowMapper<Config>) (ResultSet rs, int n) -> {
@@ -49,17 +46,9 @@ public class ConfigRepository {
             + "\"createdBy\", \"modifiedBy\", \"createdTime\", \"modifiedTime\", requestid";
 
     public Config getByTenant(String tenantId) {
-        boolean ok = true;
-        try {
-            List<Config> rows = jdbc.query("SELECT " + COLS + " FROM " + T + " WHERE tenantid = ? LIMIT 1",
-                    mapper, tenantId);
-            return rows.isEmpty() ? null : rows.get(0);
-        } catch (RuntimeException e) {
-            ok = false;
-            throw e;
-        } finally {
-            metrics.recordDbOperation("SELECT", T, ok);
-        }
+        List<Config> rows = jdbc.query("SELECT " + COLS + " FROM " + T + " WHERE tenantid = ? LIMIT 1",
+                mapper, tenantId);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     /**
@@ -69,69 +58,45 @@ public class ConfigRepository {
      * TenantTransactionFilter) so the lock is held across the subsequent update.
      */
     public Config getByTenantForUpdate(String tenantId) {
-        boolean ok = true;
-        try {
-            List<Config> rows = jdbc.query("SELECT " + COLS + " FROM " + T + " WHERE tenantid = ? LIMIT 1 FOR UPDATE",
-                    mapper, tenantId);
-            return rows.isEmpty() ? null : rows.get(0);
-        } catch (RuntimeException e) {
-            ok = false;
-            throw e;
-        } finally {
-            metrics.recordDbOperation("SELECT", T, ok);
-        }
+        List<Config> rows = jdbc.query("SELECT " + COLS + " FROM " + T + " WHERE tenantid = ? LIMIT 1 FOR UPDATE",
+                mapper, tenantId);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     /** Inserts a new config row; populates the generated id back onto cfg. */
     public void insert(Config cfg) {
-        boolean ok = true;
-        try {
-            KeyHolder kh = new GeneratedKeyHolder();
-            jdbc.update(con -> {
-                PreparedStatement ps = con.prepareStatement(
-                        "INSERT INTO " + T + " (tenantid, mobileregex, nameregex, uniquenesscriteria, version, "
-                                + "\"createdBy\", \"modifiedBy\", \"createdTime\", \"modifiedTime\", requestid) "
-                                + "VALUES (?,?,?,?::jsonb,?,?,?,?,?,?)",
-                        new String[]{"id"});
-                ps.setString(1, cfg.getTenantId());
-                ps.setString(2, cfg.getMobileRegex());
-                ps.setString(3, cfg.getNameRegex());
-                ps.setString(4, cfg.getUniquenessCriteria());
-                ps.setInt(5, cfg.getVersion());
-                ps.setString(6, cfg.getCreatedBy());
-                ps.setString(7, cfg.getModifiedBy());
-                ps.setLong(8, cfg.getCreatedTime());
-                ps.setLong(9, cfg.getModifiedTime());
-                ps.setString(10, cfg.getRequestId());
-                return ps;
-            }, kh);
-            Number key = kh.getKey();
-            if (key != null) {
-                cfg.setId(key.longValue());
-            }
-        } catch (RuntimeException e) {
-            ok = false;
-            throw e;
-        } finally {
-            metrics.recordDbOperation("INSERT", T, ok);
+        KeyHolder kh = new GeneratedKeyHolder();
+        jdbc.update(con -> {
+            PreparedStatement ps = con.prepareStatement(
+                    "INSERT INTO " + T + " (tenantid, mobileregex, nameregex, uniquenesscriteria, version, "
+                            + "\"createdBy\", \"modifiedBy\", \"createdTime\", \"modifiedTime\", requestid) "
+                            + "VALUES (?,?,?,?::jsonb,?,?,?,?,?,?)",
+                    new String[]{"id"});
+            ps.setString(1, cfg.getTenantId());
+            ps.setString(2, cfg.getMobileRegex());
+            ps.setString(3, cfg.getNameRegex());
+            ps.setString(4, cfg.getUniquenessCriteria());
+            ps.setInt(5, cfg.getVersion());
+            ps.setString(6, cfg.getCreatedBy());
+            ps.setString(7, cfg.getModifiedBy());
+            ps.setLong(8, cfg.getCreatedTime());
+            ps.setLong(9, cfg.getModifiedTime());
+            ps.setString(10, cfg.getRequestId());
+            return ps;
+        }, kh);
+        Number key = kh.getKey();
+        if (key != null) {
+            cfg.setId(key.longValue());
         }
     }
 
     /** Overwrites the row identified by cfg.id. Callers preserve immutable audit fields. */
     public void update(Config cfg) {
-        boolean ok = true;
-        try {
-            jdbc.update("UPDATE " + T + " SET tenantid=?, mobileregex=?, nameregex=?, uniquenesscriteria=?::jsonb, "
-                            + "version=?, \"createdBy\"=?, \"modifiedBy\"=?, \"createdTime\"=?, \"modifiedTime\"=?, "
-                            + "requestid=? WHERE id=?",
-                    cfg.getTenantId(), cfg.getMobileRegex(), cfg.getNameRegex(), cfg.getUniquenessCriteria(),
-                    cfg.getVersion(), cfg.getCreatedBy(), cfg.getModifiedBy(), cfg.getCreatedTime(),
-                    cfg.getModifiedTime(), cfg.getRequestId(), cfg.getId());
-        } catch (RuntimeException e) {
-            ok = false;
-            throw e;
-        } finally {
-            metrics.recordDbOperation("UPDATE", T, ok);
-        }
+        jdbc.update("UPDATE " + T + " SET tenantid=?, mobileregex=?, nameregex=?, uniquenesscriteria=?::jsonb, "
+                        + "version=?, \"createdBy\"=?, \"modifiedBy\"=?, \"createdTime\"=?, \"modifiedTime\"=?, "
+                        + "requestid=? WHERE id=?",
+                cfg.getTenantId(), cfg.getMobileRegex(), cfg.getNameRegex(), cfg.getUniquenessCriteria(),
+                cfg.getVersion(), cfg.getCreatedBy(), cfg.getModifiedBy(), cfg.getCreatedTime(),
+                cfg.getModifiedTime(), cfg.getRequestId(), cfg.getId());
     }
 }

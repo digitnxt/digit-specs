@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -25,27 +24,16 @@ import java.util.Set;
 @Component
 public class BoundaryClient {
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final DownstreamHttp http;
     private final ObjectMapper objectMapper;
     private final String baseURL;
     private final String path;
 
-    public BoundaryClient(EmployeeProperties props, ObjectMapper objectMapper) {
+    public BoundaryClient(EmployeeProperties props, ObjectMapper objectMapper, DownstreamHttp http) {
         this.objectMapper = objectMapper;
-        String b = props.getBoundary().getBaseUrl();
-        this.baseURL = b.endsWith("/") ? b.substring(0, b.length() - 1) : b;
-        // Config-driven relationship endpoint path (Go: "/" + strings.Trim(cfg.Path, "/")).
-        this.path = normalizePath(props.getBoundary().getPath());
-    }
-
-    private static String normalizePath(String p) {
-        if (p == null) {
-            return "";
-        }
-        int s = 0, e = p.length();
-        while (s < e && p.charAt(s) == '/') s++;
-        while (e > s && p.charAt(e - 1) == '/') e--;
-        return "/" + p.substring(s, e);
+        this.http = http;
+        this.baseURL = props.getBoundary().getBaseUrl();
+        this.path = props.getBoundary().getPath();
     }
 
     /** Returns the set of codes matched under the given hierarchyType/boundaryType. */
@@ -69,13 +57,12 @@ public class BoundaryClient {
         String reqURL = baseURL + path + "?" + params;
 
         try {
-            HttpRequest req = HttpRequest.newBuilder()
+            HttpRequest.Builder req = HttpRequest.newBuilder()
                     .uri(URI.create(reqURL))
                     .header("X-Tenant-Id", tenantId)
                     .header("Content-Type", "application/json")
-                    .GET()
-                    .build();
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                    .GET();
+            HttpResponse<String> resp = http.send(req);
             if (resp.statusCode() != 200) {
                 throw new RuntimeException("boundary relationship service returned status: " + resp.statusCode());
             }

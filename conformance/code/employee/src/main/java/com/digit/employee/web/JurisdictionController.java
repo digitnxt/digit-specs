@@ -28,7 +28,7 @@ import java.util.List;
  * (unwrapped) objects/arrays, matching Go.
  */
 @RestController
-@RequestMapping("${employee.server.context-path:/employee}/v3/employees/{employeeId}/jurisdictions")
+@RequestMapping("/v3/employees/{employeeId}/jurisdictions")
 public class JurisdictionController {
 
     private final JurisdictionService svc;

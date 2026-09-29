@@ -19,7 +19,6 @@ public class EmployeeProperties {
     private Individual individual = new Individual();
     private Keycloak keycloak = new Keycloak();
     @NestedConfigurationProperty
-    private TenantMigration tenantMigration = new TenantMigration();
     private PubSub pubsub = new PubSub();
 
     public Server getServer() { return server; }
@@ -36,15 +35,13 @@ public class EmployeeProperties {
     public void setIndividual(Individual individual) { this.individual = individual; }
     public Keycloak getKeycloak() { return keycloak; }
     public void setKeycloak(Keycloak keycloak) { this.keycloak = keycloak; }
-    public TenantMigration getTenantMigration() { return tenantMigration; }
-    public void setTenantMigration(TenantMigration tenantMigration) { this.tenantMigration = tenantMigration; }
     public PubSub getPubsub() { return pubsub; }
     public void setPubsub(PubSub pubsub) { this.pubsub = pubsub; }
 
     public static class Server {
-        private String contextPath = "/employee";
-        public String getContextPath() { return contextPath; }
-        public void setContextPath(String contextPath) { this.contextPath = contextPath; }
+        private String canonicalApiPrefix = "canonical";
+        public String getCanonicalApiPrefix() { return canonicalApiPrefix; }
+        public void setCanonicalApiPrefix(String canonicalApiPrefix) { this.canonicalApiPrefix = canonicalApiPrefix; }
     }
 
     public static class Otel {
@@ -81,8 +78,10 @@ public class EmployeeProperties {
     }
 
     public static class IdGen {
-        private String host = "http://localhost:8100";
-        private String path = "/idgen/v3/generate";
+        // Internal service convention: the host carries the trailing slash and the path carries none,
+        // so the clients can concatenate the two directly.
+        private String host = "http://localhost:8100/";
+        private String path = "idgen/v3/generate";
         private String idgenName = "employee.idgen";
         private boolean enabled = true;
         public String getHost() { return host; }
@@ -96,11 +95,11 @@ public class EmployeeProperties {
     }
 
     public static class Boundary {
-        private String baseUrl = "http://localhost:8095";
+        private String baseUrl = "http://localhost:8095/";
         // Full relationship endpoint path (Go BoundaryConfig.Path). Config-driven so deployments can
         // re-route/version the endpoint without a code change. Boundary validation is unconditional
         // (Go-exact) — there is no enabled flag.
-        private String path = "/boundary/v3/relationship";
+        private String path = "boundary/v3/relationship";
         private boolean enabled = true;
         public String getBaseUrl() { return baseUrl; }
         public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
@@ -111,10 +110,10 @@ public class EmployeeProperties {
     }
 
     public static class Individual {
-        private String host = "http://localhost:8086";
+        private String host = "http://localhost:8086/";
         // Full path to the individuals collection (Go IndividualConfig.Path); the client appends
         // "/{individualId}". Validation is unconditional (Go-exact) — no enabled flag.
-        private String path = "/individuals/v3/individuals";
+        private String path = "individuals/v3/individuals";
         private boolean enabled = true;
         public String getHost() { return host; }
         public void setHost(String host) { this.host = host; }
@@ -124,46 +123,40 @@ public class EmployeeProperties {
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
     }
 
+    /**
+     * clientId / clientSecret are the service-account (client_credentials) credentials used for
+     * read-only realm lookups — role members, role existence, user existence — which an ordinary
+     * caller's token is not permitted to make. Leave them empty to keep forwarding the caller's
+     * token instead. No default for the secret: a baked-in value would be a credential in source.
+     *
+     * <p>The token is issued by the tenant's own realm, so the client must exist in EVERY tenant
+     * realm under this id and secret — it is provisioned as part of the realm config applied at
+     * realm creation. A tenant whose realm lacks the client falls back to the caller's token and
+     * 403s as before. Mirrors Go config.KeycloakConfig.
+     */
     public static class Keycloak {
         private String baseUrl = "https://digit-lts.digit.org/keycloak";
         private boolean enabled = true;
+        private String clientId = "";
+        private String clientSecret = "";
         public String getBaseUrl() { return baseUrl; }
         public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public String getClientId() { return clientId; }
+        public void setClientId(String clientId) { this.clientId = clientId; }
+        public String getClientSecret() { return clientSecret; }
+        public void setClientSecret(String clientSecret) { this.clientSecret = clientSecret; }
     }
 
-    public static class TenantMigration {
-        private boolean enabled = false;
-        private String topic = "account-migration";
-        private String flywayLocations = "classpath:db/migration";
-        private String schemaTable = "employee_schema";
-        public boolean isEnabled() { return enabled; }
-        public void setEnabled(boolean enabled) { this.enabled = enabled; }
-        public String getTopic() { return topic; }
-        public void setTopic(String topic) { this.topic = topic; }
-        public String getFlywayLocations() { return flywayLocations; }
-        public void setFlywayLocations(String flywayLocations) { this.flywayLocations = flywayLocations; }
-        public String getSchemaTable() { return schemaTable; }
-        public void setSchemaTable(String schemaTable) { this.schemaTable = schemaTable; }
-    }
 
     public static class PubSub {
         private boolean enabled = true;
-        private String type = "kafka";
         private Topics topics = new Topics();
-        private Kafka kafka = new Kafka();
-        private Redis redis = new Redis();
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
-        public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
         public Topics getTopics() { return topics; }
         public void setTopics(Topics topics) { this.topics = topics; }
-        public Kafka getKafka() { return kafka; }
-        public void setKafka(Kafka kafka) { this.kafka = kafka; }
-        public Redis getRedis() { return redis; }
-        public void setRedis(Redis redis) { this.redis = redis; }
     }
 
     public static class Topics {
@@ -184,48 +177,5 @@ public class EmployeeProperties {
         public void setUpdateJurisdiction(String updateJurisdiction) { this.updateJurisdiction = updateJurisdiction; }
     }
 
-    public static class Kafka {
-        private String brokers = "localhost:9092";
-        private boolean autoCreate = true;
-        private int partitions = 1;
-        private int replication = 1;
-        private String consumerGroup = "employee-service";
-        public String getBrokers() { return brokers; }
-        public void setBrokers(String brokers) { this.brokers = brokers; }
-        public boolean isAutoCreate() { return autoCreate; }
-        public void setAutoCreate(boolean autoCreate) { this.autoCreate = autoCreate; }
-        public int getPartitions() { return partitions; }
-        public void setPartitions(int partitions) { this.partitions = partitions; }
-        public int getReplication() { return replication; }
-        public void setReplication(int replication) { this.replication = replication; }
-        public String getConsumerGroup() { return consumerGroup; }
-        public void setConsumerGroup(String consumerGroup) { this.consumerGroup = consumerGroup; }
-    }
 
-    public static class Redis {
-        private String address = "localhost:6379";
-        private String password = "";
-        private int db = 0;
-        private String consumerGroup = "employee-service";
-        private String consumerId = "employee-service-1";
-        private int retentionDays = 7;
-        private long maxStreamLength = 1_000_000L;
-        private long cleanupIntervalSeconds = 3600L;
-        public String getAddress() { return address; }
-        public void setAddress(String address) { this.address = address; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-        public int getDb() { return db; }
-        public void setDb(int db) { this.db = db; }
-        public String getConsumerGroup() { return consumerGroup; }
-        public void setConsumerGroup(String consumerGroup) { this.consumerGroup = consumerGroup; }
-        public String getConsumerId() { return consumerId; }
-        public void setConsumerId(String consumerId) { this.consumerId = consumerId; }
-        public int getRetentionDays() { return retentionDays; }
-        public void setRetentionDays(int retentionDays) { this.retentionDays = retentionDays; }
-        public long getMaxStreamLength() { return maxStreamLength; }
-        public void setMaxStreamLength(long maxStreamLength) { this.maxStreamLength = maxStreamLength; }
-        public long getCleanupIntervalSeconds() { return cleanupIntervalSeconds; }
-        public void setCleanupIntervalSeconds(long cleanupIntervalSeconds) { this.cleanupIntervalSeconds = cleanupIntervalSeconds; }
-    }
 }

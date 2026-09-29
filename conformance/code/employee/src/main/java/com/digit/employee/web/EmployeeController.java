@@ -3,10 +3,13 @@ package com.digit.employee.web;
 import com.digit.employee.constants.ErrorCodes;
 
 import com.digit.employee.constants.Headers;
+import com.digit.employee.constants.ValidationConstants;
 import com.digit.employee.config.EmployeeProperties;
 import com.digit.employee.model.CreateEmployeeRequest;
 import com.digit.employee.model.EmployeeResponse;
 import com.digit.employee.model.EmployeeSearchCriteria;
+import com.digit.employee.model.OnboardRequest;
+import com.digit.employee.model.OnboardResponse;
 import com.digit.employee.model.PatchEmployeeRequest;
 import com.digit.employee.model.UpdateEmployeeRequest;
 import com.digit.employee.service.EmployeeService;
@@ -31,7 +34,7 @@ import java.util.List;
 
 /** Employee endpoints. Mirrors Go internal/handler/employee.go + routes. */
 @RestController
-@RequestMapping("${employee.server.context-path:/employee}/v3/employees")
+@RequestMapping("/v3/employees")
 public class EmployeeController {
 
     private final EmployeeService svc;
@@ -62,43 +65,92 @@ public class EmployeeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
+    /**
+     * Onboarding: create a Keycloak user + individual + employee in one call. A bearer token is always
+     * required (onboarding provisions a Keycloak user); it is forwarded so Keycloak enforces the
+     * caller's permissions. Mirrors Go handler.OnboardEmployee.
+     */
+    @PostMapping("/onboard")
+    public ResponseEntity<OnboardResponse> onboardEmployee(
+            @RequestHeader(value = Headers.TENANT_ID) String tenantId,
+            @RequestHeader(value = Headers.USER_ID) String userId,
+            @RequestHeader(value = Headers.AUTHORIZATION, required = false) String authHeader,
+            @RequestBody(required = false) byte[] body) {
+        OnboardRequest req = ControllerSupport.parseBody(objectMapper, body, OnboardRequest.class);
+        if (authHeader == null || authHeader.isEmpty()) {
+            throw new CustomException(ErrorCodes.UNAUTHORIZED, "Authorization header is missing", HttpStatus.UNAUTHORIZED);
+        }
+        OnboardResponse result = svc.onboardEmployee(req, tenantId, authHeader, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
     @GetMapping
     public ResponseEntity<List<EmployeeResponse>> searchEmployees(
             @RequestHeader(value = Headers.TENANT_ID) String tenantId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(value = "ids", required = false) List<String> ids,
             @RequestParam(value = "codes", required = false) List<String> codes,
+            @RequestParam(value = "userIds", required = false) List<String> userIds,
             @RequestParam(value = "statuses", required = false) List<String> statuses,
             @RequestParam(value = "employeeTypes", required = false) List<String> employeeTypes,
             @RequestParam(value = "departments", required = false) List<String> departments,
             @RequestParam(value = "designations", required = false) List<String> designations,
-            @RequestParam(value = "dateOfAppointmentFrom", required = false) String dateOfAppointmentFrom,
-            @RequestParam(value = "dateOfAppointmentTo", required = false) String dateOfAppointmentTo,
+            @RequestParam(value = "dateOfAppointmentFrom", required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate dateOfAppointmentFrom,
+            @RequestParam(value = "dateOfAppointmentTo", required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate dateOfAppointmentTo,
             @RequestParam(value = "role", required = false) String role,
             @RequestParam(value = "isActive", required = false) Boolean isActive,
-            @RequestParam(value = "limit", required = false, defaultValue = "10") int limit,
-            @RequestParam(value = "offset", required = false, defaultValue = "0") int offset) {
+            @RequestParam(value = "limit", required = false) String limitRaw,
+            @RequestParam(value = "offset", required = false) String offsetRaw) {
         // Role-based search needs a bearer token to query Keycloak — Go requires Authorization only
-        // when `role` is supplied, returning 401 otherwise.
-        if (props.getKeycloak().isEnabled() && role != null && !role.isEmpty()
+        // when `role` is supplied, returning 401 otherwise. Not conditioned on keycloak.enabled:
+        // that flag governs request-body id validation, and role resolution happens regardless of
+        // it. Requiring the header here keeps an unauthenticated role search a clean 401 instead of
+        // a 502 from Keycloak when no service account is configured to stand in.
+        if (role != null && !role.isEmpty()
                 && (authHeader == null || authHeader.isEmpty())) {
             throw new CustomException(ErrorCodes.UNAUTHORIZED, "Authorization header is required for role-based search", HttpStatus.UNAUTHORIZED);
         }
+        // Parse as raw String (not int) so an over-max/non-numeric value is a clean 400, not a 500
+        // from Spring's int conversion throwing before validation. Mirrors Go + the individual service.
+        int limit = ControllerSupport.parsePagingParam("limit", limitRaw, 10);
+        int offset = ControllerSupport.parsePagingParam("offset", offsetRaw, 0);
         ControllerSupport.validatePaging(limit, offset);
         if (ids != null) {
             for (String s : ids) {
                 ControllerSupport.requireUUID(s, "Invalid id: " + s);
             }
         }
+        // userIds hold Keycloak identifiers, which are not required to be UUIDs (create only checks
+        // that the user exists), so only width and emptiness are enforced. A wholly empty `?userIds=`
+        // never arrives — Spring drops it from the List — but a blank inside a comma list does, and
+        // would silently become user_id IN ('').
+        if (userIds != null) {
+            for (String s : userIds) {
+                if (s == null || s.isBlank()) {
+                    throw new CustomException(ErrorCodes.VALIDATION_ERROR, "userIds must not contain blank values");
+                }
+                if (s.length() > ValidationConstants.USER_ID_MAX_LEN) {
+                    throw new CustomException(ErrorCodes.VALIDATION_ERROR,
+                            "userIds entries must be at most " + ValidationConstants.USER_ID_MAX_LEN + " characters");
+                }
+            }
+        }
         EmployeeSearchCriteria criteria = new EmployeeSearchCriteria();
         criteria.setIds(ids);
         criteria.setCodes(codes);
+        criteria.setUserIds(userIds);
         criteria.setStatuses(statuses);
         criteria.setEmployeeTypes(employeeTypes);
         criteria.setDepartments(departments);
         criteria.setDesignations(designations);
-        criteria.setDateOfAppointmentFrom(dateOfAppointmentFrom);
-        criteria.setDateOfAppointmentTo(dateOfAppointmentTo);
+        // LocalDate → ISO "yyyy-MM-dd" for the repo (a malformed date never reaches here — it fails
+        // binding as a type mismatch → 400 via MalformedInputExceptionHandler).
+        criteria.setDateOfAppointmentFrom(dateOfAppointmentFrom == null ? null : dateOfAppointmentFrom.toString());
+        criteria.setDateOfAppointmentTo(dateOfAppointmentTo == null ? null : dateOfAppointmentTo.toString());
         criteria.setRole(role);
         criteria.setIsActive(isActive);
         criteria.setLimit(limit);

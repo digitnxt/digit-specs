@@ -1,0 +1,9 @@
+org/digit/notify/spi/ChannelMessage.class
+org/digit/notify/spi/DispatchResult.class
+module-info.class
+org/digit/notify/spi/Priority.class
+org/digit/notify/spi/Recipient.class
+org/digit/notify/spi/package-info.class
+org/digit/notify/spi/Channel.class
+org/digit/notify/spi/DispatchStatus.class
+org/digit/notify/spi/NotificationChannelProvider.class

@@ -17,7 +17,9 @@ public class AuditDetail {
 
     public AuditDetail() {}
 
-    public AuditDetail(String createdBy, String modifiedBy, long createdTime, long modifiedTime) {
+    // Private so Jackson binds through the no-arg constructor and setters: detected as a creator, this
+    // constructor turns an omitted (zero-valued, hence not serialized) timestamp into null for a long.
+    private AuditDetail(String createdBy, String modifiedBy, long createdTime, long modifiedTime) {
         this.createdBy = createdBy;
         this.modifiedBy = modifiedBy;
         this.createdTime = createdTime;

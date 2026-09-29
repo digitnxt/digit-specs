@@ -17,12 +17,13 @@ class EventPublisherTest {
     static class CapturingClient implements PubSubClient {
         Map<String, Object> lastEvent;
         int publishCount;
-        @Override public void connect() {}
-        @Override public void disconnect() {}
         @Override @SuppressWarnings("unchecked")
         public void publish(String topic, Object event) { lastEvent = (Map<String, Object>) event; publishCount++; }
-        @Override public void subscribe(String t, String g, java.util.function.Consumer<byte[]> c) {}
-        @Override public void unsubscribe(String t, String g) {}
+        @Override
+        public org.digit.tracer.pubsub.Subscription subscribe(String t, String g,
+                java.util.function.Consumer<byte[]> c) {
+            return () -> { };   // no-op AutoCloseable
+        }
     }
 
     private static EmployeeProperties props(boolean pubsubEnabled) {

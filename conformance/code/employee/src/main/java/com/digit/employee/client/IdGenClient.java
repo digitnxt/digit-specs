@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
@@ -25,19 +24,17 @@ public class IdGenClient {
 
     private static final Logger log = LoggerFactory.getLogger(IdGenClient.class);
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final DownstreamHttp http;
     private final ObjectMapper objectMapper;
     private final String host;
     private final String path;
     private final String idgenName;
     private final boolean enabled;
 
-    public IdGenClient(EmployeeProperties props, ObjectMapper objectMapper) {
+    public IdGenClient(EmployeeProperties props, ObjectMapper objectMapper, DownstreamHttp http) {
         this.objectMapper = objectMapper;
-        // Trim a trailing slash on host so host + path (e.g. "/idgen/v3/generate") yields a
-        // single-slash URL, matching Go idgen client (strings.TrimSuffix(host, "/")).
-        String h = props.getIdgen().getHost();
-        this.host = (h != null && h.endsWith("/")) ? h.substring(0, h.length() - 1) : h;
+        this.http = http;
+        this.host = props.getIdgen().getHost();
         this.path = props.getIdgen().getPath();
         this.idgenName = props.getIdgen().getIdgenName();
         this.enabled = props.getIdgen().isEnabled();
@@ -74,7 +71,7 @@ public class IdGenClient {
                 if (tenantId != null && !tenantId.isEmpty()) {
                     b.header("X-Tenant-Id", tenantId);
                 }
-                HttpResponse<String> resp = httpClient.send(b.build(), HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> resp = http.send(b);
 
                 if (resp.statusCode() != 200) {
                     // Fail immediately with status + body (matches Go idgen client).

@@ -5,7 +5,6 @@ import java.util.List;
 /**
  * Search criteria for employees. Mirrors Go {@code EmployeeSearchCriteria} (post-8749c30e):
  * multi-value IN filters, a fixed server-side sort, and role-based search resolved via Keycloak.
- * {@code userIds} is not client-bindable — the service populates it after resolving {@code role}.
  */
 public class EmployeeSearchCriteria {
 
@@ -20,7 +19,10 @@ public class EmployeeSearchCriteria {
     private Boolean isActive;
     /** Keycloak realm role; resolved to userIds by the service, never queried directly. */
     private String role;
-    /** Populated internally from role resolution; when non-empty the repo adds user_id IN (...). */
+    /**
+     * Keycloak user ids; when non-empty the repo adds user_id IN (...). Supplied by the client and/or
+     * populated from {@code role} resolution — when both are given the service intersects them.
+     */
     private List<String> userIds;
     private int limit = 10;
     private int offset = 0;

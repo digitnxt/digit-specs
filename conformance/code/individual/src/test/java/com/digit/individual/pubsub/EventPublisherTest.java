@@ -23,16 +23,17 @@ class EventPublisherTest {
         String lastTopic;
         int publishCount;
 
-        @Override public void connect() {}
-        @Override public void disconnect() {}
         @Override @SuppressWarnings("unchecked")
         public void publish(String topic, Object event) {
             this.lastTopic = topic;
             this.lastEvent = (Map<String, Object>) event;
             this.publishCount++;
         }
-        @Override public void subscribe(String t, String g, java.util.function.Consumer<byte[]> c) {}
-        @Override public void unsubscribe(String t, String g) {}
+        @Override
+        public org.digit.tracer.pubsub.Subscription subscribe(String t, String g,
+                java.util.function.Consumer<byte[]> c) {
+            return () -> { };   // no-op AutoCloseable
+        }
     }
 
     private static IndividualProperties props(boolean pubsubEnabled) {
