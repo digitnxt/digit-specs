@@ -31,14 +31,20 @@ info:
     | `employeeType` | Classification of the employment arrangement (e.g., PERMANENT, CONTRACT, DEPUTATION). |
     | `boundaryRelation` | Array of `{ code, boundaryType, hierarchyType }` objects defining the geographic scope of a jurisdiction. |
 
-    The `tenantId` is always resolved from the Bearer token and must not be
+    `X-Tenant-ID` and `X-User-ID` are derived from the bearer token and must not be
     sent in request bodies.
 
+    **Envelope dialect**
+
+    Every path is also served under `/v3/canonical` with identical validation,
+    status codes and error bodies. Request context moves into the body —
+    `RequestMetadata.tenantId` → `X-Tenant-ID`, `RequestMetadata.userInfo.uuid` →
+    `X-User-ID` — with the domain payload under `data`, and responses become
+    `{"ResponseMetadata": {…}, "data": <body>}`. `Authorization` stays a header.
+
 servers:
-  - url: https://api.example.com/employee/v3
+  - url: https://test-lts.digit.org/employee/v3
     description: Production
-  - url: https://staging-api.example.com/employee/v3
-    description: Staging
   - url: http://localhost:8080/employee/v3
     description: Local Development
 
@@ -79,9 +85,6 @@ paths:
         All records are validated before any are persisted — if any employee
         fails validation the entire operation is rolled back and no records
         are created.
-
-        **Idempotency:** Supply the same `Idempotency-Key` on retries within
-        24 hours to receive the original response without duplication.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -233,7 +236,7 @@ paths:
           description: |
             Downstream dependency failure — a service this request depends on
             (boundary, keycloak, individual, or idgen) did not respond
-            successfully. Not the client's fault; retry with backoff.
+            successfully or timed out. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -285,6 +288,24 @@ paths:
               maxLength: 64
           style: form
           explode: true
+        - name: userIds
+          in: query
+          required: false
+          description: |
+            Filter by one or more platform user ids (IN match) — the `userId` each
+            employee record links to.
+
+            Keycloak identifiers are not required to be UUIDs, so only emptiness and
+            length are enforced; a blank entry in the list is rejected with `400`.
+          schema:
+            type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 64
+          style: form
+          explode: true
+          example: [0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f]
         - name: statuses
           in: query
           required: false
@@ -335,8 +356,11 @@ paths:
           description: |
             Filter by a Keycloak realm role. Employees carry no role column — the
             role is resolved against Keycloak to its member user IDs and matched
-            on user_id, composed with the other filters. Requires keycloak to be
-            enabled; otherwise returns 400.
+            on user_id, composed with the other filters.
+
+            This is the only filter that needs a bearer token: supplying `role`
+            without `Authorization` returns `401`. A Keycloak lookup failure is
+            `502`.
           schema:
             type: string
             minLength: 1
@@ -427,7 +451,209 @@ paths:
           description: |
             Downstream dependency failure — a service this request depends on
             (boundary, keycloak, individual, or idgen) did not respond
-            successfully. Not the client's fault; retry with backoff.
+            successfully or timed out. Not the client's fault; retry with backoff.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # EMPLOYEE — ONBOARDING
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  /employees/onboard:
+
+    post:
+      summary: Onboard an employee (login user + individual + employee)
+      operationId: onboardEmployee
+      tags: [Employee]
+      description: |
+        Creates a login user, an individual profile and an employee record in one
+        call, linked by the new user's id.
+
+        `userId` and `individualId` are not accepted — the server injects the new
+        user's id into both the individual and the employee. The username is
+        `user.mobileNumber`; the password is set as supplied and never returned.
+
+        The token is forwarded to Keycloak, so a caller can only assign roles it is
+        permitted to grant. Requested roles are checked to exist before anything is
+        created:
+
+        | Step | On failure |
+        |---|---|
+        | 1. Create the Keycloak user | nothing to undo |
+        | 2. Assign realm roles | the user is deleted |
+        | 3. Create the individual | the user is deleted |
+        | 4. Create the employee | the individual is soft-deleted, then the user is deleted |
+
+        Compensation is best-effort; a failure is reported with the status of the
+        step that failed.
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardRequest'
+            examples:
+              full:
+                summary: Every field — user, individual and employee with a jurisdiction
+                value:
+                  user:
+                    mobileNumber: "9812345678"
+                    password: Secret@123
+                    email: aisha.khan@corp.example
+                    firstName: Aisha
+                    lastName: Khan
+                    emailVerified: false
+                    roles: [EMPLOYEE]
+                  individual:
+                    givenName: Aisha
+                    familyName: Khan
+                    gender: FEMALE
+                    mobileNumber: "9812345678"
+                    email: aisha.khan@corp.example
+                    identifiers:
+                      - identifierType: PAN
+                        identifierId: ABCDE1234F
+                  employee:
+                    employeeType: PERMANENT
+                    department: FINANCE
+                    designation: ACCOUNTS_OFFICER
+                    dateOfAppointment: "2025-01-01T10:00:00Z"
+                    status: EMPLOYED
+                    isActive: true
+                    jurisdictions:
+                      - boundaryRelation:
+                          - code: STATE33d
+                            boundaryType: state
+                            hierarchyType: state-district-city
+                        isActive: true
+              minimal:
+                summary: Required fields only
+                value:
+                  user:
+                    mobileNumber: "9812345678"
+                    password: Secret@123
+                  individual:
+                    givenName: Aisha
+                    gender: FEMALE
+                  employee:
+                    employeeType: PERMANENT
+                    department: FINANCE
+                    designation: ACCOUNTS_OFFICER
+                    isActive: true
+                    jurisdictions: []
+      responses:
+        '201':
+          description: All three records created and linked.
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardResponse'
+              example:
+                user:
+                  id: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                  username: "9812345678"
+                  roles: [EMPLOYEE]
+                individual:
+                  id: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
+                  individualId: IND-PUNECITY-00107
+                  givenName: Aisha
+                  familyName: Khan
+                  gender: FEMALE
+                  mobileNumber: "9812345678"
+                  isActive: true
+                employee:
+                  id: 50843605-23cb-4b6d-b246-6da77d172756
+                  code: EMP-PUNECITY-00003
+                  userId: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                  individualId: 8c8c6532-c282-48fd-9fde-dd003bf01ac7
+                  status: EMPLOYED
+                  employeeType: PERMANENT
+                  dateOfAppointment: "2025-01-01T10:00:00Z"
+                  department: FINANCE
+                  designation: ACCOUNTS_OFFICER
+                  isActive: true
+                  version: 1
+                  auditDetail:
+                    createdBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                    modifiedBy: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+                    createdTime: 1780478075749
+                    modifiedTime: 1780478075749
+        '400':
+          description: |
+            Validation error — a missing `user`, `individual` or `employee` block, a
+            missing `user.mobileNumber` / `user.password`, a role that does not exist
+            in the realm, or an individual/employee payload rejected by its own
+            validation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '403':
+          description: |
+            The caller is not permitted to assign one of the requested roles. The
+            Keycloak user created in step 1 is deleted.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: |
+            A user with this mobile number or email already exists, or the individual
+            conflicts with an existing record.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            Downstream dependency failure — keycloak, individual, boundary or idgen
+            did not respond successfully or timed out. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -538,9 +764,6 @@ paths:
         **Immutable fields** (`id`, `code`, `userId`, `individualId`,
         `dateOfAppointment`, `tenantId`, `auditDetail`) are silently ignored
         if included in the body — they cannot be changed via this endpoint.
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original response without re-applying the update.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -654,7 +877,7 @@ paths:
           description: |
             Downstream dependency failure — a service this request depends on
             (boundary, keycloak, individual, or idgen) did not respond
-            successfully. Not the client's fault; retry with backoff.
+            successfully or timed out. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -689,9 +912,6 @@ paths:
         → insert, omitted existing → deactivate; `[]` deactivates all). When
         omitted, the existing collection is preserved untouched. See
         `JurisdictionUpsertRequest`.
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original response without re-applying the patch.
 
         For full-state declaration (declarative provisioners), use
         `PUT /employees/{employeeId}` instead.
@@ -809,7 +1029,7 @@ paths:
           description: |
             Downstream dependency failure — a service this request depends on
             (boundary, keycloak, individual, or idgen) did not respond
-            successfully. Not the client's fault; retry with backoff.
+            successfully or timed out. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -1095,9 +1315,6 @@ paths:
 
         An employee may hold multiple active jurisdiction records concurrently
         (e.g., assigned to both ward-level and block-level boundaries).
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original record without duplication.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1180,7 +1397,7 @@ paths:
           description: |
             Downstream dependency failure — a service this request depends on
             (boundary, keycloak, individual, or idgen) did not respond
-            successfully. Not the client's fault; retry with backoff.
+            successfully or timed out. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -1385,9 +1602,6 @@ paths:
         and cannot be changed through this endpoint. If a jurisdiction with
         the given UUID exists but belongs to a different employee, this
         endpoint returns 404 — the resource does not exist at this URL.
-
-        **Idempotency:** Same `Idempotency-Key` within 24 hours returns the
-        original response without re-applying the update.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1480,7 +1694,7 @@ paths:
           description: |
             Downstream dependency failure — a service this request depends on
             (boundary, keycloak, individual, or idgen) did not respond
-            successfully. Not the client's fault; retry with backoff.
+            successfully or timed out. Not the client's fault; retry with backoff.
           content:
             application/json:
               schema:
@@ -1529,8 +1743,6 @@ components:
         Unique key to prevent duplicate operations on retries.
         Scoped per operation — the same key on `/employees` POST and
         `/employees/{employeeId}/jurisdictions` POST are independent.
-        Same key re-submitted within 24 hours returns the original response
-        without re-executing the operation.
     EmployeeIdPath:
       name: employeeId
       in: path
@@ -1897,7 +2109,7 @@ components:
         dateOfAppointment:
           type: string
           format: date-time
-          description: ISO-8601 date-time of the employee's formal appointment.
+          description: ISO-8601 date-time of the employee's formal appointment, returned in UTC.
           example: "2022-06-01T00:00:00.000Z"
         status:
           type: string
@@ -1912,8 +2124,8 @@ components:
           items:
             $ref: '#/components/schemas/JurisdictionResponse'
           description: |
-            All jurisdiction assignments associated with this employee.
-            Included inline for convenience — use
+            All jurisdiction assignments associated with this employee, newest
+            first. Included inline for convenience — use
             `GET /employees/{employeeId}/jurisdictions` for paginated access
             when large numbers of assignments are expected.
         version:
@@ -1923,6 +2135,115 @@ components:
           description: Optimistic concurrency version. Incremented on every mutation.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
+
+    OnboardRequest:
+      type: object
+      description: |
+        Combined payload for onboarding. All three blocks are required. `userId` and
+        `individualId` are server-injected and must not be supplied.
+      required: [user, individual, employee]
+      properties:
+        user:
+          $ref: '#/components/schemas/OnboardUser'
+        individual:
+          type: object
+          description: |
+            Individual (person) payload, forwarded to the Individual service and
+            validated there. `givenName` and `gender` are required; `address`,
+            `documents` and `identifiers` are supported. The new user's id is
+            injected before forwarding.
+          additionalProperties: true
+          example:
+            givenName: Aisha
+            familyName: Khan
+            gender: FEMALE
+            mobileNumber: "9812345678"
+            identifiers:
+              - identifierType: PAN
+                identifierId: ABCDE1234F
+        employee:
+          allOf:
+            - $ref: '#/components/schemas/EmployeeCreateRequest'
+          description: |
+            Employee payload, validated by the same rules as `POST /employees`.
+            `userId` and `individualId` are ignored if sent.
+
+    OnboardUser:
+      type: object
+      description: The login user to provision. `mobileNumber` becomes the username and is immutable.
+      required: [mobileNumber, password]
+      properties:
+        mobileNumber:
+          type: string
+          description: Becomes the username — the login identifier.
+          example: "9812345678"
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          description: Initial password, set as supplied. Never returned.
+          example: Secret@123
+        email:
+          type: string
+          format: email
+          example: aisha.khan@corp.example
+        firstName:
+          type: string
+          example: Aisha
+        lastName:
+          type: string
+          example: Khan
+        emailVerified:
+          type: boolean
+          default: false
+        roles:
+          type: array
+          description: |
+            Realm roles to assign. Each must already exist in the realm — an unknown
+            name is `400` and nothing is created.
+          items:
+            type: string
+          example: [EMPLOYEE]
+
+    OnboardResponse:
+      type: object
+      description: The three created records.
+      required: [user, individual, employee]
+      properties:
+        user:
+          $ref: '#/components/schemas/OnboardUserResponse'
+        individual:
+          type: object
+          description: The created individual, as returned by the Individual service.
+          additionalProperties: true
+        employee:
+          $ref: '#/components/schemas/EmployeeResponse'
+
+    OnboardUserResponse:
+      type: object
+      description: |
+        The server-decided facts about the new login user. Fields the client supplied
+        are not echoed, and the password is never returned.
+      required: [id, username]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The new user's id, also set as the employee's `userId`.
+          example: 0e7604a3-468f-4cfb-bb62-f2bf1ff74d1f
+        username:
+          type: string
+          readOnly: true
+          description: The login identifier, derived from `user.mobileNumber`.
+          example: "9812345678"
+        roles:
+          type: array
+          readOnly: true
+          description: Roles actually assigned. Omitted when none were requested.
+          items:
+            type: string
+          example: [EMPLOYEE]
 
     Boundary:
       type: object
@@ -2020,6 +2341,7 @@ components:
         - entry with `id` but no `version` → 400 (version is required to update
           an existing jurisdiction).
         - entry with an `id` not owned by the employee in the path → 404.
+        - the same `id` listed more than once → 400.
         - entry without `id` → a new jurisdiction is inserted (version 1).
         - any existing jurisdiction omitted from the array → deactivated
           (`isActive=false`, soft-delete), not hard-deleted.
