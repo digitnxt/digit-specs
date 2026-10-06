@@ -1,0 +1,957 @@
+openapi: 3.0.3
+info:
+  title: Notification Config API
+  version: 1.0.0
+  description: API for managing notification configurations across channels
+
+servers:
+  - url: https://api.platform.com/v1
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Notify
+  - name: NotificationConfigs
+  - name: ProviderMappings
+  - name: Providers
+
+paths:
+
+  /notify:
+    post:
+      tags: [Notify]
+      summary: Send a notification
+      description: |
+        Triggers a notification for a given recipient based on an existing
+        notification-config identified by templateCode. The service resolves
+        the active config, renders templates with the supplied payload variables,
+        resolves providers via provider-mappings, and dispatches to all enabled
+        channels asynchronously.
+      operationId: sendNotification
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotifyRequest'
+      responses:
+        '202':
+          description: Accepted — notification dispatched asynchronously
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotifyResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: No active notification config found for the given templateCode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Template rendering failed — required variables missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notification-configs:
+    post:
+      tags: [NotificationConfigs]
+      summary: Create notification config
+      operationId: createNotificationConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationConfig'
+      responses:
+        '201':
+          description: Created
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationConfig'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [NotificationConfigs]
+      summary: List notification configs
+      operationId: listNotificationConfigs
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: templateCode
+          in: query
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of configs
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationConfig'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notification-configs/{config_id}:
+    get:
+      tags: [NotificationConfigs]
+      summary: Get notification config
+      operationId: getNotificationConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: config_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Config
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationConfig'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [NotificationConfigs]
+      summary: Update notification config
+      operationId: updateNotificationConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: config_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationConfig'
+      responses:
+        '200':
+          description: Updated
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationConfig'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [NotificationConfigs]
+      summary: Delete notification config
+      operationId: deleteNotificationConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: config_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /provider-mappings:
+    get:
+      tags: [ProviderMappings]
+      summary: List provider mappings
+      operationId: listProviderMappings
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [sms, email, whatsapp, push]
+      responses:
+        '200':
+          description: List of provider mappings
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderMapping'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [ProviderMappings]
+      summary: Create provider mapping
+      operationId: createProviderMapping
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderMapping'
+      responses:
+        '201':
+          description: Created
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderMapping'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Mapping already exists for this tenant + channel + country scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /provider-mappings/{mapping_id}:
+    put:
+      tags: [ProviderMappings]
+      summary: Update provider mapping
+      operationId: updateProviderMapping
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: mapping_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderMapping'
+      responses:
+        '200':
+          description: Updated
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderMapping'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [ProviderMappings]
+      summary: Delete provider mapping
+      operationId: deleteProviderMapping
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: mapping_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /providers:
+    get:
+      tags: [Providers]
+      summary: List providers
+      operationId: listProviders
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [sms, email, whatsapp, push]
+          description: Filter providers by supported channel.
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active/inactive status.
+      responses:
+        '200':
+          description: List of providers
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Provider'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /providers/{provider_id}/status:
+    patch:
+      tags: [Providers]
+      summary: Enable or disable a provider
+      operationId: updateProviderStatus
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+        - $ref: '#/components/parameters/UserAgentHeader'
+        - $ref: '#/components/parameters/ForwardedForHeader'
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/ClientSecret'
+        - $ref: '#/components/parameters/TimeStamp'
+        - name: provider_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderStatusUpdate'
+      responses:
+        '200':
+          description: Updated
+          headers:
+            X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
+            X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
+            X-Request-ID: { $ref: '#/components/headers/X-Request-ID' }
+            X-Correlation-ID: { $ref: '#/components/headers/X-Correlation-ID' }
+            X-Tenant-ID: { $ref: '#/components/headers/X-Tenant-ID' }
+            X-Rate-Limit: { $ref: '#/components/headers/X-Rate-Limit' }
+            X-Rate-Limit-Remaining: { $ref: '#/components/headers/X-Rate-Limit-Remaining' }
+            X-Rate-Limit-Reset: { $ref: '#/components/headers/X-Rate-Limit-Reset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Provider'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/securitySchemes/BearerAuth'
+
+  parameters:
+    RequestIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/RequestIdHeader'
+    CorrelationIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/CorrelationIdHeader'
+    UserAgentHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader'
+    TenantIdHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader'
+    ForwardedForHeader:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader'
+    ClientId:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId'
+    ClientSecret:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientSecret'
+    TimeStamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp'
+
+  headers:
+    X-Response-Time:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Time'
+    X-Response-Timestamp:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Response-Timestamp'
+    X-Request-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Request-ID'
+    X-Correlation-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Correlation-ID'
+    X-Tenant-ID:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Tenant-ID'
+    X-Rate-Limit:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit'
+    X-Rate-Limit-Remaining:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Remaining'
+    X-Rate-Limit-Reset:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/headers/X-Rate-Limit-Reset'
+
+  schemas:
+
+    Error:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error'
+
+    AuditDetail:
+      $ref: 'https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail'
+
+    NotificationConfig:
+      type: object
+      required:
+        - templateCode
+      properties:
+        id:
+          type: string
+          readOnly: true
+        templateCode:
+          type: string
+        isActive:
+          type: boolean
+        channels:
+          $ref: '#/components/schemas/Channels'
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
+
+    Channels:
+      type: object
+      properties:
+        sms:
+          $ref: '#/components/schemas/SmsChannelConfig'
+        email:
+          $ref: '#/components/schemas/EmailChannelConfig'
+        whatsapp:
+          $ref: '#/components/schemas/WhatsappChannelConfig'
+        push:
+          $ref: '#/components/schemas/PushChannelConfig'
+
+    LocalizedString:
+      type: object
+      description: |
+        Key-value map for localized content.
+        Keys represent locale codes (e.g., default, hi, ta).
+        "default" is mandatory fallback when locale-specific value is not found.
+      additionalProperties:
+        type: string
+
+    BaseChannelConfig:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        body:
+          $ref: '#/components/schemas/LocalizedString'
+        payloadBindings:
+          $ref: '#/components/schemas/VariableMap'
+
+    SmsChannelConfig:
+      allOf:
+        - $ref: '#/components/schemas/BaseChannelConfig'
+        - type: object
+          properties:
+            body:
+              allOf:
+                - $ref: '#/components/schemas/LocalizedString'
+              example:
+                default: "{{otp}} is your OTP. Valid for {{expiry_minutes}} mins. Do not share."
+                hi: "{{otp}} आपका OTP है। {{expiry_minutes}} मिनट में समाप्त। किसी को न बताएं।"
+                ta: "{{otp}} உங்கள் OTP. {{expiry_minutes}} நிமிடங்களில் காலாவதியாகும்."
+
+    EmailChannelConfig:
+      allOf:
+        - $ref: '#/components/schemas/BaseChannelConfig'
+        - type: object
+          properties:
+            subject:
+              allOf:
+                - $ref: '#/components/schemas/LocalizedString'
+              example:
+                default: "Your OTP for login"
+                hi: "लॉगिन के लिए आपका OTP"
+                ta: "உங்கள் உள்நுழைவு OTP"
+
+    WhatsappChannelConfig:
+      allOf:
+        - $ref: '#/components/schemas/BaseChannelConfig'
+        - type: object
+          properties:
+            body:
+              allOf:
+                - $ref: '#/components/schemas/LocalizedString'
+              example:
+                default: "Hi {{name}}, your OTP is {{otp}}. Valid for {{expiry_minutes}} mins."
+                hi: "नमस्ते {{name}}, आपका OTP {{otp}} है। {{expiry_minutes}} मिनट के लिए वैध।"
+                ta: "வணக்கம் {{name}}, உங்கள் OTP {{otp}}. {{expiry_minutes}} நிமிடங்கள்."
+
+    PushChannelConfig:
+      allOf:
+        - $ref: '#/components/schemas/BaseChannelConfig'
+        - type: object
+          properties:
+            title:
+              allOf:
+                - $ref: '#/components/schemas/LocalizedString'
+              example:
+                default: "Login OTP"
+                hi: "लॉगिन OTP"
+                ta: "உள்நுழைவு OTP"
+
+    VariableMap:
+      type: object
+      description: |
+        Mapping of template variables to JSONPath expressions.
+        Evaluated against the event payload at runtime to extract values for template rendering.
+      additionalProperties:
+        type: string
+        description: JSONPath expression
+      example:
+        otp: "$.data.otp_code"
+        expiry_minutes: "$.data.expiry.minutes"
+
+    ProviderMapping:
+      type: object
+      required:
+        - channel
+        - providers
+      properties:
+        id:
+          type: string
+          readOnly: true
+        channel:
+          type: string
+          enum: [sms, email, whatsapp, push]
+        country:
+          type: string
+          description: Optional. If not provided, acts as global/default mapping.
+        providers:
+          type: array
+          description: |
+            Ordered list of provider names. First entry is the primary provider,
+            subsequent entries are fallbacks in order. Validated against the
+            provider catalog at save time.
+          items:
+            type: string
+          minItems: 1
+          example: ["twilio", "kaleyra", "exotel"]
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
+
+    NotifyRequest:
+      type: object
+      required:
+        - templateCode
+        - recipient
+      properties:
+        templateCode:
+          type: string
+          description: |
+            Identifies which notification config to use. The service looks up
+            the active config for this templateCode scoped to the tenant
+            (X-Tenant-ID) and dispatches to all channels enabled in that config.
+          example: OTP_LOGIN
+        recipient:
+          $ref: '#/components/schemas/Recipient'
+        payload:
+          type: object
+          description: |
+            Event payload. Each channel config's payloadBindings JSONPath expressions
+            are evaluated against this object at runtime to extract template variable values.
+          additionalProperties: true
+          example:
+            data:
+              otp_code: "482910"
+              expiry:
+                minutes: 10
+        locale:
+          type: string
+          description: |
+            BCP-47 locale code (e.g. "hi", "ta"). Falls back to "default"
+            if no locale-specific template body is found.
+          example: hi
+        metadata:
+          type: object
+          description: Dispatch-level context forwarded to providers (e.g. campaign tags, correlation ids).
+          additionalProperties:
+            type: string
+
+    Recipient:
+      type: object
+      description: Delivery addresses for each channel. Only fields relevant to enabled channels are required.
+      properties:
+        phone:
+          type: string
+          description: E.164 format. Required for sms and whatsapp channels.
+          example: "+919876543210"
+        email:
+          type: string
+          format: email
+          description: Required for email channel.
+          example: user@example.com
+        deviceTokens:
+          type: array
+          description: FCM / APNs device tokens. Required for push channel.
+          items:
+            type: string
+        countryCode:
+          type: string
+          description: |
+            ISO 3166-1 alpha-2. Used by provider-mapping resolution to select
+            country-specific providers. Falls back to global mapping if absent.
+          example: IN
+        metadata:
+          type: object
+          description: |
+            Recipient-scoped context (e.g. userId, name). Distinct from top-level
+            request metadata which carries dispatch/campaign-level context.
+          additionalProperties:
+            type: string
+          example:
+            userId: "usr_12345"
+            name: "Ravi Kumar"
+
+    NotifyResponse:
+      type: object
+      properties:
+        notificationId:
+          type: string
+          description: Unique ID for this dispatch event. Use for status tracking.
+          example: "ntf_01J2K9X8ZQPMBVFW3DTYS4R6NE"
+        templateCode:
+          type: string
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelDispatchStatus'
+
+    ChannelDispatchStatus:
+      type: object
+      properties:
+        channel:
+          type: string
+          enum: [sms, email, whatsapp, push]
+        status:
+          type: string
+          enum: [dispatched, skipped, failed]
+          description: |
+            dispatched — handed off to provider successfully.
+            skipped — channel disabled in config.
+            failed — provider returned an error; see reason.
+        provider:
+          type: string
+          description: Name of the provider that accepted the message.
+        reason:
+          type: string
+          description: Present only when status is skipped or failed.
+
+    Provider:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        providerName:
+          type: string
+        channels:
+          type: array
+          description: Channels this provider supports.
+          items:
+            type: string
+            enum: [sms, email, whatsapp, push]
+        isActive:
+          type: boolean
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
+
+    ProviderStatusUpdate:
+      type: object
+      required:
+        - isActive
+      properties:
+        isActive:
+          type: boolean
