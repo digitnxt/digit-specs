@@ -234,9 +234,8 @@ paths:
         '502':
           description: |
             A dependency failed (`DOWNSTREAM_ERROR`); nothing is persisted, retry once it
-            recovers. Either IDGen could not assign an `individualId` (unreachable or timed
-            out, or it rejected the request, e.g. a missing template, in which case its own
-            code and message are included), or Vault could not encrypt the personal data.
+            recovers. Either IDGen could not assign an `individualId` (unreachable, timed
+            out or failed), or Vault could not encrypt the personal data.
           content:
             application/json:
               schema:
@@ -252,7 +251,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. `IDGEN_TEMPLATE_NOT_FOUND` when the tenant has no IDGen
+            template for `individualId`; create the template. Retrying does not help.
           content:
             application/json:
               schema:
@@ -1588,9 +1589,6 @@ components:
           additionalProperties:
             type: string
             maxLength: 1024
-          propertyNames:
-            pattern: '^[a-zA-Z0-9_.-]+$'
-            maxLength: 128
           example:
             occupation: engineer
             preferredLanguage: kn
