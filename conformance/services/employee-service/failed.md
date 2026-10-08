@@ -9,6 +9,21 @@ Target `https://uat-saas.digit.org/employee/v3` through Kong, image `anishegov/e
 | New: onboard + `userIds` (`tests/test_onboard_contracts.py`) | **11 / 11** |
 | Schemathesis (bounded) | 6 / 13 ops pass — all 7 failures are one gateway cause (F1) |
 
+
+## Undeclared HTTP methods (2026-10-08) — F1 resolved in the suite
+The platform exposes only GET/PUT/POST/DELETE/PATCH (the only Keycloak scopes in
+`realm_config.json`). Schemathesis' coverage phase is now limited to those verbs
+(`schema.config.phases.coverage.unexpected_methods = PLATFORM_METHODS`), so QUERY/OPTIONS/TRACE
+are never sent. A platform verb the spec doesn't declare for a path must be rejected by Kong
+with **404 `RBAC.ResourceNotFound`** (401/403 also accepted) — asserted by
+`assert_undeclared_method_rejected` (`tests/helpers/validators.py`); 2xx or any 5xx fails.
+Verified in Kong access logs: every undeclared verb was sent once per path → 404.
+
+| Schemathesis (bounded) | Result |
+|---|---|
+| individual | **7 / 7 (1 skipped — destructive DELETE)** |
+| employee | **13 / 13** |
+
 ## Findings
 
 **F1 — Kong `keycloak-rbac`: unknown HTTP method → 500 (gateway defect, affects every service)**

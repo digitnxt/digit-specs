@@ -11,10 +11,17 @@ from schemathesis.specs.openapi.checks import (
     unsupported_method,
     content_type_conformance,
 )
+from tests.helpers.validators import (
+    PLATFORM_METHODS, declared_methods, assert_undeclared_method_rejected,
+)
 
 # Schema file is `individual.yaml` (not the legacy `schema.yaml`).
 _SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "individual.yaml"
 schema = schemathesis.openapi.from_path(_SCHEMA_PATH)
+
+# Only the platform verbs are probed as "undeclared methods" (QUERY/OPTIONS/TRACE
+# are not part of the platform and are never sent). See validators.py.
+schema.config.phases.coverage.unexpected_methods = set(PLATFORM_METHODS)
 
 # Endpoints skipped by Schemathesis parametrize.
 # DELETE is destructive — Schemathesis runs many iterations of a generated
@@ -52,6 +59,12 @@ def test_all_endpoints_conform(case, request, base_url, auth_headers):
     if hasattr(response, "request") and response.request is not None:
         request.node._curl_request = response.request
 
+    # A platform verb the spec doesn't declare for this path (e.g. PATCH where only PUT exists)
+    # have no contract — they must simply be rejected. See validators.py.
+    if case.method.upper() not in declared_methods(schema.raw_schema, case.operation.path):
+        assert_undeclared_method_rejected(response)
+        return
+
     # Excluded checks — all behaviours outside the strict
     # request-conforms / response-conforms contract:
     # - ignored_auth: auth is handled by the API gateway, not the service.
@@ -65,8 +78,9 @@ def test_all_endpoints_conform(case, request, base_url, auth_headers):
     #     boundary. The explicit negative-input cases live in
     #     tests/test_error_contracts.py.
     # - missing_required_header: gateway injects X-Tenant-ID from the auth token.
-    # - unsupported_method: nginx returns 405 for TRACE/etc. without the
-    #     RFC 9110-required Allow header.
+    # - unsupported_method: expects 405 + Allow, but Kong rejects an undeclared
+    #     verb with 404 RBAC.ResourceNotFound (no Keycloak permission for it).
+    #     Asserted explicitly above via assert_undeclared_method_rejected.
     # - content_type_conformance: when Schemathesis generates malformed HTTP
     #     headers (control chars, non-latin-1), nginx/Kong rejects the request
     #     at the HTTP parse layer and returns text/plain — before the service

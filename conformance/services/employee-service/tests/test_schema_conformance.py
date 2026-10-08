@@ -13,9 +13,16 @@ from schemathesis.specs.openapi.checks import (
     unsupported_method,
 )
 from tests.helpers.curl_builder import build_curl
+from tests.helpers.validators import (
+    PLATFORM_METHODS, declared_methods, assert_undeclared_method_rejected,
+)
 
 _schema_path = os.path.join(os.path.dirname(__file__), "..", "employee.yaml")
 schema = schemathesis.openapi.from_path(os.path.abspath(_schema_path))
+
+# Only the platform verbs are probed as "undeclared methods" (QUERY/OPTIONS/TRACE
+# are not part of the platform and are never sent). See validators.py.
+schema.config.phases.coverage.unexpected_methods = set(PLATFORM_METHODS)
 
 # These checks are excluded because they fire on gateway/environment artifacts
 # or on intentional platform behaviour, not on real contract violations.
@@ -40,9 +47,10 @@ schema = schemathesis.openapi.from_path(os.path.abspath(_schema_path))
 #   the spec marks client-required (X-Tenant-ID, X-User-ID, …) from the auth
 #   token, so a client omission never reaches the service as a rejection.
 #
-# - unsupported_method (UnsupportedMethodResponse): routing and auth happen at
-#   Kong, so an undocumented HTTP method is denied/handled at the gateway before
-#   reaching the service.
+# - unsupported_method (UnsupportedMethodResponse): expects 405 + Allow, but Kong
+#   rejects an undeclared verb with 404 RBAC.ResourceNotFound (no Keycloak
+#   permission for it). Asserted explicitly in the test via
+#   assert_undeclared_method_rejected; only platform verbs are probed.
 #
 # - negative_data_rejection (AcceptedNegativeData): its only remaining hit is
 #   UNKNOWN query parameters (e.g. ?foo=bar) returning 200 instead of 400 —
@@ -98,6 +106,11 @@ def test_all_endpoints_conform(case: Case, request, base_url, auth_headers):
         return
     if hasattr(response, "request") and response.request is not None:
         request.node._curl_request = response.request
+    # A platform verb the spec doesn't declare for this path (e.g. PATCH where only PUT exists)
+    # have no contract — they must simply be rejected. See validators.py.
+    if case.method.upper() not in declared_methods(schema.raw_schema, case.operation.path):
+        assert_undeclared_method_rejected(response)
+        return
     # NOTE: gateway operational headers (e.g. X-Kong-Request-Id) are intentionally
     # NOT asserted here. They are not part of the OpenAPI contract, and the fuzzer
     # generates adversarial requests (bad methods, malformed headers) that are

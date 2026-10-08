@@ -107,3 +107,36 @@ def assert_boundary_relation(boundary_relation):
         for key in ("code", "boundaryType", "hierarchyType"):
             assert key in entry, f"boundaryRelation entry missing '{key}'"
             assert isinstance(entry[key], str) and entry[key], f"boundaryRelation '{key}' must be a non-empty string"
+
+
+# ── Undeclared HTTP methods ───────────────────────────────────────────────────
+# The platform only exposes GET/PUT/POST/DELETE/PATCH — the only scopes Keycloak
+# knows (realm_config.json). Schemathesis' coverage phase is limited to those
+# verbs (PLATFORM_METHODS, set in test_schema_conformance.py), so QUERY/OPTIONS/
+# TRACE are never sent. A platform verb the spec does NOT declare for a path
+# (e.g. PATCH where only PUT exists) has no permission mapped in Keycloak, so
+# Kong must reject it → 404 RBAC.ResourceNotFound (401/403 also count as a
+# rejection). Anything else — a 2xx, or any 5xx — fails.
+PLATFORM_METHODS = {"get", "put", "post", "delete", "patch"}
+
+
+def declared_methods(raw_schema, path):
+    return {m.upper() for m in raw_schema["paths"].get(path, {}) if m in PLATFORM_METHODS}
+
+
+def assert_undeclared_method_rejected(response):
+    status = response.status_code
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    code = body[0].get("code") if isinstance(body, list) and body and isinstance(body[0], dict) else None
+
+    if status in (401, 403):
+        return
+    if status == 404 and code == "RBAC.ResourceNotFound":
+        return
+    raise AssertionError(
+        f"undeclared method must be rejected by the gateway "
+        f"(404 RBAC.ResourceNotFound, 401 or 403); got {status}: {response.text[:300]}"
+    )

@@ -7,6 +7,29 @@ Target `https://uat-saas.digit.org/individuals/v3` through Kong, image `anishego
 | Behavioral (response / error / stateful, incl. new `userId` filter tests) | **61 / 61** |
 | Schemathesis (bounded) | before spec fix: 0 / 7 · **after: 3 / 7 (1 skipped) — all 4 failures are F1** |
 
+
+## Undeclared HTTP methods (2026-10-08) — F1 resolved in the suite
+The platform exposes only GET/PUT/POST/DELETE/PATCH (the only Keycloak scopes in
+`realm_config.json`). Schemathesis' coverage phase is now limited to those verbs
+(`schema.config.phases.coverage.unexpected_methods = PLATFORM_METHODS`), so QUERY/OPTIONS/TRACE
+are never sent. A platform verb the spec doesn't declare for a path must be rejected by Kong
+with **404 `RBAC.ResourceNotFound`** (401/403 also accepted) — asserted by
+`assert_undeclared_method_rejected` (`tests/helpers/validators.py`); 2xx or any 5xx fails.
+Verified in Kong access logs: every undeclared verb was sent once per path → 404.
+
+| Schemathesis (bounded) | Result |
+|---|---|
+| individual | **7 / 7 (1 skipped — destructive DELETE)** |
+| employee | **13 / 13** |
+
+## Rerun 2026-10-08 — image `egovio/individual:performance-changes-82b2cdf`
+| Layer | Result |
+|---|---|
+| Behavioral | **61 / 61** |
+| Schemathesis (bounded) | **3 / 7 (1 skipped)** — all 4 failures are F1 (`QUERY` → 500 at Kong) |
+
+No regressions vs the previous build; S1/S2 remain fixed.
+
 ## Findings
 
 **S1 — Spec: `401` not documented on any operation (spec gap)**
