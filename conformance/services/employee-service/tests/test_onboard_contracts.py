@@ -148,7 +148,7 @@ class TestUserIdsFilter:
 
     def test_blank_user_id_returns_400(self, request, base_url, auth_headers):
         # A blank entry in the list is a 400. A lone `?userIds=` binds to an empty list and
-        # is treated as "no filter" — see failed.md.
+        # is treated as "no filter" (platform-wide behaviour for empty list params).
         r = _send(request.node, "GET", f"{base_url}/employees", headers=auth_headers,
                   params={"userIds": ["abc", " "]})
         assert r.status_code == 400, f"got {r.status_code}: {r.text}"
