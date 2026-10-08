@@ -62,7 +62,7 @@ public class EmployeeRepository {
         e.setDateOfAppointment(ts == null ? null : OffsetDateTime.ofInstant(ts.toInstant(), ZoneOffset.UTC));
         e.setDepartment(rs.getString("department"));
         e.setDesignation(rs.getString("designation"));
-        e.setActive(rs.getBoolean("is_active"));
+        e.setIsActive(rs.getBoolean("is_active"));
         e.setVersion(rs.getInt("version"));
         e.setTenantId(rs.getString("tenant_id"));
         AuditDetails ad = new AuditDetails();
@@ -104,7 +104,7 @@ public class EmployeeRepository {
                     rowMapper,
                     e.getCode(), e.getUserId(), e.getIndividualId(), e.getStatus(), e.getEmployeeType(),
                     toTimestamp(e.getDateOfAppointment()), e.getDepartment(), e.getDesignation(),
-                    e.isActive(), e.getVersion(), e.getTenantId(),
+                    e.getIsActive(), e.getVersion(), e.getTenantId(),
                     e.getAuditDetails().getCreatedBy(), e.getAuditDetails().getModifiedBy(),
                     e.getAuditDetails().getCreatedTime(), e.getAuditDetails().getModifiedTime());
             e.setId(stored.getId());
@@ -158,7 +158,7 @@ public class EmployeeRepository {
                             + "designation = ?, is_active = ?, version = ?, \"modifiedBy\" = ?, \"modifiedTime\" = ? "
                             + "WHERE id = ? AND version = ?",
                     e.getStatus(), e.getEmployeeType(), e.getDepartment(), e.getDesignation(),
-                    e.isActive(), expectedVersion + 1, modifiedBy, now,
+                    e.getIsActive(), expectedVersion + 1, modifiedBy, now,
                     java.util.UUID.fromString(e.getId()), expectedVersion);
             if (affected == 0) {
                 throw new CustomException(ErrorCodes.ROW_VERSION_MISMATCH, "employee was modified concurrently", HttpStatus.CONFLICT);

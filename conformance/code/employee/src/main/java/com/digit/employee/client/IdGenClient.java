@@ -75,8 +75,7 @@ public class IdGenClient {
 
                 if (resp.statusCode() != 200) {
                     // Fail immediately with status + body (matches Go idgen client).
-                    throw new RuntimeException("idgen returned status=" + resp.statusCode()
-                            + " body=" + resp.body());
+                    throw new IdGenApiException(resp.statusCode(), resp.body());
                 }
                 JsonNode node = objectMapper.readTree(resp.body());
                 String id = node.has("id") ? node.get("id").asText("") : "";

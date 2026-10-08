@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * What a caller sees when IDGen fails: IDGen's own error when it answered, "unavailable" when it
- * could not be reached in time — never its raw body or transport detail. Always 502.
+ * What a caller sees when IDGen fails: a 500 naming the template when it is missing, otherwise a 502
+ * saying whether IDGen was reachable — never IDGen's body or transport detail.
  */
 class IdgenFailureTest {
 
@@ -75,15 +75,27 @@ class IdgenFailureTest {
     }
 
     @Test
-    void idgenReportedError_isPassedOnAsItsCodeAndMessage() {
+    void missingTemplate_is500NamingTheTemplate() {
         status = 404;
         body = "[{\"code\":\"NOT_FOUND\",\"message\":\"template not found\"}]";
 
         CustomException ex = failCreate(serverHost());
 
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, ex.getHttpStatus());
+        assertEquals("IDGEN_TEMPLATE_NOT_FOUND", ex.getCode());
+        assertEquals("failed to generate individualId: idgen template 'individual.id' not found for tenant pg", ex.getMessage());
+    }
+
+    @Test
+    void idgenReportedError_isNotEchoed() {
+        status = 422;
+        body = "[{\"code\":\"UNPROCESSABLE\",\"message\":\"id generation failed: nextval failed: relation does not exist\"}]";
+
+        CustomException ex = failCreate(serverHost());
+
         assertEquals(HttpStatus.BAD_GATEWAY, ex.getHttpStatus());
         assertEquals("DOWNSTREAM_ERROR", ex.getCode());
-        assertEquals("idgen: failed to generate individualId: NOT_FOUND template not found", ex.getMessage());
+        assertEquals("idgen: failed to generate individualId", ex.getMessage());
     }
 
     @Test

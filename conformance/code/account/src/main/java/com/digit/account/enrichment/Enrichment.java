@@ -28,6 +28,7 @@ public final class Enrichment {
         if (t.getAdditionalAttributes() == null) {
             t.setAdditionalAttributes(new HashMap<>());
         }
+        t.setVersion(1);
         t.setCreatedBy(clientId);
         t.setModifiedBy(clientId);
         t.setCreatedTime(now);
@@ -46,6 +47,7 @@ public final class Enrichment {
             c.setId(UUID.randomUUID().toString());
         }
         c.setActive(true);
+        c.setVersion(1);
         c.setCreatedBy(clientId);
         c.setModifiedBy(clientId);
         c.setCreatedTime(now);

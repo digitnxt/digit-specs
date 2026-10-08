@@ -4,7 +4,6 @@ import com.digit.individual.config.IndividualProperties;
 import org.digit.tracer.config.TracerProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import org.springframework.stereotype.Component;
 
@@ -32,24 +31,23 @@ public class IdgenClient {
     private static final Logger log = LoggerFactory.getLogger(IdgenClient.class);
 
     /**
-     * An IDGen failure, carrying only what may be shown to the caller: IDGen's own error code and
-     * message when it answered, or {@code unavailable} when it could not be reached. The transport
-     * detail and raw body stay on the cause, for the server log.
+     * An IDGen failure: {@code unavailable} when it could not be reached, otherwise the HTTP status it
+     * answered with. The transport detail and raw body stay in the message, for the server log only.
      */
     public static final class IdgenException extends RuntimeException {
         private final boolean unavailable;
-        private final String detail;
+        private final int statusCode;
 
-        IdgenException(boolean unavailable, String detail, String logMessage, Throwable cause) {
+        IdgenException(boolean unavailable, int statusCode, String logMessage, Throwable cause) {
             super(logMessage, cause);
             this.unavailable = unavailable;
-            this.detail = detail;
+            this.statusCode = statusCode;
         }
 
         public boolean isUnavailable() { return unavailable; }
 
-        /** IDGen's reported code and message, or null when it gave none. */
-        public String getDetail() { return detail; }
+        /** The status IDGen answered with; 0 when it could not be reached. */
+        public int getStatusCode() { return statusCode; }
     }
 
     private final IndividualProperties.Idgen config;
@@ -100,45 +98,28 @@ public class IdgenClient {
             try {
                 resp = httpClient.send(rb.build(), HttpResponse.BodyHandlers.ofString());
             } catch (IOException e) {
-                throw new IdgenException(true, null, "failed to call IDGen service: " + e, e);
+                throw new IdgenException(true, 0, "failed to call IDGen service: " + e, e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new IdgenException(true, null, "interrupted calling IDGen service", e);
+                throw new IdgenException(true, 0, "interrupted calling IDGen service", e);
             }
 
             if (resp.statusCode() != 200) {
-                throw new IdgenException(false, reportedError(resp.body()),
+                throw new IdgenException(false, resp.statusCode(),
                         "idgen returned status=" + resp.statusCode() + " body=" + resp.body(), null);
             }
             Object idVal;
             try {
                 idVal = mapper.readValue(resp.body(), Map.class).get("id");
             } catch (RuntimeException e) {
-                throw new IdgenException(false, null, "idgen returned an unreadable body: " + resp.body(), e);
+                throw new IdgenException(false, resp.statusCode(), "idgen returned an unreadable body: " + resp.body(), e);
             }
             if (idVal == null || String.valueOf(idVal).isEmpty()) {
-                throw new IdgenException(false, null, "idgen response missing 'id': " + resp.body(), null);
+                throw new IdgenException(false, resp.statusCode(), "idgen response missing 'id': " + resp.body(), null);
             }
             ids.add(String.valueOf(idVal));
         }
         return ids;
-    }
-
-    /**
-     * IDGen's own error, as "CODE message", from the platform error body ([{"code","message"}]).
-     * Returns null for any other body, so nothing unstructured reaches the caller.
-     */
-    private String reportedError(String body) {
-        try {
-            JsonNode root = mapper.readTree(body);
-            JsonNode err = root.isArray() && !root.isEmpty() ? root.get(0) : root;
-            String code = err.path("code").asString("");
-            String message = err.path("message").asString("");
-            String reported = (code + " " + message).trim();
-            return reported.isEmpty() ? null : reported;
-        } catch (RuntimeException e) {
-            return null;
-        }
     }
 
     private List<String> generateFallbackIds(int count) {

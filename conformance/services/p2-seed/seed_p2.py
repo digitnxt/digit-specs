@@ -27,7 +27,7 @@ HIERARCHY = "CONF_HIER"
 STATE, DISTRICT = "CONF_STATE_1", "CONF_DIST_1"
 
 IDGEN_TEMPLATES = {
-    "EmployeeCode": "EMP-{ORG}-{SEQ}",
+    "EmployeeCode": "EMP-{DATE:yyyy}-{SEQ}",  # employee client sends no variables
     "individual": "IND-{ORG}-{DATE:yyyymmdd}-{SEQ}",
 }
 
@@ -131,7 +131,10 @@ def main():
         sys.exit("CONFORMANCE_TOKEN not set")
     c = Client(a.base_url, a.tenant, token)
     seed_idgen(c)
-    seed_boundary(c)
+    try:
+        seed_boundary(c)
+    except SystemExit:
+        print("WARNING: boundary seed failed — employee jurisdiction tests will skip/fail")
     seed_individual(c)
     print("\nexport CONFORMANCE_BOUNDARY_CODE=%s CONFORMANCE_BOUNDARY_TYPE=state "
           "CONFORMANCE_BOUNDARY_HIERARCHY=%s" % (STATE, HIERARCHY))

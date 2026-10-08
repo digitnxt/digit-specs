@@ -295,8 +295,11 @@ Errors are returned as a list of `code` / `message` pairs:
 | Status | Codes |
 |---|---|
 | `400` | `VALIDATION_ERROR`, `INVALID_REQUEST`, `INVALID_UUID` |
+| `401` | `UNAUTHORIZED` — onboarding: Keycloak rejected the caller's token |
+| `403` | `FORBIDDEN` — onboarding: the caller's token may not create users or assign a requested role |
 | `404` | `NOT_FOUND`, `EMPLOYEE_NOT_FOUND` |
 | `409` | `EMPLOYEE_EXISTS`, `ROW_VERSION_MISMATCH`, `EMPLOYEE_ALREADY_ACTIVE`, `EMPLOYEE_ALREADY_INACTIVE`, `CONFLICT` |
+| `500` | `IDGEN_TEMPLATE_NOT_FOUND` — no IDGen template for employee codes in the tenant; create it or send `code` |
 | `502` | `DOWNSTREAM_ERROR` — IDGen, Boundary, Individual or Keycloak failed or timed out |
 
 ## Health and Observability

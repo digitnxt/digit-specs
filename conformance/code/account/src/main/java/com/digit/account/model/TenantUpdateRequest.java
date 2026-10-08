@@ -19,9 +19,13 @@ public class TenantUpdateRequest {
     // flipping it enables/disables the tenant's Keycloak realm.
     private Boolean isActive;
     private Map<String, Object> additionalAttributes;
+    // The version the client last read. Optional; when sent, the update applies only if the row still has it.
+    private Integer version;
 
     @JsonProperty("isActive")
     public Boolean getIsActive() { return isActive; }
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
     @JsonProperty("isActive")
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 

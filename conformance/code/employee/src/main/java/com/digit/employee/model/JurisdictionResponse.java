@@ -26,9 +26,8 @@ public class JurisdictionResponse {
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
     public List<BoundaryRef> getBoundaryRelation() { return boundaryRelation; }
     public void setBoundaryRelation(List<BoundaryRef> boundaryRelation) { this.boundaryRelation = boundaryRelation; }
-    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
+    public boolean getIsActive() { return isActive; }
+    public void setIsActive(boolean isActive) { this.isActive = isActive; }
     public int getVersion() { return version; }
     public void setVersion(int version) { this.version = version; }
     public AuditDetails getAuditDetail() { return auditDetail; }

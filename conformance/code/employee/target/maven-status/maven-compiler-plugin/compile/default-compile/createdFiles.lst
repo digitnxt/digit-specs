@@ -34,6 +34,7 @@ com/digit/employee/model/OnboardRequest.class
 com/digit/employee/service/EmployeeService.class
 com/digit/employee/service/EmployeeService$PendingEmployee.class
 com/digit/employee/web/CanonicalDelegate$Envelope.class
+com/digit/employee/web/DatabaseExceptionHandler.class
 com/digit/employee/model/AuditDetails.class
 com/digit/employee/model/OnboardUserResponse.class
 com/digit/employee/web/HeaderInterceptor.class
@@ -49,6 +50,7 @@ com/digit/employee/EmployeeApplication.class
 com/digit/employee/model/OnboardUser.class
 com/digit/employee/client/KeycloakClient.class
 com/digit/employee/model/JurisdictionSearchCriteria.class
+com/digit/employee/client/IdGenApiException.class
 com/digit/employee/repository/JurisdictionRepository.class
 com/digit/employee/config/EmployeeProperties$IdGen.class
 com/digit/employee/client/KeycloakUserRequest.class

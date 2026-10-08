@@ -11,6 +11,8 @@ behaviour across calls:
 - Search by mobileNumber round-trip.
 """
 
+import uuid
+
 import requests as req_lib
 
 from tests.helpers.curl_builder import attach_curl
@@ -304,3 +306,37 @@ class TestConfigUpsertFlow:
                          json_body=make_config_request(uniquenessCriteria=["name"]))
         assert second_r.status_code == 200, \
             f"second upsert must return 200, got {second_r.status_code}: {second_r.text}"
+
+
+# ── userId filters (401e8e3) ──────────────────────────────────────────────────
+
+class TestUserIdFilters:
+    def test_search_and_exists_by_user_id(self, request, base_url, auth_headers):
+        """Create with a userId → it is filterable on search (IN match) and /exists."""
+        user_id = f"conf-{uuid.uuid4()}"
+        create_r = _send(request.node, "POST", f"{base_url}/individuals",
+                         headers=auth_headers, json_body=make_individual(userId=user_id))
+        assert create_r.status_code == 201, f"create failed: {create_r.text}"
+        ind_id = create_r.json()["id"]
+        try:
+            assert create_r.json().get("userId") == user_id
+
+            search_r = _send(request.node, "GET", f"{base_url}/individuals", headers=auth_headers,
+                             params={"userId": [user_id, f"conf-{uuid.uuid4()}"]})
+            assert search_r.status_code == 200, search_r.text
+            body = search_r.json()
+            assert_individual_search_response(body)
+            assert [i["id"] for i in body["individuals"]] == [ind_id]
+
+            exists_r = _send(request.node, "GET", f"{base_url}/individuals/exists",
+                             headers=auth_headers, params={"userId": user_id})
+            assert exists_r.status_code == 200, exists_r.text
+            assert exists_r.json()["exists"] is True
+        finally:
+            _cleanup(f"{base_url}/individuals/{ind_id}", auth_headers)
+
+    def test_unknown_user_id_search_is_empty(self, request, base_url, auth_headers):
+        r = _send(request.node, "GET", f"{base_url}/individuals", headers=auth_headers,
+                  params={"userId": f"conf-{uuid.uuid4()}"})
+        assert r.status_code == 200, r.text
+        assert r.json()["individuals"] == [] and r.json()["totalCount"] == 0

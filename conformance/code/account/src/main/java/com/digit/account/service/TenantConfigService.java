@@ -79,9 +79,9 @@ public class TenantConfigService {
         return Mappers.tenantConfigFromEntity(entity);
     }
 
-    /** Mirrors Get — returns null when not found. */
-    public TenantConfigResponse get(String id) {
-        return Mappers.tenantConfigFromEntity(configRepo.getById(id));
+    /** Mirrors Get — returns null when not found in the tenant. */
+    public TenantConfigResponse get(String id, String tenantCode) {
+        return Mappers.tenantConfigFromEntity(configRepo.getById(id, tenantCode));
     }
 
     /** Mirrors List. {@code tenantCode} is the X-Tenant-Id header. */
@@ -104,11 +104,18 @@ public class TenantConfigService {
     }
 
     /** Mirrors Update. */
+    /** {@code tenantCode} is the X-Tenant-Id header; a config owned by another tenant is not found. */
     public TenantConfigResponse update(String id, TenantConfigUpdateRequest req, String clientId,
-                                       String requestId) {
-        TenantConfigEntity existing = configRepo.getById(id);
+                                       String requestId, String tenantCode) {
+        TenantConfigEntity existing = configRepo.getById(id, tenantCode);
         if (existing == null) {
             throw new CustomException("NOT_FOUND", "TenantConfig not found", HttpStatus.NOT_FOUND);
+        }
+        // version is optional: when sent it must match (fast-fail before validation). Either way the
+        // compare-and-swap in configRepo.update is against the version read here, so a write that
+        // lands between this read and that write is still a conflict.
+        if (req.getVersion() != null && req.getVersion() != existing.getVersion()) {
+            throw versionMismatch();
         }
 
         TenantConfigEntity updated = Mappers.tenantConfigUpdateRequestToEntity(existing, req, clientId,
@@ -133,7 +140,9 @@ public class TenantConfigService {
         }
 
         // A unique-constraint violation surfaces as a DUPLICATE_RECORD CustomException (PgErrors).
-        configRepo.update(updated);
+        if (!configRepo.update(updated, existing.getVersion())) {
+            throw versionMismatch();
+        }
 
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("tenantConfigId", updated.getId());
@@ -144,5 +153,10 @@ public class TenantConfigService {
                 updated.getTenantId(), clientId, eventData, 1);
 
         return Mappers.tenantConfigFromEntity(updated);
+    }
+
+    private static CustomException versionMismatch() {
+        return new CustomException("ROW_VERSION_MISMATCH", "TenantConfig was modified concurrently",
+                HttpStatus.CONFLICT);
     }
 }

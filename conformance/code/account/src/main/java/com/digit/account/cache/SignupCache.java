@@ -121,7 +121,7 @@ public class SignupCache {
         }
     }
 
-    /** Retrieves the payload, or throws "request ID not found or expired" when absent. */
+    /** Retrieves the payload, or null when it is absent or expired; throws only when Redis fails. */
     public TenantCreateRequest get(String referenceId) {
         String data;
         try {
@@ -130,7 +130,7 @@ public class SignupCache {
             throw new RuntimeException("failed to retrieve payload from Redis: " + cause(e), e);
         }
         if (data == null) {
-            throw new RuntimeException("request ID not found or expired");
+            return null;
         }
         try {
             return objectMapper.readValue(data, TenantCreateRequest.class);

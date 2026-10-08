@@ -19,6 +19,7 @@ public final class ErrorCodes {
     public static final String ROW_VERSION_MISMATCH = "ROW_VERSION_MISMATCH";
     public static final String DATABASE = "DATABASE_ERROR";
     public static final String DOWNSTREAM = "DOWNSTREAM_ERROR"; // a dependency call (e.g. idgen) failed → 502
+    public static final String IDGEN_TEMPLATE_NOT_FOUND = "IDGEN_TEMPLATE_NOT_FOUND"; // no idgen template for the tenant → 500
     public static final String FAILED_TO_HASH = "FAILED_TO_HASH";
     public static final String ENCRYPTION = "ENCRYPTION_ERROR";
     public static final String DECRYPTION = "DECRYPTION_ERROR";

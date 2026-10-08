@@ -42,7 +42,6 @@ public class TenantResponse {
     private Boolean temporaryPasswordEmailed;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Map<String, Object> additionalAttributes;
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     private int version;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private AuditDetail auditDetail;

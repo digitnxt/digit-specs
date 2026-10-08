@@ -55,9 +55,10 @@ public class TenantConfigRepository {
         }
     }
 
-    public TenantConfigEntity getById(String id) {
-        return takeOne("SELECT " + COLS + " FROM " + TABLE + " WHERE id = ? LIMIT 1",
-                new Object[]{id});
+    /** Scoped to the tenant: another tenant's row reads as absent. */
+    public TenantConfigEntity getById(String id, String tenantCode) {
+        return takeOne("SELECT " + COLS + " FROM " + TABLE + " WHERE id = ? AND tenantid = ? LIMIT 1",
+                new Object[]{id, tenantCode});
     }
 
     public TenantConfigEntity getByKey(String tenantCode, String configKey) {
@@ -116,14 +117,20 @@ public class TenantConfigRepository {
         return new Page(rows, totalCount);
     }
 
-    public void update(TenantConfigEntity c) {
+    /**
+     * Compare-and-swap on {@code version}: writes only if the row still has {@code expectedVersion}.
+     * Returns false when it has moved on, so the caller can report the conflict.
+     */
+    public boolean update(TenantConfigEntity c, int expectedVersion) {
         try {
-            jdbc.update("UPDATE " + TABLE + " SET tenantid = ?, configkey = ?, configvalue = ?, "
+            return jdbc.update("UPDATE " + TABLE + " SET tenantid = ?, configkey = ?, configvalue = ?, "
                             + "description = ?, isactive = ?, version = ?, createdby = ?, modifiedby = ?, "
-                            + "createdtime = ?, modifiedtime = ?, requestid = ? WHERE id = ?",
+                            + "createdtime = ?, modifiedtime = ?, requestid = ? "
+                            + "WHERE id = ? AND tenantid = ? AND version = ?",
                     c.getTenantId(), c.getConfigKey(), c.getConfigValue(), c.getDescription(),
                     c.isActive(), c.getVersion(), c.getCreatedBy(), c.getModifiedBy(),
-                    c.getCreatedTime(), c.getModifiedTime(), c.getRequestId(), c.getId());
+                    c.getCreatedTime(), c.getModifiedTime(), c.getRequestId(), c.getId(), c.getTenantId(),
+                    expectedVersion) == 1;
         } catch (RuntimeException e) {
             throw PgErrors.translate(e);
         }

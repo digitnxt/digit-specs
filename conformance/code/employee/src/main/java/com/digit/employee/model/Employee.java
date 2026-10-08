@@ -44,8 +44,8 @@ public class Employee {
     public void setDepartment(String department) { this.department = department; }
     public String getDesignation() { return designation; }
     public void setDesignation(String designation) { this.designation = designation; }
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
+    public boolean getIsActive() { return isActive; }
+    public void setIsActive(boolean isActive) { this.isActive = isActive; }
     public List<Jurisdiction> getJurisdictions() { return jurisdictions; }
     public void setJurisdictions(List<Jurisdiction> jurisdictions) { this.jurisdictions = jurisdictions; }
     public String getTenantId() { return tenantId; }

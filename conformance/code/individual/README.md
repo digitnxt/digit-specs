@@ -265,6 +265,7 @@ Errors are returned as a list of `code` / `message` pairs:
 | `400` | `VALIDATION_ERROR`, `INVALID_REQUEST`, `MISSING_HEADER` |
 | `404` | `NOT_FOUND` |
 | `409` | `UNIQUE_ENTITY_ERROR`, `DUPLICATE_ERROR`, `ROW_VERSION_MISMATCH` |
+| `500` | `IDGEN_TEMPLATE_NOT_FOUND` — no IDGen template for `individualId` in the tenant |
 | `502` | `DOWNSTREAM_ERROR` — IDGen or Vault failed or timed out |
 
 ## Health and Observability

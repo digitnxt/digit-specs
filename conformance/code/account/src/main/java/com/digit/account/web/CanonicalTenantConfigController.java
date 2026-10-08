@@ -53,6 +53,7 @@ public class CanonicalTenantConfigController {
                                                                   @RequestBody(required = false) byte[] body) {
         CanonicalDelegate.Envelope envelope = canonical.parse(body);
         return canonical.envelope(envelope, delegate.updateTenantConfig(
-                id, envelope.clientId(), envelope.requestId(), canonical.payloadBytes(envelope)));
+                id, envelope.tenantCode(), envelope.clientId(), envelope.requestId(),
+                canonical.payloadBytes(envelope)));
     }
 }

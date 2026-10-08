@@ -25,8 +25,8 @@ public class Jurisdiction {
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
     public List<BoundaryRef> getBoundaryRelation() { return boundaryRelation; }
     public void setBoundaryRelation(List<BoundaryRef> boundaryRelation) { this.boundaryRelation = boundaryRelation; }
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
+    public boolean getIsActive() { return isActive; }
+    public void setIsActive(boolean isActive) { this.isActive = isActive; }
     public String getTenantId() { return tenantId; }
     public void setTenantId(String tenantId) { this.tenantId = tenantId; }
     public int getVersion() { return version; }

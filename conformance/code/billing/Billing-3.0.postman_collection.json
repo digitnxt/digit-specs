@@ -1,0 +1,1510 @@
+{
+ "info": {
+  "_postman_id": "ade1a712-f78d-4c41-bbde-7cf443ec1a19",
+  "name": "Billing-3.0 (Java)",
+  "description": "Postman collection covering Business Service, Tax Head, and Demand APIs for the DIGIT Billing service.",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+  "_exporter_id": "32125612"
+ },
+ "item": [
+  {
+   "name": "Business Services",
+   "item": [
+    {
+     "name": "Create business services (bulk)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "[\n  {\n    \"code\": \"PT\",\n    \"name\": \"Property Tax\",\n    \"collectionMode\": \"BOTH\",\n    \"allowedPaymentModes\": [\"UPI\", \"NETBANKING\", \"CASH\"],\n    \"billExpiryDays\": 45,\n    \"partialPaymentAllowed\": true,\n    \"minPayableAmount\": \"10\",\n    \"currency\": \"INR\",\n    \"roundingRuleCode\": \"ROUND_NEAREST\",\n    \"effectiveFrom\": 1735669800000,\n    \"effectiveTo\": 1767205799000,\n    \"isActive\": true\n  },\n  {\n    \"code\": \"WT\",\n    \"name\": \"Water Tax\",\n    \"collectionMode\": \"BOTH\",\n    \"allowedPaymentModes\": [\"UPI\", \"NETBANKING\", \"WALLET\"],\n    \"billExpiryDays\": 45,\n    \"partialPaymentAllowed\": true,\n    \"minPayableAmount\": 10,\n    \"currency\": \"INR\",\n    \"roundingRuleCode\": \"ROUND_NEAREST\",\n    \"effectiveFrom\": 1735669800000,\n    \"effectiveTo\": 1767205799000,\n    \"isActive\": true\n  }\n]"
+      },
+      "url": "{{baseUrl}}/v3/business-services"
+     },
+     "response": []
+    },
+    {
+     "name": "Search business services",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/business-services?code=PT&isActive=true&effectiveOn=1764332308842&limit=25&offset=0"
+     },
+     "response": []
+    },
+    {
+     "name": "Get business service by code",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/business-services/PT"
+     },
+     "response": []
+    },
+    {
+     "name": "Update business service by code",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n    \"name\": \"Property Tax\",\n    \"collectionMode\": \"BOTH\",\n    \"allowedPaymentModes\": [\n        \"UPI\",\n        \"NETBANKING\",\n        \"CARD\",\n        \"CASH\",\n        \"WALLET\"\n    ],\n    \"billExpiryDays\": 45,\n    \"partialPaymentAllowed\": true,\n    \"minPayableAmount\": 10,\n    \"currency\": \"INR\",\n    \"roundingRuleCode\": \"ROUND_NEAREST\",\n    \"effectiveFrom\": 1735669800000,\n    \"effectiveTo\": 1767205799000,\n    \"isActive\": true\n}"
+      },
+      "url": "{{baseUrl}}/v3/business-services/PT"
+     },
+     "response": []
+    },
+    {
+     "name": "Patch business service by code",
+     "request": {
+      "method": "PATCH",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n    \"name\": \"Property Tax Business Service\",\n    \"collectionMode\": \"ONLINE\",\n    \"allowedPaymentModes\": [\n        \"UPI\",\n        \"NETBANKING\",\n        \"CARD\",\n        \"WALLET\"\n    ],\n    \"billExpiryDays\": 60,\n    \"minPayableAmount\": 100,\n    \"roundingRuleCode\": \"ROUND_CEILLING\",\n    \"effectiveFrom\": 1735669800001,\n    \"effectiveTo\": 1767205799001,\n    \"isActive\": true\n}"
+      },
+      "url": "{{baseUrl}}/v3/business-services/PT"
+     },
+     "response": []
+    },
+    {
+     "name": "Delete business service by code",
+     "request": {
+      "method": "DELETE",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/business-services/PT"
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Tax Heads",
+   "item": [
+    {
+     "name": "Create tax heads (bulk)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "[\n    {\n        \"code\": \"PT_EXEMPTION\",\n        \"name\": \"Property Tax Exemption\",\n        \"businessServiceCode\": \"PT\",\n        \"category\": \"OTHER\",\n        \"order\": 1,\n        \"effectiveFrom\": 1735669800000,\n        \"effectiveTo\": 1767205799000,\n        \"isActive\": true\n    },\n    {\n        \"code\": \"PT_REBATE\",\n        \"name\": \"Property Tax Rebate\",\n        \"businessServiceCode\": \"PT\",\n        \"category\": \"REBATE\",\n        \"order\": 2,\n        \"effectiveFrom\": 1735669800000,\n        \"effectiveTo\": 1767205799000,\n        \"isActive\": true\n    },\n    {\n        \"code\": \"PT_ARREAR\",\n        \"name\": \"Property Tax Arrear\",\n        \"businessServiceCode\": \"PT\",\n        \"category\": \"ARREAR\",\n        \"order\": 3,\n        \"effectiveFrom\": 1735669800000,\n        \"effectiveTo\": 1767205799000,\n        \"isActive\": true\n    },\n    {\n        \"code\": \"PT_CESS\",\n        \"name\": \"Property Tax Cess\",\n        \"businessServiceCode\": \"PT\",\n        \"category\": \"CESS\",\n        \"order\": 4,\n        \"effectiveFrom\": 1735669800000,\n        \"effectiveTo\": 1767205799000,\n        \"isActive\": true\n    },\n    {\n        \"code\": \"PT_INTEREST\",\n        \"name\": \"Property Tax Interest\",\n        \"businessServiceCode\": \"PT\",\n        \"category\": \"INTEREST\",\n        \"order\": 5,\n        \"effectiveFrom\": 1735669800000,\n        \"effectiveTo\": 1767205799000,\n        \"isActive\": true\n    },\n    {\n        \"code\": \"PT_PENALTY\",\n        \"name\": \"Property Tax Penalty\",\n        \"businessServiceCode\": \"PT\",\n        \"category\": \"PENALTY\",\n        \"order\": 6,\n        \"effectiveFrom\": 1735669800000,\n        \"effectiveTo\": 1767205799000,\n        \"isActive\": true\n    },\n    {\n        \"code\": \"PT_BASE_TAX\",\n        \"name\": \"Property Tax Base\",\n        \"businessServiceCode\": \"PT\",\n        \"category\": \"TAX\",\n        \"order\": 7,\n        \"effectiveFrom\": 1735669800000,\n        \"effectiveTo\": 1767205799000,\n        \"isActive\": true\n    }\n]"
+      },
+      "url": "{{baseUrl}}/v3/tax-heads"
+     },
+     "response": []
+    },
+    {
+     "name": "Search tax heads",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/tax-heads?code=PT_BASE_TAX&businessServiceCode=PT&category=TAX&isActive=true&limit=25&offset=0"
+     },
+     "response": []
+    },
+    {
+     "name": "Get tax head by code",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/tax-heads/PT_BASE_TAX"
+     },
+     "response": []
+    },
+    {
+     "name": "Update tax head by code",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n    \"name\": \"Property Tax Base\",\n    \"businessServiceCode\": \"PT\",\n    \"category\": \"TAX\",\n    \"order\": 7,\n    \"effectiveFrom\": 1735669800000,\n    \"effectiveTo\": 1767205799000,\n    \"isActive\": true\n}"
+      },
+      "url": "{{baseUrl}}/v3/tax-heads/PT_BASE_TAX"
+     },
+     "response": []
+    },
+    {
+     "name": "Patch tax head by code",
+     "request": {
+      "method": "PATCH",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"name\": \"Property Tax Base (updated)\",\n  \"businessServiceCode\": \"PT\",\n  \"effectiveFrom\": 1735669800000,\n  \"effectiveTo\": 1767205799000,\n  \"isActive\": true\n}"
+      },
+      "url": "{{baseUrl}}/v3/tax-heads/PT_BASE_TAX"
+     },
+     "response": []
+    },
+    {
+     "name": "Delete tax head by code",
+     "request": {
+      "method": "DELETE",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/tax-heads/PT_BASE_TAX"
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Demands",
+   "item": [
+    {
+     "name": "Create demands (bulk)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "[\n  {\n    \"businessServiceCode\": \"PT\",\n    \"periodFrom\": 1735669800000,\n    \"periodTo\": 1767205799000,\n    \"billExpiryDays\": 30,\n    \"consumerCode\": \"PG-PT-0001\",\n    \"payer\": [\"IND-12345\"],\n    \"lineItems\": [\n      {\n        \"taxHeadCode\": \"PT_EXEMPTION\",\n        \"amount\": \"-100\",\n        \"collectedAmount\": \"0\"\n      },\n      {\n        \"taxHeadCode\": \"PT_REBATE\",\n        \"amount\": \"-200\",\n        \"collectedAmount\": \"0\"\n      },\n      {\n        \"taxHeadCode\": \"PT_CESS\",\n        \"amount\": \"200\",\n        \"collectedAmount\": \"0\"\n      },\n      {\n        \"taxHeadCode\": \"PT_BASE_TAX\",\n        \"amount\": \"1500\",\n        \"collectedAmount\": \"0\"\n      }\n    ],\n    \"status\": \"ACTIVE\",\n    \"metadata\": {\n      \"taxPeriod\": \"FY25-26\"\n    }\n  }\n]"
+      },
+      "url": "{{baseUrl}}/v3/demands"
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "if (pm.response.code < 300) {",
+         "    const body = pm.response.json();",
+         "    const value = Array.isArray(body) ? body[0] && body[0].id : body.success && body.success[0] && body.success[0].id;",
+         "    if (value) pm.collectionVariables.set('demandId', value);",
+         "}"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Update demands (bulk)",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "[\n  {\n    \"id\": \"{{demandId}}\",\n    \"businessServiceCode\": \"PT\",\n    \"periodFrom\": 1735669800000,\n    \"periodTo\": 1767205799000,\n    \"billExpiryDays\": 45,\n    \"consumerCode\": \"PG-PT-0001\",\n    \"payer\": [\"IND-12345\"],\n    \"lineItems\": [\n      {\n        \"taxHeadCode\": \"PT_EXEMPTION\",\n        \"amount\": \"-100\",\n        \"collectedAmount\": \"0\"\n      },\n      {\n        \"taxHeadCode\": \"PT_REBATE\",\n        \"amount\": \"-200\",\n        \"collectedAmount\": \"0\"\n      },\n      {\n        \"taxHeadCode\": \"PT_CESS\",\n        \"amount\": \"200\",\n        \"collectedAmount\": \"200\"\n      },\n      {\n        \"taxHeadCode\": \"PT_BASE_TAX\",\n        \"amount\": \"1500\",\n        \"collectedAmount\": \"500\"\n      }\n    ],\n    \"status\": \"ACTIVE\",\n    \"metadata\": {\n      \"taxPeriod\": \"FY25-26\"\n    }\n  }\n]"
+      },
+      "url": "{{baseUrl}}/v3/demands"
+     },
+     "response": []
+    },
+    {
+     "name": "Search demands",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/demands?businessServiceCode=PT&consumerCode=PG-PT-0001&status=ACTIVE&createdFrom=1735669800000&createdTo=1767205799000&limit=25&offset=0"
+     },
+     "response": []
+    },
+    {
+     "name": "Get demand by ID",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/demands/{{demandId}}"
+     },
+     "response": []
+    },
+    {
+     "name": "Patch demand by ID",
+     "request": {
+      "method": "PATCH",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n    \"consumerCode\": \"PG-PT-0001\",\n    \"payer\": [\n        \"IND-12345\",\n        \"IND-123456\"\n    ],\n    \"status\": \"ACTIVE\",\n    \"lineItems\": [\n        {\n            \"taxHeadCode\": \"PT_EXEMPTION\",\n            \"amount\": -100,\n            \"collectedAmount\": 0\n        },\n        {\n            \"taxHeadCode\": \"PT_REBATE\",\n            \"amount\": -200,\n            \"collectedAmount\": 0\n        },\n        {\n            \"taxHeadCode\": \"PT_CESS\",\n            \"amount\": 200,\n            \"collectedAmount\": 200\n        },\n        {\n            \"taxHeadCode\": \"PT_BASE_TAX\",\n            \"amount\": 1500,\n            \"collectedAmount\": 500\n        }\n    ]\n}"
+      },
+      "url": "{{baseUrl}}/v3/demands/{{demandId}}"
+     },
+     "response": []
+    },
+    {
+     "name": "Freeze demand by ID",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/demands/{{demandId}}/freeze"
+     },
+     "response": []
+    },
+    {
+     "name": "Cancel demand by ID",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"reasonCode\": \"WRONG_ASSESSMENT\",\n  \"note\": \"Assessment superseded by new survey\"\n}"
+      },
+      "url": "{{baseUrl}}/v3/demands/{{demandId}}/cancel"
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Bills",
+   "item": [
+    {
+     "name": "Generate Bill",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n    \"businessServiceCode\": \"PT\",\n    \"consumerCode\": \"PG-PT-0001\",\n    \"payerId\": \"IND-12345\",\n    \"payerName\": \"Rajesh Kumar\",\n    \"payerAddress\": \"House No. 45, Sector 7, Amritsar, Punjab - 143001\",\n    \"payerMobileNumber\": \"+919876543210\",\n    \"payerEmail\": \"rajesh.kumar@gmail.com\"\n}"
+      },
+      "url": "{{baseUrl}}/v3/bills/generate"
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "if (pm.response.code < 300) {",
+         "    const body = pm.response.json();",
+         "    const value = body.id;",
+         "    if (value) pm.collectionVariables.set('billId', value);",
+         "}"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Search Bills",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/bills?businessServiceCode=PT&consumerCodes=PG-PT-0001,PG-PT-0002&status=ACTIVE&billNumbers=BILLNO-PT-20260224-0013-00,BILLNO-PT-20260224-0012-SB&billIds={{billId}}&mobileNumber=+919876543210&email=rajesh.kumar@gmail.com&offset=0&limit=10"
+     },
+     "response": []
+    },
+    {
+     "name": "Cancel Bill",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n    \"businessServiceCode\": \"PT\",\n    \"consumerCode\": \"PG-PT-0001\",\n    \"statusToBeUpdated\": \"CANCELLED\",\n    \"metadata\": {\n        \"reason\": \"Consumer request\",\n        \"cancelledBy\": \"billing-admin\",\n        \"remarks\": \"Bill cancelled due to consumer dispute\"\n    }\n}"
+      },
+      "url": "{{baseUrl}}/v3/bills/cancel"
+     },
+     "response": []
+    },
+    {
+     "name": "Generate Bulk Bill",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n    \"businessServiceCode\": \"AD\",\n    \"metadata\": {\n        \"taxPeriod\": \"FY25-26\"\n    }\n}"
+      },
+      "url": "{{baseUrl}}/v3/bills/bulk-generate"
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Payments",
+   "item": [
+    {
+     "name": "Create Payment",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"totalAmountPaid\": 1400.00,\n  \"paymentMode\": \"CASH\",\n  \"paidBy\": \"John Doe\",\n  \"payerName\": \"John Doe\",\n  \"payerMobileNumber\": \"+919876543210\",\n  \"payerEmail\": \"john.doe@example.com\",\n  \"paymentDetails\": [\n    {\n      \"totalAmountPaid\": 1400.00,\n      \"billId\": \"{{billId}}\"\n    }\n  ]\n}"
+      },
+      "url": "{{baseUrl}}/v3/payments"
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "if (pm.response.code < 300) {",
+         "    const body = pm.response.json();",
+         "    const value = body.id;",
+         "    if (value) pm.collectionVariables.set('paymentId', value);",
+         "}"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Search Payment",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/payments?paymentIds={{paymentId}}&billIds={{billId}}&receiptNumbers=PT/2026-0014-S6,PT/2026-0002-60&consumerCodes=PG-PT-0001,PG-PT-0002&paymentStatuses=NEW,DEPOSITED&instrumentStatuses=APPROVED,REMITTED&paymentModes=CASH,UPI&payerIds=IND-12345,IND-12346&businessServiceCode=PT&transactionNumber=pg-2026-02-23-MU&payerMobileNumber=+919876543210&fromDate=1735669800000&toDate=1767205800000&limit=25&offset=0"
+     },
+     "response": []
+    },
+    {
+     "name": "Get payment By ID",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/payments/{{paymentId}}"
+     },
+     "response": []
+    },
+    {
+     "name": "Validate Payment",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json"
+       },
+       {
+        "key": "X-Tenant-ID",
+        "value": "{{tenantId}}"
+       },
+       {
+        "key": "X-User-ID",
+        "value": "{{userId}}"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"totalAmountPaid\": 1400.00,\n  \"paymentMode\": \"CASH\",\n  \"paidBy\": \"John Doe\",\n  \"payerName\": \"John Doe\",\n  \"payerMobileNumber\": \"+919876543210\",\n  \"payerEmail\": \"john.doe@example.com\",\n  \"paymentDetails\": [\n    {\n      \"totalAmountPaid\": 1400.00,\n      \"billId\": \"{{billId}}\"\n    }\n  ]\n}"
+      },
+      "url": "{{baseUrl}}/v3/payments/validate"
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Canonical Business Services",
+   "description": "Header-free twins of the Business Services routes (billing-canonical.yml): request metadata moves from X-* headers into `requestMetadata`, payloads sit under `data`, and errors answer as {responseMetadata, errors}.\n\nRun-order coupling is inherited from the folder above and deliberately mirrored rather than silently fixed: the Business Services folder ends by deleting PT, which every later folder needs, and the id variables are only populated by the create requests. Run a folder against a fresh database, or skip the deletes, to see the green path. Verified: on a fresh database the canonical folders return exactly the same 27 status codes as their 3.0 twins, request for request.",
+   "item": [
+    {
+     "name": "Create business services (bulk) - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\":\n  [\n    {\n      \"code\": \"PT\",\n      \"name\": \"Property Tax\",\n      \"collectionMode\": \"BOTH\",\n      \"allowedPaymentModes\": [\"UPI\", \"NETBANKING\", \"CASH\"],\n      \"billExpiryDays\": 45,\n      \"partialPaymentAllowed\": true,\n      \"minPayableAmount\": \"10\",\n      \"currency\": \"INR\",\n      \"roundingRuleCode\": \"ROUND_NEAREST\",\n      \"effectiveFrom\": 1735669800000,\n      \"effectiveTo\": 1767205799000,\n      \"isActive\": true\n    },\n    {\n      \"code\": \"WT\",\n      \"name\": \"Water Tax\",\n      \"collectionMode\": \"BOTH\",\n      \"allowedPaymentModes\": [\"UPI\", \"NETBANKING\", \"WALLET\"],\n      \"billExpiryDays\": 45,\n      \"partialPaymentAllowed\": true,\n      \"minPayableAmount\": 10,\n      \"currency\": \"INR\",\n      \"roundingRuleCode\": \"ROUND_NEAREST\",\n      \"effectiveFrom\": 1735669800000,\n      \"effectiveTo\": 1767205799000,\n      \"isActive\": true\n    }\n  ]\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/business-services",
+      "description": "Header-free twin of \"Create business services (bulk)\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Search business services - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/business-services?code=PT&isActive=true&effectiveOn=1764332308842&limit=25&offset=0",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Search business services\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Get business service by code - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/business-services/PT",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Get business service by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Update business service by code - Canonical",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n      \"name\": \"Property Tax\",\n      \"collectionMode\": \"BOTH\",\n      \"allowedPaymentModes\": [\n          \"UPI\",\n          \"NETBANKING\",\n          \"CARD\",\n          \"CASH\",\n          \"WALLET\"\n      ],\n      \"billExpiryDays\": 45,\n      \"partialPaymentAllowed\": true,\n      \"minPayableAmount\": 10,\n      \"currency\": \"INR\",\n      \"roundingRuleCode\": \"ROUND_NEAREST\",\n      \"effectiveFrom\": 1735669800000,\n      \"effectiveTo\": 1767205799000,\n      \"isActive\": true\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/business-services/PT",
+      "description": "Header-free twin of \"Update business service by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Patch business service by code - Canonical",
+     "request": {
+      "method": "PATCH",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n      \"name\": \"Property Tax Business Service\",\n      \"collectionMode\": \"ONLINE\",\n      \"allowedPaymentModes\": [\n          \"UPI\",\n          \"NETBANKING\",\n          \"CARD\",\n          \"WALLET\"\n      ],\n      \"billExpiryDays\": 60,\n      \"minPayableAmount\": 100,\n      \"roundingRuleCode\": \"ROUND_CEILLING\",\n      \"effectiveFrom\": 1735669800001,\n      \"effectiveTo\": 1767205799001,\n      \"isActive\": true\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/business-services/PT",
+      "description": "Header-free twin of \"Patch business service by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Delete business service by code - Canonical",
+     "request": {
+      "method": "DELETE",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/business-services/PT",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Delete business service by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Canonical Tax Heads",
+   "description": "Header-free twins of the Tax Heads routes (billing-canonical.yml): request metadata moves from X-* headers into `requestMetadata`, payloads sit under `data`, and errors answer as {responseMetadata, errors}.\n\nRun-order coupling is inherited from the folder above and deliberately mirrored rather than silently fixed: the Business Services folder ends by deleting PT, which every later folder needs, and the id variables are only populated by the create requests. Run a folder against a fresh database, or skip the deletes, to see the green path. Verified: on a fresh database the canonical folders return exactly the same 27 status codes as their 3.0 twins, request for request.",
+   "item": [
+    {
+     "name": "Create tax heads (bulk) - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\":\n  [\n      {\n          \"code\": \"PT_EXEMPTION\",\n          \"name\": \"Property Tax Exemption\",\n          \"businessServiceCode\": \"PT\",\n          \"category\": \"OTHER\",\n          \"order\": 1,\n          \"effectiveFrom\": 1735669800000,\n          \"effectiveTo\": 1767205799000,\n          \"isActive\": true\n      },\n      {\n          \"code\": \"PT_REBATE\",\n          \"name\": \"Property Tax Rebate\",\n          \"businessServiceCode\": \"PT\",\n          \"category\": \"REBATE\",\n          \"order\": 2,\n          \"effectiveFrom\": 1735669800000,\n          \"effectiveTo\": 1767205799000,\n          \"isActive\": true\n      },\n      {\n          \"code\": \"PT_ARREAR\",\n          \"name\": \"Property Tax Arrear\",\n          \"businessServiceCode\": \"PT\",\n          \"category\": \"ARREAR\",\n          \"order\": 3,\n          \"effectiveFrom\": 1735669800000,\n          \"effectiveTo\": 1767205799000,\n          \"isActive\": true\n      },\n      {\n          \"code\": \"PT_CESS\",\n          \"name\": \"Property Tax Cess\",\n          \"businessServiceCode\": \"PT\",\n          \"category\": \"CESS\",\n          \"order\": 4,\n          \"effectiveFrom\": 1735669800000,\n          \"effectiveTo\": 1767205799000,\n          \"isActive\": true\n      },\n      {\n          \"code\": \"PT_INTEREST\",\n          \"name\": \"Property Tax Interest\",\n          \"businessServiceCode\": \"PT\",\n          \"category\": \"INTEREST\",\n          \"order\": 5,\n          \"effectiveFrom\": 1735669800000,\n          \"effectiveTo\": 1767205799000,\n          \"isActive\": true\n      },\n      {\n          \"code\": \"PT_PENALTY\",\n          \"name\": \"Property Tax Penalty\",\n          \"businessServiceCode\": \"PT\",\n          \"category\": \"PENALTY\",\n          \"order\": 6,\n          \"effectiveFrom\": 1735669800000,\n          \"effectiveTo\": 1767205799000,\n          \"isActive\": true\n      },\n      {\n          \"code\": \"PT_BASE_TAX\",\n          \"name\": \"Property Tax Base\",\n          \"businessServiceCode\": \"PT\",\n          \"category\": \"TAX\",\n          \"order\": 7,\n          \"effectiveFrom\": 1735669800000,\n          \"effectiveTo\": 1767205799000,\n          \"isActive\": true\n      }\n  ]\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/tax-heads",
+      "description": "Header-free twin of \"Create tax heads (bulk)\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Search tax heads - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/tax-heads?code=PT_BASE_TAX&businessServiceCode=PT&category=TAX&isActive=true&limit=25&offset=0",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Search tax heads\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Get tax head by code - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/tax-heads/PT_BASE_TAX",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Get tax head by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Update tax head by code - Canonical",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n      \"name\": \"Property Tax Base\",\n      \"businessServiceCode\": \"PT\",\n      \"category\": \"TAX\",\n      \"order\": 7,\n      \"effectiveFrom\": 1735669800000,\n      \"effectiveTo\": 1767205799000,\n      \"isActive\": true\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/tax-heads/PT_BASE_TAX",
+      "description": "Header-free twin of \"Update tax head by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Patch tax head by code - Canonical",
+     "request": {
+      "method": "PATCH",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n    \"name\": \"Property Tax Base (updated)\",\n    \"businessServiceCode\": \"PT\",\n    \"effectiveFrom\": 1735669800000,\n    \"effectiveTo\": 1767205799000,\n    \"isActive\": true\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/tax-heads/PT_BASE_TAX",
+      "description": "Header-free twin of \"Patch tax head by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Delete tax head by code - Canonical",
+     "request": {
+      "method": "DELETE",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/tax-heads/PT_BASE_TAX",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Delete tax head by code\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Canonical Demands",
+   "description": "Header-free twins of the Demands routes (billing-canonical.yml): request metadata moves from X-* headers into `requestMetadata`, payloads sit under `data`, and errors answer as {responseMetadata, errors}.\n\nRun-order coupling is inherited from the folder above and deliberately mirrored rather than silently fixed: the Business Services folder ends by deleting PT, which every later folder needs, and the id variables are only populated by the create requests. Run a folder against a fresh database, or skip the deletes, to see the green path. Verified: on a fresh database the canonical folders return exactly the same 27 status codes as their 3.0 twins, request for request.",
+   "item": [
+    {
+     "name": "Create demands (bulk) - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\":\n  [\n    {\n      \"businessServiceCode\": \"PT\",\n      \"periodFrom\": 1735669800000,\n      \"periodTo\": 1767205799000,\n      \"billExpiryDays\": 30,\n      \"consumerCode\": \"PG-PT-0001\",\n      \"payer\": [\"IND-12345\"],\n      \"lineItems\": [\n        {\n          \"taxHeadCode\": \"PT_EXEMPTION\",\n          \"amount\": \"-100\",\n          \"collectedAmount\": \"0\"\n        },\n        {\n          \"taxHeadCode\": \"PT_REBATE\",\n          \"amount\": \"-200\",\n          \"collectedAmount\": \"0\"\n        },\n        {\n          \"taxHeadCode\": \"PT_CESS\",\n          \"amount\": \"200\",\n          \"collectedAmount\": \"0\"\n        },\n        {\n          \"taxHeadCode\": \"PT_BASE_TAX\",\n          \"amount\": \"1500\",\n          \"collectedAmount\": \"0\"\n        }\n      ],\n      \"status\": \"ACTIVE\",\n      \"metadata\": {\n        \"taxPeriod\": \"FY25-26\"\n      }\n    }\n  ]\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/demands",
+      "description": "Header-free twin of \"Create demands (bulk)\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "if (pm.response.code < 300) {",
+         "    const body = pm.response.json().data;",
+         "    // 201 wraps the plain array; 207 wraps the {success, failures} envelope",
+         "    const value = Array.isArray(body) ? body[0] && body[0].id : body.success && body.success[0] && body.success[0].id;",
+         "    if (value) pm.collectionVariables.set('canonicalDemandId', value);",
+         "}"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Update demands (bulk) - Canonical",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\":\n  [\n    {\n      \"id\": \"{{canonicalDemandId}}\",\n      \"businessServiceCode\": \"PT\",\n      \"periodFrom\": 1735669800000,\n      \"periodTo\": 1767205799000,\n      \"billExpiryDays\": 45,\n      \"consumerCode\": \"PG-PT-0001\",\n      \"payer\": [\"IND-12345\"],\n      \"lineItems\": [\n        {\n          \"taxHeadCode\": \"PT_EXEMPTION\",\n          \"amount\": \"-100\",\n          \"collectedAmount\": \"0\"\n        },\n        {\n          \"taxHeadCode\": \"PT_REBATE\",\n          \"amount\": \"-200\",\n          \"collectedAmount\": \"0\"\n        },\n        {\n          \"taxHeadCode\": \"PT_CESS\",\n          \"amount\": \"200\",\n          \"collectedAmount\": \"200\"\n        },\n        {\n          \"taxHeadCode\": \"PT_BASE_TAX\",\n          \"amount\": \"1500\",\n          \"collectedAmount\": \"500\"\n        }\n      ],\n      \"status\": \"ACTIVE\",\n      \"metadata\": {\n        \"taxPeriod\": \"FY25-26\"\n      }\n    }\n  ]\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/demands",
+      "description": "Header-free twin of \"Update demands (bulk)\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Search demands - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/demands?businessServiceCode=PT&consumerCode=PG-PT-0001&status=ACTIVE&createdFrom=1735669800000&createdTo=1767205799000&limit=25&offset=0",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Search demands\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Get demand by ID - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/demands/{{canonicalDemandId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Get demand by ID\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Patch demand by ID - Canonical",
+     "request": {
+      "method": "PATCH",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n      \"consumerCode\": \"PG-PT-0001\",\n      \"payer\": [\n          \"IND-12345\",\n          \"IND-123456\"\n      ],\n      \"status\": \"ACTIVE\",\n      \"lineItems\": [\n          {\n              \"taxHeadCode\": \"PT_EXEMPTION\",\n              \"amount\": -100,\n              \"collectedAmount\": 0\n          },\n          {\n              \"taxHeadCode\": \"PT_REBATE\",\n              \"amount\": -200,\n              \"collectedAmount\": 0\n          },\n          {\n              \"taxHeadCode\": \"PT_CESS\",\n              \"amount\": 200,\n              \"collectedAmount\": 200\n          },\n          {\n              \"taxHeadCode\": \"PT_BASE_TAX\",\n              \"amount\": 1500,\n              \"collectedAmount\": 500\n          }\n      ]\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/demands/{{canonicalDemandId}}",
+      "description": "Header-free twin of \"Patch demand by ID\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Freeze demand by ID - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/demands/{{canonicalDemandId}}/freeze",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Freeze demand by ID\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Cancel demand by ID - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n    \"reasonCode\": \"WRONG_ASSESSMENT\",\n    \"note\": \"Assessment superseded by new survey\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/demands/{{canonicalDemandId}}/cancel",
+      "description": "Header-free twin of \"Cancel demand by ID\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Canonical Bills",
+   "description": "Header-free twins of the Bills routes (billing-canonical.yml): request metadata moves from X-* headers into `requestMetadata`, payloads sit under `data`, and errors answer as {responseMetadata, errors}.\n\nRun-order coupling is inherited from the folder above and deliberately mirrored rather than silently fixed: the Business Services folder ends by deleting PT, which every later folder needs, and the id variables are only populated by the create requests. Run a folder against a fresh database, or skip the deletes, to see the green path. Verified: on a fresh database the canonical folders return exactly the same 27 status codes as their 3.0 twins, request for request.",
+   "item": [
+    {
+     "name": "Generate Bill - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n      \"businessServiceCode\": \"PT\",\n      \"consumerCode\": \"PG-PT-0001\",\n      \"payerId\": \"IND-12345\",\n      \"payerName\": \"Rajesh Kumar\",\n      \"payerAddress\": \"House No. 45, Sector 7, Amritsar, Punjab - 143001\",\n      \"payerMobileNumber\": \"+919876543210\",\n      \"payerEmail\": \"rajesh.kumar@gmail.com\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/bills/generate",
+      "description": "Header-free twin of \"Generate Bill\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "if (pm.response.code < 300) {",
+         "    const value = pm.response.json().data.id;",
+         "    if (value) pm.collectionVariables.set('canonicalBillId', value);",
+         "}"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Search Bills - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/bills?businessServiceCode=PT&consumerCodes=PG-PT-0001,PG-PT-0002&status=ACTIVE&billNumbers=BILLNO-PT-20260224-0013-00,BILLNO-PT-20260224-0012-SB&billIds={{canonicalBillId}}&mobileNumber=+919876543210&email=rajesh.kumar@gmail.com&offset=0&limit=10",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Search Bills\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Cancel Bill - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n      \"businessServiceCode\": \"PT\",\n      \"consumerCode\": \"PG-PT-0001\",\n      \"statusToBeUpdated\": \"CANCELLED\",\n      \"metadata\": {\n          \"reason\": \"Consumer request\",\n          \"cancelledBy\": \"billing-admin\",\n          \"remarks\": \"Bill cancelled due to consumer dispute\"\n      }\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/bills/cancel",
+      "description": "Header-free twin of \"Cancel Bill\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    },
+    {
+     "name": "Generate Bulk Bill - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n      \"businessServiceCode\": \"AD\",\n      \"metadata\": {\n          \"taxPeriod\": \"FY25-26\"\n      }\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/bills/bulk-generate",
+      "description": "Header-free twin of \"Generate Bulk Bill\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    }
+   ]
+  },
+  {
+   "name": "Canonical Payments",
+   "description": "Header-free twins of the Payments routes (billing-canonical.yml): request metadata moves from X-* headers into `requestMetadata`, payloads sit under `data`, and errors answer as {responseMetadata, errors}.\n\nRun-order coupling is inherited from the folder above and deliberately mirrored rather than silently fixed: the Business Services folder ends by deleting PT, which every later folder needs, and the id variables are only populated by the create requests. Run a folder against a fresh database, or skip the deletes, to see the green path. Verified: on a fresh database the canonical folders return exactly the same 27 status codes as their 3.0 twins, request for request.",
+   "item": [
+    {
+     "name": "Create Payment - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n    \"totalAmountPaid\": 1400.00,\n    \"paymentMode\": \"CASH\",\n    \"paidBy\": \"John Doe\",\n    \"payerName\": \"John Doe\",\n    \"payerMobileNumber\": \"+919876543210\",\n    \"payerEmail\": \"john.doe@example.com\",\n    \"paymentDetails\": [\n      {\n        \"totalAmountPaid\": 1400.00,\n        \"billId\": \"{{canonicalBillId}}\"\n      }\n    ]\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/payments",
+      "description": "Header-free twin of \"Create Payment\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": [],
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "if (pm.response.code < 300) {",
+         "    const value = pm.response.json().data.id;",
+         "    if (value) pm.collectionVariables.set('canonicalPaymentId', value);",
+         "}"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Search Payment - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/payments?paymentIds={{canonicalPaymentId}}&billIds={{canonicalBillId}}&receiptNumbers=PT/2026-0014-S6,PT/2026-0002-60&consumerCodes=PG-PT-0001,PG-PT-0002&paymentStatuses=NEW,DEPOSITED&instrumentStatuses=APPROVED,REMITTED&paymentModes=CASH,UPI&payerIds=IND-12345,IND-12346&businessServiceCode=PT&transactionNumber=pg-2026-02-23-MU&payerMobileNumber=+919876543210&fromDate=1735669800000&toDate=1767205800000&limit=25&offset=0",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Search Payment\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Get payment By ID - Canonical",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "url": "{{baseUrl}}/v3/canonical/payments/{{canonicalPaymentId}}",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\"\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "description": "Header-free twin of \"Get payment By ID\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged.\n\nNOTE — Postman prunes the body from GET requests by default: on import an exported cURL shows `--data ''`, and newman sends nothing, so the service answers 400 MISSING_HEADER requestMetadata.tenantId. This request sets `protocolProfileBehavior.disableBodyPruning: true`, which keeps the body on import and on send. Keep that flag if you copy this request."
+     },
+     "response": [],
+     "protocolProfileBehavior": {
+      "disableBodyPruning": true
+     }
+    },
+    {
+     "name": "Validate Payment - Canonical",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Content-Type",
+        "value": "application/json",
+        "type": "text"
+       }
+      ],
+      "body": {
+       "mode": "raw",
+       "raw": "{\n  \"requestMetadata\": {\n    \"ts\": {{ts}},\n    \"msgId\": \"{{ts}}|en_IN\",\n    \"requestId\": \"4f0b1c8e-72a1-4d2e-9c31-7f5a2e6b8d40\",\n    \"correlationId\": \"0c9e6b8e-1c3a-4c0e-9a1a-2c4b7f0d5e11\",\n    \"tenantId\": \"{{tenantId}}\",\n    \"userInfo\": { \"userId\": \"{{userId}}\" }\n  },\n  \"data\": {\n    \"totalAmountPaid\": 1400.00,\n    \"paymentMode\": \"CASH\",\n    \"paidBy\": \"John Doe\",\n    \"payerName\": \"John Doe\",\n    \"payerMobileNumber\": \"+919876543210\",\n    \"payerEmail\": \"john.doe@example.com\",\n    \"paymentDetails\": [\n      {\n        \"totalAmountPaid\": 1400.00,\n        \"billId\": \"{{canonicalBillId}}\"\n      }\n    ]\n  }\n}",
+       "options": {
+        "raw": {
+         "language": "json"
+        }
+       }
+      },
+      "url": "{{baseUrl}}/v3/canonical/payments/validate",
+      "description": "Header-free twin of \"Validate Payment\". X-Tenant-ID / X-User-ID move into requestMetadata; query and path parameters are unchanged."
+     },
+     "response": []
+    }
+   ]
+  }
+ ],
+ "variable": [
+  {
+   "key": "baseUrl",
+   "value": "http://localhost:8080/billing"
+  },
+  {
+   "key": "tenantId",
+   "value": "pg"
+  },
+  {
+   "key": "userId",
+   "value": "billing-user"
+  },
+  {
+   "key": "demandId",
+   "value": "",
+   "description": "set by 'Create demands (bulk)'"
+  },
+  {
+   "key": "billId",
+   "value": "",
+   "description": "set by 'Generate Bill'"
+  },
+  {
+   "key": "paymentId",
+   "value": "",
+   "description": "set by 'Create Payment'"
+  },
+  {
+   "key": "ts",
+   "value": "1712830200000"
+  },
+  {
+   "key": "canonicalDemandId",
+   "value": ""
+  },
+  {
+   "key": "canonicalBillId",
+   "value": ""
+  },
+  {
+   "key": "canonicalPaymentId",
+   "value": ""
+  }
+ ],
+ "event": [
+  {
+   "listen": "prerequest",
+   "script": {
+    "type": "text/javascript",
+    "exec": [
+     "// RequestMetadata.ts must be epoch MILLISECONDS (13 digits);",
+     "// Postman's {{$timestamp}} is seconds, so it is computed here instead.",
+     "pm.collectionVariables.set('ts', Date.now());"
+    ]
+   }
+  }
+ ]
+}

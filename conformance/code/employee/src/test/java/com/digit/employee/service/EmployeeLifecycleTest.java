@@ -25,7 +25,7 @@ class EmployeeLifecycleTest {
     void deactivate_alreadyInactive_is409() {
         EmployeeRepository repo = Mockito.mock(EmployeeRepository.class);
         Employee e = new Employee();
-        e.setActive(false);
+        e.setIsActive(false);
         Mockito.when(repo.findByUUID("id", "t1")).thenReturn(e);
 
         CustomException ex = assertThrows(CustomException.class,
@@ -38,7 +38,7 @@ class EmployeeLifecycleTest {
     void reactivate_alreadyActive_is409() {
         EmployeeRepository repo = Mockito.mock(EmployeeRepository.class);
         Employee e = new Employee();
-        e.setActive(true);
+        e.setIsActive(true);
         Mockito.when(repo.findByUUID("id", "t1")).thenReturn(e);
 
         CustomException ex = assertThrows(CustomException.class,

@@ -50,9 +50,8 @@ public class EmployeeResponse {
     public void setDesignation(String designation) { this.designation = designation; }
 
     @JsonInclude(JsonInclude.Include.ALWAYS)
-    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
+    public boolean getIsActive() { return isActive; }
+    public void setIsActive(boolean isActive) { this.isActive = isActive; }
 
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public int getVersion() { return version; }

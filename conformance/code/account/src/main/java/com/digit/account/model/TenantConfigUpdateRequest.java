@@ -19,6 +19,8 @@ public class TenantConfigUpdateRequest {
     // Boxed rather than presence-tracked like description: null is already unambiguous for a
     // Boolean, so absent means retain and only a literal true/false flips the flag.
     private Boolean isActive;
+    // The version the client last read. Optional; when sent, the update applies only if the row still has it.
+    private Integer version;
 
     @JsonProperty("isActive")
     public Boolean getIsActive() { return isActive; }
@@ -35,4 +37,6 @@ public class TenantConfigUpdateRequest {
         this.descriptionPresent = true;
     }
     public boolean isDescriptionPresent() { return descriptionPresent; }
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
 }

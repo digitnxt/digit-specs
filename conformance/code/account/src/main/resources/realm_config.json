@@ -367,14 +367,14 @@
       },
       {
         "name": "view:boundary",
-        "description": "Fine-grained permission role. Covers: GET /boundary/v3/boundaries, GET /boundary/v3/hierarchy, GET /boundary/v3/relationship",
+        "description": "Fine-grained permission role. Covers: GET /boundary/v3/boundaries, GET /boundary/v3/hierarchy, GET /boundary/v3/relationship, POST /boundary-management/v1/_generate-search, POST /boundary-management/v1/_process-search",
         "composite": false,
         "clientRole": false,
         "attributes": {}
       },
       {
         "name": "manage:boundary",
-        "description": "Fine-grained permission role. Covers: POST /boundary/v3/boundaries, PUT /boundary/v3/boundaries/{id}, POST /boundary/v3/hierarchy, PUT /boundary/v3/hierarchy/{id}, POST /boundary/v3/relationship, PUT /boundary/v3/relationship/{id}",
+        "description": "Fine-grained permission role. Covers create and update on /boundary/v3 boundaries, hierarchy and relationship, and generate, process and their searches on /boundary-management/v1.",
         "composite": false,
         "clientRole": false,
         "attributes": {}
@@ -472,21 +472,21 @@
       },
       {
         "name": "send:notification",
-        "description": "Fine-grained permission role. Covers: POST /notification/v3/email/send, POST /notification/v3/sms/send",
+        "description": "Fine-grained permission role. Covers: POST /notification/v3/email/send, POST /notification/v3/sms/send, POST /notify/v3/notifications",
         "composite": false,
         "clientRole": false,
         "attributes": {}
       },
       {
         "name": "view:notification-template",
-        "description": "Fine-grained permission role. Covers: GET /notification/v3/template",
+        "description": "Fine-grained permission role. Covers: GET /notification/v3/template, GET /notify/v3/notification-configs, GET /notify/v3/notification-configs/{id}",
         "composite": false,
         "clientRole": false,
         "attributes": {}
       },
       {
         "name": "manage:notification-template",
-        "description": "Fine-grained permission role. Covers: POST /notification/v3/template, PUT /notification/v3/template, DELETE /notification/v3/template, POST /notification/v3/template/preview",
+        "description": "Fine-grained permission role. Covers create, update, delete and preview on /notification/v3/template, and read, create, update and delete on /notify/v3/notification-configs.",
         "composite": false,
         "clientRole": false,
         "attributes": {}
@@ -2147,6 +2147,58 @@
             "icon_uri": ""
           },
           {
+            "name": "boundary-management-v1-generate",
+            "ownerManagedAccess": false,
+            "displayName": "Boundary Management V1 Generate",
+            "attributes": {},
+            "uris": [
+              "/boundary-management/v1/_generate"
+            ],
+            "scopes": [
+              "post"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "boundary-management-v1-generate-search",
+            "ownerManagedAccess": false,
+            "displayName": "Boundary Management V1 Generate Search",
+            "attributes": {},
+            "uris": [
+              "/boundary-management/v1/_generate-search"
+            ],
+            "scopes": [
+              "post"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "boundary-management-v1-process",
+            "ownerManagedAccess": false,
+            "displayName": "Boundary Management V1 Process",
+            "attributes": {},
+            "uris": [
+              "/boundary-management/v1/_process"
+            ],
+            "scopes": [
+              "post"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "boundary-management-v1-process-search",
+            "ownerManagedAccess": false,
+            "displayName": "Boundary Management V1 Process Search",
+            "attributes": {},
+            "uris": [
+              "/boundary-management/v1/_process-search"
+            ],
+            "scopes": [
+              "post"
+            ],
+            "icon_uri": ""
+          },
+          {
             "name": "employee-v3-employees",
             "ownerManagedAccess": false,
             "displayName": "Employee V3 Employees",
@@ -3011,6 +3063,102 @@
             ],
             "scopes": [
               "post"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "notify-v3-notifications",
+            "ownerManagedAccess": false,
+            "displayName": "Notify V3 Notifications",
+            "attributes": {},
+            "uris": [
+              "/notify/v3/notifications"
+            ],
+            "scopes": [
+              "post"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "notify-v3-notification-configs",
+            "ownerManagedAccess": false,
+            "displayName": "Notify V3 Notification Configs",
+            "attributes": {},
+            "uris": [
+              "/notify/v3/notification-configs"
+            ],
+            "scopes": [
+              "post",
+              "get"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "notify-v3-notification-configs-id",
+            "ownerManagedAccess": false,
+            "displayName": "Notify V3 Notification Configs (by ID)",
+            "attributes": {},
+            "uris": [
+              "/notify/v3/notification-configs/{id}"
+            ],
+            "scopes": [
+              "get",
+              "put",
+              "delete"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "notify-v3-provider-mappings",
+            "ownerManagedAccess": false,
+            "displayName": "Notify V3 Provider Mappings",
+            "attributes": {},
+            "uris": [
+              "/notify/v3/provider-mappings"
+            ],
+            "scopes": [
+              "post",
+              "get"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "notify-v3-provider-mappings-id",
+            "ownerManagedAccess": false,
+            "displayName": "Notify V3 Provider Mappings (by ID)",
+            "attributes": {},
+            "uris": [
+              "/notify/v3/provider-mappings/{id}"
+            ],
+            "scopes": [
+              "put",
+              "delete"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "notify-v3-providers",
+            "ownerManagedAccess": false,
+            "displayName": "Notify V3 Providers",
+            "attributes": {},
+            "uris": [
+              "/notify/v3/providers"
+            ],
+            "scopes": [
+              "get"
+            ],
+            "icon_uri": ""
+          },
+          {
+            "name": "notify-v3-providers-id-status",
+            "ownerManagedAccess": false,
+            "displayName": "Notify V3 Providers Status (by ID)",
+            "attributes": {},
+            "uris": [
+              "/notify/v3/providers/{id}/status"
+            ],
+            "scopes": [
+              "patch"
             ],
             "icon_uri": ""
           },
@@ -5640,6 +5788,54 @@
             }
           },
           {
+            "name": "boundary-management-v1-generate-post-permission",
+            "description": "Permission for POST scope on boundary-management-v1-generate resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"boundary-management-v1-generate\"]",
+              "scopes": "[\"post\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"manage-boundary-policy\"]"
+            }
+          },
+          {
+            "name": "boundary-management-v1-generate-search-post-permission",
+            "description": "Permission for POST scope on boundary-management-v1-generate-search resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"boundary-management-v1-generate-search\"]",
+              "scopes": "[\"post\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"EMPLOYEE-policy\", \"view-boundary-policy\", \"manage-boundary-policy\"]"
+            }
+          },
+          {
+            "name": "boundary-management-v1-process-post-permission",
+            "description": "Permission for POST scope on boundary-management-v1-process resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"boundary-management-v1-process\"]",
+              "scopes": "[\"post\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"manage-boundary-policy\"]"
+            }
+          },
+          {
+            "name": "boundary-management-v1-process-search-post-permission",
+            "description": "Permission for POST scope on boundary-management-v1-process-search resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"boundary-management-v1-process-search\"]",
+              "scopes": "[\"post\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"EMPLOYEE-policy\", \"view-boundary-policy\", \"manage-boundary-policy\"]"
+            }
+          },
+          {
             "name": "employee-v3-employees-post-permission",
             "description": "Permission for POST scope on employee-v3-employees resource",
             "type": "scope",
@@ -5972,7 +6168,7 @@
             "config": {
               "resources": "[\"filestore-v3-document-categories\"]",
               "scopes": "[\"get\"]",
-              "applyPolicies": "[\"SUPERUSER-policy\", \"view-document-category-policy\"]"
+              "applyPolicies": "[\"SUPERUSER-policy\", \"CITIZEN-policy\", \"EMPLOYEE-policy\", \"view-document-category-policy\"]"
             }
           },
           {
@@ -6200,7 +6396,7 @@
             "config": {
               "resources": "[\"filestore-v3-canonical-document-categories\"]",
               "scopes": "[\"get\"]",
-              "applyPolicies": "[\"SUPERUSER-policy\"]"
+              "applyPolicies": "[\"SUPERUSER-policy\",\"CITIZEN-policy\", \"EMPLOYEE-policy\"]"
             }
           },
           {
@@ -6981,6 +7177,150 @@
               "resources": "[\"notification-v3-template-preview\"]",
               "scopes": "[\"post\"]",
               "applyPolicies": "[\"SUPERUSER-policy\", \"manage-notification-template-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-notifications-post-permission",
+            "description": "Permission for POST scope on notify-v3-notifications resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-notifications\"]",
+              "scopes": "[\"post\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"send-notification-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-notification-configs-post-permission",
+            "description": "Permission for POST scope on notify-v3-notification-configs resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-notification-configs\"]",
+              "scopes": "[\"post\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"manage-notification-template-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-notification-configs-get-permission",
+            "description": "Permission for GET scope on notify-v3-notification-configs resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-notification-configs\"]",
+              "scopes": "[\"get\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"view-notification-template-policy\", \"manage-notification-template-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-notification-configs-id-get-permission",
+            "description": "Permission for GET scope on notify-v3-notification-configs-id resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-notification-configs-id\"]",
+              "scopes": "[\"get\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"view-notification-template-policy\", \"manage-notification-template-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-notification-configs-id-put-permission",
+            "description": "Permission for PUT scope on notify-v3-notification-configs-id resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-notification-configs-id\"]",
+              "scopes": "[\"put\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"manage-notification-template-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-notification-configs-id-delete-permission",
+            "description": "Permission for DELETE scope on notify-v3-notification-configs-id resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-notification-configs-id\"]",
+              "scopes": "[\"delete\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\", \"manage-notification-template-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-provider-mappings-post-permission",
+            "description": "Permission for POST scope on notify-v3-provider-mappings resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-provider-mappings\"]",
+              "scopes": "[\"post\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-provider-mappings-get-permission",
+            "description": "Permission for GET scope on notify-v3-provider-mappings resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-provider-mappings\"]",
+              "scopes": "[\"get\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-provider-mappings-id-put-permission",
+            "description": "Permission for PUT scope on notify-v3-provider-mappings-id resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-provider-mappings-id\"]",
+              "scopes": "[\"put\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-provider-mappings-id-delete-permission",
+            "description": "Permission for DELETE scope on notify-v3-provider-mappings-id resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-provider-mappings-id\"]",
+              "scopes": "[\"delete\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-providers-get-permission",
+            "description": "Permission for GET scope on notify-v3-providers resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-providers\"]",
+              "scopes": "[\"get\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\"]"
+            }
+          },
+          {
+            "name": "notify-v3-providers-id-status-patch-permission",
+            "description": "Permission for PATCH scope on notify-v3-providers-id-status resource",
+            "type": "scope",
+            "logic": "POSITIVE",
+            "decisionStrategy": "AFFIRMATIVE",
+            "config": {
+              "resources": "[\"notify-v3-providers-id-status\"]",
+              "scopes": "[\"patch\"]",
+              "applyPolicies": "[\"SUPERUSER-policy\"]"
             }
           },
           {

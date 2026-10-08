@@ -1,3 +1,29 @@
+# uat-saas / P2 run guide (current)
+
+Single implementation per service on uat-saas (no `-java` variants); Kong keeps the path.
+
+```bash
+cd conformance/services
+export CONFORMANCE_TOKEN='<fresh P2 token>'          # short-lived
+python3 p2-seed/seed_p2.py                            # idempotent; P2 only
+export CONFORMANCE_BOUNDARY_CODE=CONF_STATE_1 CONFORMANCE_BOUNDARY_TYPE=state CONFORMANCE_BOUNDARY_HIERARCHY=CONF_HIER
+
+cd employee-service
+python3 -m pytest -p no:randomly -q --base-url https://uat-saas.digit.org/employee/v3 \
+  --api-token "$CONFORMANCE_TOKEN" --tenant-id P2 --gateway kong \
+  tests/test_response_contracts.py tests/test_error_contracts.py tests/test_stateful_flows.py tests/test_onboard_contracts.py
+python3 -m pytest -p no:randomly -q --hypothesis-profile=bounded --base-url https://uat-saas.digit.org/employee/v3 \
+  --api-token "$CONFORMANCE_TOKEN" --tenant-id P2 --gateway kong tests/test_schema_conformance.py
+python3 generate_summary_table.py
+# individual-service: same, with --base-url https://uat-saas.digit.org/individuals/v3 (no onboard file)
+```
+Suite changes for this run: schema path `schema.yaml` → `employee.yaml` (conftest, schema test,
+summary generator); new `tests/test_onboard_contracts.py`. Results: see `failed.md`.
+
+The sections below are the earlier digit-lts / MAD (Go vs Java) history.
+
+---
+
 # Employee conformance — change log & run guide
 
 A durable record of everything changed while bringing the Employee service into

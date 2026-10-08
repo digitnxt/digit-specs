@@ -129,8 +129,8 @@ def assert_enum_values(body, enum_map):
 def assert_individual_shape(individual):
     """Validate required fields and types on an Individual object.
 
-    Per spec, server-side response includes `id`, `givenName`, and `gender`
-    at minimum. PII fields (mobileNumber, email, address) are decrypted on
+    Per spec, server-side response includes `id` and `givenName` at minimum;
+    `gender` is optional (401e8e3) but must be a valid enum value when present. PII fields (mobileNumber, email, address) are decrypted on
     authorised reads.
     """
     assert isinstance(individual, dict), \
@@ -138,14 +138,14 @@ def assert_individual_shape(individual):
     # `id` is server-generated, always present after create
     assert "id" in individual, "Individual missing required field 'id'"
     assert "givenName" in individual, "Individual missing required field 'givenName'"
-    assert "gender" in individual, "Individual missing required field 'gender'"
 
     assert isinstance(individual["id"], str) and individual["id"], \
         "individual.id must be a non-empty string"
     assert isinstance(individual["givenName"], str) and individual["givenName"], \
         "individual.givenName must be a non-empty string"
-    assert individual["gender"] in GENDER_VALUES, \
-        f"individual.gender must be one of {GENDER_VALUES}, got '{individual['gender']}'"
+    if individual.get("gender") is not None:
+        assert individual["gender"] in GENDER_VALUES, \
+            f"individual.gender must be one of {GENDER_VALUES}, got '{individual['gender']}'"
 
     # Optional but typed fields — validate when present
     if "identifiers" in individual and individual["identifiers"] is not None:

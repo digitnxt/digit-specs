@@ -1,4 +1,4 @@
-# Notification setup: what must exist before anything sends
+# Onboarding defaults: what must exist before a tenant can send anything
 
 Three services collaborate to deliver an OTP or an account email, and each owns a different piece
 of configuration. Two of those pieces fall back to a shared tenant and one does not, which is the
@@ -71,12 +71,14 @@ test-lts stack it is hardcoded to `global` — same mechanism, different name.
 |---|---|---|
 | `otp-login` | otp, `purpose=login` | SMS + EMAIL |
 | `otp-transaction` | otp, `purpose=transaction` | SMS + EMAIL |
-| `otp-generic` | otp — `forgot-password`, `phone-verify`, `registration` all land here | SMS + EMAIL |
+| `otp-password-reset` | otp, `purpose=forgot-password` | SMS + EMAIL |
+| `otp-generic` | otp — `phone-verify` and `registration` share this one | SMS + EMAIL |
 | `account-tenant-temp-password` | account, admin temp-password email | EMAIL |
 
-`otp-mfa` and `otp-password-reset` are also seeded but **unreachable** — see [Known gaps](#known-gaps).
+`otp-mfa` is also seeded but nothing selects it: `mfa` is not an accepted purpose. Harmless, and
+kept only because removing a template code from a live tenant is riskier than an unused row.
 
-Seeded by `seed-notify.sh <base-url> <tenant>` (beside this file).
+Seeded by `seed-defaults.sh` (beside this file), which also seeds the otp configs below.
 
 ### notify — `provider_mapping`, under the platform tenant
 
@@ -101,15 +103,14 @@ tenant on the cluster**.
 
 No fallback. Every tenant needs a row for every purpose it will use.
 
-| Purpose | Seeded automatically? |
-|---|---|
-| `login` | yes |
-| `registration` | yes |
-| `transaction` | **no** |
-| `forgot-password` | **no** |
-| `phone-verify` | **no** |
+All five accepted purposes are seeded: `login`, `transaction`, `forgot-password`, `phone-verify`,
+`registration`.
 
-Seeded by `otp`'s `TenantConfigSeeder` when it consumes the tenant-provisioning event. Defaults
+Seeded by `otp`'s `TenantConfigSeeder` when it consumes the tenant-provisioning event, and by
+`seed-defaults.sh` for a tenant that never had one — the platform tenant, typically. The list is
+derived from `Purposes.VALID` rather than written out, so a new purpose is seeded automatically —
+it used to be a hardcoded pair, which is how `transaction` and `forgot-password` ended up accepted
+by validation with a config on no tenant anywhere. Defaults
 (length 6, TTL 300s, cooldown 120s, 3 attempts) come from `ConfigValidation.validateConfigFields`,
 so create rows through `POST /otp/v3/config` — writing them any other way skips the defaults.
 
@@ -156,13 +157,16 @@ Email has no equivalent constraint.
 ```
 login            -> otp-login
 transaction      -> otp-transaction
-forgot-password  -> otp-generic
+forgot-password  -> otp-password-reset
 phone-verify     -> otp-generic
 registration     -> otp-generic
 ```
 
-Mapped in `otp/service/NotificationClient.templateFor(purpose)`. One code per purpose — the channel
-is chosen by which address the caller supplies, not by the template name. Supplying only a phone
+Mapped in `otp/service/NotificationClient.templateFor(purpose)`, whose cases are the `Purposes`
+constants so the switch stays visibly tied to `Purposes.VALID` — it previously mapped `mfa` and
+`password_reset`, which validation rejects, so two templates existed that nothing could select.
+One code per purpose; the channel is chosen by which address the caller supplies, not by the
+template name. Supplying only a phone
 sends SMS and skips EMAIL; supplying both sends both.
 
 ---
@@ -211,16 +215,15 @@ through the account API; they have to be provisioned with `/internal/migrate`.
 
 ## Known gaps
 
-**Two seeded templates are unreachable.** `templateFor` maps `mfa` and `password_reset`, but
-`Purposes.VALID` accepts neither, so validation rejects those purposes before the mapping is
-consulted. `otp-mfa` and `otp-password-reset` can never be selected. Meanwhile `forgot-password`,
-`phone-verify` and `registration` all share `otp-generic`. Inherited from the older stack, which has
-the same dead `sms-otp-mfa` and `sms-otp-password-reset` templates.
-
-**`transaction` and `forgot-password` have no `otp_config` anywhere.** Both are accepted purposes;
-both fail with `No configuration found for this tenant and purpose` on every tenant, because
-`TenantConfigSeeder` seeds only `login` and `registration`.
-
 **Delivery reports are requested and discarded.** The smscountry provider sends `DR=Y`, but nothing
 consumes the callback, so `DISPATCHED` means *accepted by the vendor* and never *delivered*. The
-same is true of gmail (a later bounce is invisible) and of Twilio status callbacks.
+same is true of gmail (a later bounce is invisible) and of Twilio status callbacks. This is the
+reason an SMS can report success and never arrive — see [the DLT rule](#the-dlt-rule-for-sms).
+
+**`phone-verify` and `registration` share `otp-generic`**, so both send login-flavoured wording.
+Fine for SMS, where the DLT-registered body is fixed anyway, but the email could read better with
+templates of their own.
+
+**Two purposes differ between the old and new stacks.** The older code mapped `mfa` and
+`password_reset`; this one maps `forgot-password` and `phone-verify`, matching what validation
+actually accepts. Anything integrating against both needs to know which it is talking to.

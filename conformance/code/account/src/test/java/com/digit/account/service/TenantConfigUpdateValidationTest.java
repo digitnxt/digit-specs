@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -43,7 +44,8 @@ class TenantConfigUpdateValidationTest {
         existing.setConfigValue("blue");
         existing.setDescription("UI accent");
         existing.setActive(true);
-        when(configRepo.getById("cfg-1")).thenReturn(existing);
+        when(configRepo.getById("cfg-1", "CITYA")).thenReturn(existing);
+        when(configRepo.update(any(TenantConfigEntity.class), anyInt())).thenReturn(true);
     }
 
     private static TenantConfigUpdateRequest req(String key, String value) {
@@ -54,7 +56,8 @@ class TenantConfigUpdateValidationTest {
     }
 
     private TenantConfigResponse update(TenantConfigUpdateRequest r) {
-        return service.update("cfg-1", r, "tester", "req-1");
+        r.setVersion(0);
+        return service.update("cfg-1", r, "tester", "req-1", "CITYA");
     }
 
     // ---------------------------------------------------------------- omit-to-retain
@@ -123,7 +126,7 @@ class TenantConfigUpdateValidationTest {
         // Retaining the key means it cannot collide with itself, so no probe is warranted.
         update(req(null, "green"));
         verify(configRepo, never()).getByKey(anyString(), anyString());
-        verify(configRepo).update(any(TenantConfigEntity.class));
+        verify(configRepo).update(any(TenantConfigEntity.class), anyInt());
     }
 
     @Test

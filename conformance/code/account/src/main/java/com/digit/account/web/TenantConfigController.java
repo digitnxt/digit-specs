@@ -71,12 +71,14 @@ public class TenantConfigController {
     @PutMapping("/config/{id}")
     public ResponseEntity<?> updateTenantConfig(
             @PathVariable("id") String id,
+            @RequestHeader(value = Headers.TENANT_ID, required = false) String tenantCode,
             @RequestHeader(value = Headers.CLIENT_ID, required = false) String clientId,
             @RequestHeader(value = Headers.REQUEST_ID, required = false) String requestId,
             @RequestBody(required = false) byte[] body) {
+        ControllerSupport.failIfValidation(TenantConfigValidator.validateTenantCodeHeader(tenantCode));
         ControllerSupport.failIfValidation(TenantValidator.validateUUIDPath("config id", id));
         TenantConfigUpdateRequest req = ControllerSupport.parseBody(objectMapper, body,
                 TenantConfigUpdateRequest.class);
-        return ResponseEntity.ok(service.update(id, req, clientId, requestId));
+        return ResponseEntity.ok(service.update(id, req, clientId, requestId, tenantCode));
     }
 }

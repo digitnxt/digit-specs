@@ -42,6 +42,7 @@
 /home/admin/Desktop/java25/digit3/src/services/account/src/main/java/com/digit/account/web/CanonicalTenantConfigController.java
 /home/admin/Desktop/java25/digit3/src/services/account/src/main/java/com/digit/account/web/CanonicalTenantController.java
 /home/admin/Desktop/java25/digit3/src/services/account/src/main/java/com/digit/account/web/ControllerSupport.java
+/home/admin/Desktop/java25/digit3/src/services/account/src/main/java/com/digit/account/web/DatabaseExceptionHandler.java
 /home/admin/Desktop/java25/digit3/src/services/account/src/main/java/com/digit/account/web/TenantConfigController.java
 /home/admin/Desktop/java25/digit3/src/services/account/src/main/java/com/digit/account/web/TenantController.java
 /home/admin/Desktop/java25/digit3/src/services/account/src/main/java/com/digit/account/web/ValidationException.java

@@ -37,19 +37,24 @@ public class EnrichmentService {
     }
 
     /**
-     * "idgen: failed to generate individualId: NOT_FOUND template not found" when IDGen answered with
-     * its own error, "idgen unavailable: ..." when it could not be reached, and nothing more otherwise.
+     * Maps an IDGen failure. A missing template (404) is a non-retryable 500 naming the template, since
+     * only creating it can fix the call; anything else is a 502 that says whether IDGen was reachable.
+     * IDGen's own message is never passed on — its 422 can carry database error text.
      */
-    private static String idgenFailureMessage(RuntimeException e) {
+    private CustomException idgenFailure(RuntimeException e, String tenantId) {
         if (e instanceof IdgenClient.IdgenException ie) {
-            if (ie.isUnavailable()) {
-                return "idgen unavailable: failed to generate individualId";
+            if (ie.getStatusCode() == 404) {
+                return new CustomException(ErrorCodes.IDGEN_TEMPLATE_NOT_FOUND,
+                        "failed to generate individualId: idgen template '" + config.getFormat()
+                                + "' not found for tenant " + tenantId,
+                        HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            if (ie.getDetail() != null) {
-                return "idgen: failed to generate individualId: " + ie.getDetail();
+            if (ie.isUnavailable()) {
+                return new CustomException(ErrorCodes.DOWNSTREAM,
+                        "idgen unavailable: failed to generate individualId", HttpStatus.BAD_GATEWAY);
             }
         }
-        return "idgen: failed to generate individualId";
+        return new CustomException(ErrorCodes.DOWNSTREAM, "idgen: failed to generate individualId", HttpStatus.BAD_GATEWAY);
     }
 
     private static long now() {
@@ -73,11 +78,9 @@ public class EnrichmentService {
         try {
             ids = idgenClient.generateIds(ind.getTenantId(), config.getFormat(), 1, customVars);
         } catch (RuntimeException e) {
-            // idgen is a downstream dependency — surface as DOWNSTREAM_ERROR (502), not the tracer's
-            // generic 500 catch-all. The caller sees IDGen's own error (e.g. a missing template) or that
-            // it was unreachable; the raw body and transport detail go to the log only.
+            // The raw body and transport detail go to the log only.
             log.error("idgen individualId generation failed tenantId={}", ind.getTenantId(), e);
-            throw new CustomException(ErrorCodes.DOWNSTREAM, idgenFailureMessage(e), HttpStatus.BAD_GATEWAY);
+            throw idgenFailure(e, ind.getTenantId());
         }
         if (!ids.isEmpty()) {
             ind.setIndividualId(ids.get(0));

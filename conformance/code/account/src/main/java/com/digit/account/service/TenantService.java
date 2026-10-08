@@ -153,17 +153,18 @@ public class TenantService {
         }
 
         // Phase 1: DB insert FIRST. A unique-constraint violation surfaces as a DUPLICATE_RECORD
-        // CustomException (from PgErrors.translate); any other failure is genuine infra -> 500.
+        // CustomException (from PgErrors.translate); a database failure reaches
+        // DatabaseExceptionHandler as a 500.
         try {
             tenantRepo.create(entity);
         } catch (CustomException e) {
             throw e;
         } catch (RuntimeException e) {
-            throw new RuntimeException("failed to create tenant in database: " + e.getMessage(), e);
+            log.error("failed to create tenant {} in database", entity.getCode(), e);
+            throw e;
         }
 
-        // Phase 2: Keycloak realm. Failure rolls back the DB row. A Keycloak/IO failure is a genuine
-        // downstream error -> propagate as 500 (not a business CustomException).
+        // Phase 2: Keycloak realm. Failure rolls back the DB row and is a downstream error (502).
         try {
             keycloakClient.createRealmWithFullConfig(entity.getCode(), entity.getEmail(),
                     entity.getName(), password, entity.getPhone(), passwordGenerated);
@@ -171,12 +172,12 @@ public class TenantService {
             try {
                 tenantRepo.delete(entity.getId());
             } catch (RuntimeException rollbackErr) {
-                throw new RuntimeException("failed to create Keycloak realm: "
-                        + kcErr.getMessage() + " (rollback also failed: " + rollbackErr.getMessage()
-                        + " - manual cleanup required)", kcErr);
+                log.error("failed to roll back tenant {} after its Keycloak realm failed", entity.getCode(),
+                        rollbackErr);
+                throw keycloakFailure("failed to create Keycloak realm (removing the tenant row also "
+                        + "failed - manual cleanup required)", entity.getCode(), kcErr);
             }
-            throw new RuntimeException("failed to create Keycloak realm: "
-                    + kcErr.getMessage(), kcErr);
+            throw keycloakFailure("failed to create Keycloak realm", entity.getCode(), kcErr);
         }
 
         // A tenant's OTP configs are seeded by the OTP service itself, off the same provisioning
@@ -326,6 +327,12 @@ public class TenantService {
             throw new CustomException("NOT_FOUND", "Tenant not found", HttpStatus.NOT_FOUND);
         }
         requireTenantIdMatches(existing, tenantId);
+        // version is optional: when sent it must match, checked before the realm flip below so a
+        // stale request never touches Keycloak. Either way the compare-and-swap in tenantRepo.update
+        // is against the version read here, closing the race with a concurrent write.
+        if (req.getVersion() != null && req.getVersion() != existing.getVersion()) {
+            throw versionMismatch();
+        }
         TenantEntity updated = Mappers.tenantUpdateRequestToEntity(existing, req, clientId, requestId,
                 System.currentTimeMillis());
         List<String> errs = TenantValidator.validateTenantEntity(updated);
@@ -341,29 +348,34 @@ public class TenantService {
             try {
                 keycloakClient.setRealmEnabled(updated.getCode(), updated.isActive());
             } catch (RuntimeException e) {
-                throw new RuntimeException("failed to " + (updated.isActive() ? "enable" : "disable")
-                        + " Keycloak realm: " + e.getMessage(), e);
+                throw keycloakFailure("failed to " + (updated.isActive() ? "enable" : "disable")
+                        + " Keycloak realm", updated.getCode(), e);
             }
         }
 
         try {
-            tenantRepo.update(updated);
+            if (!tenantRepo.update(updated, existing.getVersion())) {
+                throw versionMismatch();
+            }
         } catch (RuntimeException e) {
             if (activeChanged) {
                 try {
                     keycloakClient.setRealmEnabled(existing.getCode(), existing.isActive());
                 } catch (RuntimeException rollbackErr) {
-                    throw new RuntimeException("failed to update tenant in database: " + e.getMessage()
-                            + " (rolling the Keycloak realm back to enabled=" + existing.isActive()
-                            + " also failed: " + rollbackErr.getMessage()
-                            + " - manual cleanup required)", e);
+                    log.error("failed to update tenant {} in database", existing.getCode(), e);
+                    log.error("failed to roll tenant {}'s Keycloak realm back to enabled={}",
+                            existing.getCode(), existing.isActive(), rollbackErr);
+                    throw new CustomException("DATABASE_ERROR", "failed to update tenant "
+                            + "(rolling the Keycloak realm back to enabled=" + existing.isActive()
+                            + " also failed - manual cleanup required)", HttpStatus.INTERNAL_SERVER_ERROR);
                 }
             }
-            // A translated business failure keeps its own status; only genuine infra becomes a 500.
-            if (e instanceof CustomException) {
-                throw e;
+            // A translated business failure keeps its own status; a database failure reaches
+            // DatabaseExceptionHandler as a 500.
+            if (!(e instanceof CustomException)) {
+                log.error("failed to update tenant {} in database", existing.getCode(), e);
             }
-            throw new RuntimeException("failed to update tenant in database: " + e.getMessage(), e);
+            throw e;
         }
 
         Map<String, Object> eventData = new HashMap<>();
@@ -386,7 +398,8 @@ public class TenantService {
         try {
             entity = tenantRepo.getById(id);
         } catch (RuntimeException e) {
-            throw new RuntimeException("failed to get tenant: " + e.getMessage(), e);
+            log.error("failed to get tenant {}", id, e);
+            throw e;
         }
         if (entity == null) {
             throw new CustomException("NOT_FOUND", "Tenant not found", HttpStatus.NOT_FOUND);
@@ -398,20 +411,22 @@ public class TenantService {
             try {
                 configRepo.deleteByTenant(tenantCode);
             } catch (RuntimeException e) {
-                throw new RuntimeException("failed to delete tenant configs: " + e.getMessage(), e);
+                log.error("failed to delete tenant {}'s configs", tenantCode, e);
+                throw e;
             }
         }
 
         try {
             keycloakClient.deleteRealm(tenantCode);
         } catch (RuntimeException e) {
-            throw new RuntimeException("failed to delete Keycloak realm: " + e.getMessage(), e);
+            throw keycloakFailure("failed to delete Keycloak realm", tenantCode, e);
         }
 
         try {
             tenantRepo.delete(id);
         } catch (RuntimeException e) {
-            throw new RuntimeException("failed to delete tenant from database: " + e.getMessage(), e);
+            log.error("failed to delete tenant {} from database", tenantCode, e);
+            throw e;
         }
 
         Map<String, Object> eventData = new HashMap<>();
@@ -419,6 +434,16 @@ public class TenantService {
         eventData.put("tenantCode", tenantCode);
         eventPublisher.publishEvent(props.getPubsub().getTopics().getDeleteTenant(), "DELETE",
                 tenantCode, resolveActor(clientId), eventData, 1);
+    }
+
+    private static CustomException versionMismatch() {
+        return new CustomException("ROW_VERSION_MISMATCH", "Tenant was modified concurrently", HttpStatus.CONFLICT);
+    }
+
+    /** Logs a failed Keycloak step with its cause and returns the client-facing 502. */
+    private static CustomException keycloakFailure(String message, String tenantCode, RuntimeException cause) {
+        log.error("{} for tenant {}", message, tenantCode, cause);
+        return new CustomException("DOWNSTREAM_ERROR", message, HttpStatus.BAD_GATEWAY);
     }
 
     /**

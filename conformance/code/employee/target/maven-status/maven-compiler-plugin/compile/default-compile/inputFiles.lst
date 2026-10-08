@@ -1,6 +1,7 @@
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/EmployeeApplication.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/client/BoundaryClient.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/client/DownstreamHttp.java
+/home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/client/IdGenApiException.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/client/IdGenClient.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/client/IndividualApiException.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/client/IndividualClient.java
@@ -43,6 +44,7 @@
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/web/CanonicalJurisdictionController.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/web/CanonicalSupport.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/web/ControllerSupport.java
+/home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/web/DatabaseExceptionHandler.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/web/EmployeeController.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/web/HeaderInterceptor.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/main/java/com/digit/employee/web/JurisdictionController.java

@@ -23,6 +23,7 @@ com/digit/account/model/SignupInitiateRequest.class
 com/digit/account/model/SignupResponses$SignupResendRequest.class
 com/digit/account/web/ControllerSupport.class
 com/digit/account/model/TenantResponse.class
+com/digit/account/web/DatabaseExceptionHandler.class
 com/digit/account/config/AccountProperties$Otp.class
 com/digit/account/web/CanonicalDelegate.class
 com/digit/account/clients/notification/NotificationClient.class

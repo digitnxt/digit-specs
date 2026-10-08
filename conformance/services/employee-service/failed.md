@@ -1,3 +1,55 @@
+# Employee conformance — uat-saas / tenant P2 (2026-09-29)
+
+Target `https://uat-saas.digit.org/employee/v3` through Kong, image `anishegov/employee:master-bf8e4d5a`
+(single implementation, context `/employee`). Seed data from `../p2-seed/seed_p2.py`.
+
+| Layer | Result |
+|---|---|
+| Behavioral (response / error / stateful) | **39 passed, 4 skipped** |
+| New: onboard + `userIds` (`tests/test_onboard_contracts.py`) | **11 / 11** |
+| Schemathesis (bounded) | 6 / 13 ops pass — all 7 failures are one gateway cause (F1) |
+
+## Findings
+
+**F1 — Kong `keycloak-rbac`: unknown HTTP method → 500 (gateway defect, affects every service)**
+`QUERY` (or any method that isn't a Keycloak scope) → Keycloak `400 invalid_scope` → plugin falls
+through to fail-closed `500 RBAC.AuthorizationUnavailable` (`code/kong/plugins/keycloak-rbac/handler.lua:275`).
+On digit-lts the same request returned 403. Fix: map `invalid_scope` to 405/403 like `invalid_resource` → 404.
+```
+curl -X QUERY 'https://uat-saas.digit.org/employee/v3/employees' -H 'Authorization: Bearer <token>' -H 'X-Tenant-ID: P2'
+```
+
+**F2 — Boundary service: cannot create boundaries in tenant schemas (blocks 4 jurisdiction tests)**
+`POST /boundary/v3/boundaries` → `400 bad SQL grammar`. With `search_path="P2"` PostGIS
+(installed in `public`) isn't resolvable: `function st_geomfromgeojson(jsonb) does not exist`.
+Verified read-only in psql (works with `search_path "P2", public`). Fix: schema-qualify
+`public.ST_SetSRID(public.ST_GeomFromGeoJSON(...))` in `code/boundary/.../BoundaryRepository.java:34`
+or include `public` in the tenant search_path. Skipped until fixed:
+`test_response_contracts.py:149`, `test_error_contracts.py:206`, `test_stateful_flows.py:151,202`.
+
+**O1 — empty filter value is silently dropped → unfiltered result** (open, design decision)
+`GET /employees?userIds=` → Spring binds `""` to an empty `List`, the blank-check loop
+(`EmployeeController.java:131`) has nothing to reject, and the repository skips the `IN` clause
+when the list is empty (`EmployeeRepository.java:241`) → **same result as no filter at all**. This is
+deliberate per the code comment (`EmployeeController.java:128`). Blank entries inside a list
+(`userIds=,` / `userIds=%20`) → 400 as the spec says. Individual behaves the same: `?userId=`
+returned `totalCount=3` (all of P2), identical to no filter.
+Risk: a client that builds `?userIds=${id}` with an unset id gets the full (RBAC-permitted) list
+instead of none. Choose one: reject a present-but-empty param with 400 (check
+`request.getParameterValues`), or document "empty value = filter ignored" in both specs.
+
+**F1 update** — confirmed by design: `realm_config.json` defines only `get/post/put/patch/delete`
+scopes, so `QUERY` is correctly denied. Only the status is off: Keycloak answers `400 invalid_scope`,
+which the plugin maps to 500 (`TRACE` already gets 405 before the plugin).
+
+## Environment notes (not defects)
+- Seeded idgen `EmployeeCode` must **not** use `{ORG}` — the employee client sends no variables
+  (`IdGenClient.java:56`). Template in P2 is `EMP-{DATE:yyyy}-{SEQ}` (v2).
+- Onboard creates Keycloak users in realm P2; tests delete employee → individual → Keycloak user.
+  Schemathesis may leave random records in P2 (accepted).
+
+---
+
 # Employee conformance — Java (`/employee-java/v3`) vs Go (`/employee/v3`)
 
 Live run through Kong, tenant **MAD**, boundary `STATE1_1_2nvb / state / state-district-hierarchyas1i`.

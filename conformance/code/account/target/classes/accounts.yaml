@@ -7,7 +7,7 @@ info:
     Tenant accounts and per-tenant key/value configuration.
 
     **Auth.** Tenant create, update and delete are gated by `PLATFORM_AUTH_ENABLED`
-    (default `true`), which requires a `master`-realm bearer token carrying the
+    (default `false`), which requires a `master`-realm bearer token carrying the
     `SUPERADMIN` realm role; `false` leaves them open. `SIGNUP_ENABLED=false` turns
     `/tenants/registrations*` off with `403`. Per-endpoint effects are on each
     operation.
@@ -364,7 +364,7 @@ paths:
         | Mutable | Immutable |
         |---|---|
         | `phone`, `address`, `city`, `state`, `pincode`, `country` | `id`, `code`, `name`, `email` |
-        | `isActive` | `firstLoginUrls`, `passwordGenerated`, `version`, `auditDetail` |
+        | `isActive` | `firstLoginUrls`, `passwordGenerated`, `auditDetail` |
         | `additionalAttributes` | |
 
         - `name` and `email` are not updatable; sending them is ignored, not an
@@ -376,7 +376,9 @@ paths:
           alternative to `DELETE`.
         - `additionalAttributes` **replaces** the whole map; `{}` clears it, omitting
           retains it.
-        - `version` increments on every successful update.
+        - `version` is required: send the value last read. A mismatch returns
+          `409 ROW_VERSION_MISMATCH` before the realm is touched; reload and retry.
+          It increments on every successful update.
         - `X-Tenant-Id` is optional; when present it must equal the addressed
           tenant's `code`, else `403`.
         - No `password` field — this endpoint cannot change a password.
@@ -478,6 +480,16 @@ paths:
                       message: country must be at least 2 characters (got 1)
         '401': { $ref: '#/components/responses/PlatformUnauthenticated' }
         '403': { $ref: '#/components/responses/TenantForbidden' }
+        '409':
+          description: The tenant was modified since `version` was read (`ROW_VERSION_MISMATCH`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+              example:
+                - code: ROW_VERSION_MISMATCH
+                  message: Tenant was modified concurrently
         '404': { $ref: '#/components/responses/TenantNotFound' }
         '500':
           description: |
@@ -1014,7 +1026,9 @@ paths:
           only ever means absent.
         - `isActive` activates/deactivates the entry. Unlike a tenant's `isActive`
           this has **no Keycloak effect** — it is a flag for consumers to honour.
-        - `version` increments on every successful update.
+        - `version` is required: send the value last read. A mismatch returns
+          `409 ROW_VERSION_MISMATCH`; reload and retry. It increments on every
+          successful update.
       parameters:
         - $ref: '#/components/parameters/ConfigIdPath'
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -1099,7 +1113,18 @@ paths:
               example:
                 - code: NOT_FOUND
                   message: TenantConfig not found
-        '409': { $ref: '#/components/responses/DuplicateConfigKey' }
+        '409':
+          description: |
+            The new `configKey` already exists for the tenant (`DUPLICATE_RECORD`), or
+            the config was modified since `version` was read (`ROW_VERSION_MISMATCH`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+              example:
+                - code: ROW_VERSION_MISMATCH
+                  message: TenantConfig was modified concurrently
         '500': { $ref: '#/components/responses/InternalError' }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1556,10 +1581,18 @@ components:
     TenantUpdateRequest:
       type: object
       description: |
-        `PUT /tenants/{id}` body. Every field is **omit-to-retain**. `id`, `code`,
-        `name`, `email`, `firstLoginUrls`, `passwordGenerated`, `version` and
+        `PUT /tenants/{id}` body. Every field except `version` is **omit-to-retain**.
+        `id`, `code`, `name`, `email`, `firstLoginUrls`, `passwordGenerated` and
         `auditDetail` are immutable and ignored if sent. No `password` field.
+      required: [version]
       properties:
+        version:
+          type: integer
+          format: int32
+          description: |
+            The `version` last read for this tenant. The update applies only if the
+            tenant still has it; otherwise `409 ROW_VERSION_MISMATCH`.
+          example: 2
         phone:
           type: string
           maxLength: 20
@@ -1612,9 +1645,9 @@ components:
       description: |
         A tenant account. `readOnly` fields are server-managed. The password is never
         included. Optional fields are **omitted, not null**, so absence is
-        meaningful — `version` is absent while `0`, and `firstLoginUrls` /
-        `temporaryPasswordEmailed` appear only in the generated-password case.
-      required: [id, code, name, email, isActive, passwordGenerated]
+        meaningful — `firstLoginUrls` / `temporaryPasswordEmailed` appear only in the
+        generated-password case.
+      required: [id, code, name, email, isActive, passwordGenerated, version]
       properties:
         id:
           type: string
@@ -1724,7 +1757,9 @@ components:
           type: integer
           format: int32
           readOnly: true
-          description: Optimistic concurrency version. **Omitted while `0`.**
+          description: |
+            Optimistic concurrency version: `1` on creation, incremented by every
+            successful update. Send it back in `PUT /tenants/{id}`.
           example: 2
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
@@ -1900,9 +1935,17 @@ components:
     TenantConfigUpdateRequest:
       type: object
       description: |
-        `PUT /config/{id}` body. Every field is **omit-to-retain**. `id` and
-        `tenantId` are immutable and ignored if sent.
+        `PUT /config/{id}` body. Every field except `version` is **omit-to-retain**.
+        `id` and `tenantId` are immutable and ignored if sent.
+      required: [version]
       properties:
+        version:
+          type: integer
+          format: int32
+          description: |
+            The `version` last read for this config. The update applies only if the
+            config still has it; otherwise `409 ROW_VERSION_MISMATCH`.
+          example: 2
         configKey:
           type: string
           minLength: 1
@@ -1936,9 +1979,9 @@ components:
     TenantConfigResponse:
       type: object
       description: |
-        A configuration entry. Optional fields are omitted, not null — `version` is
-        absent while `0`, `description` absent when empty.
-      required: [id, tenantId, configKey, configValue, isActive]
+        A configuration entry. Optional fields are omitted, not null — `description`
+        is absent when empty.
+      required: [id, tenantId, configKey, configValue, isActive, version]
       properties:
         id:
           type: string
@@ -1973,7 +2016,9 @@ components:
           type: integer
           format: int32
           readOnly: true
-          description: Optimistic concurrency version. **Omitted while `0`.**
+          description: |
+            Optimistic concurrency version: `1` on creation, incremented by every
+            successful update. Send it back in `PUT /config/{id}`.
           example: 2
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'

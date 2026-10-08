@@ -1,5 +1,7 @@
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/client/DownstreamUrlTest.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/pubsub/EventPublisherTest.java
+/home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/EmbeddedJurisdictionBindingTest.java
+/home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/EmployeeDownstreamErrorTest.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/EmployeeJurisdictionLoadingTest.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/EmployeeLifecycleTest.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/EmployeePatchPutTest.java
@@ -7,3 +9,5 @@
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/EmployeeTransactionScopeTest.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/EmployeeVersioningTest.java
 /home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/JurisdictionServiceTest.java
+/home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/service/OnboardKeycloakErrorTest.java
+/home/admin/Desktop/java25/digit3/src/services/employee/src/test/java/com/digit/employee/web/DatabaseExceptionHandlerTest.java

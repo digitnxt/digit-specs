@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -57,10 +58,12 @@ class TenantIdScopeTest {
         e.setEmail("a@example.com");
         e.setActive(true);
         when(tenantRepo.getById("id-1")).thenReturn(e);
+        when(tenantRepo.update(any(TenantEntity.class), anyInt())).thenReturn(true);
     }
 
     private static TenantUpdateRequest req() {
         TenantUpdateRequest r = new TenantUpdateRequest();
+        r.setVersion(0);
         r.setCity("Springfield");
         return r;
     }
@@ -71,19 +74,19 @@ class TenantIdScopeTest {
     void anAbsentTenantIdLeavesUpdateUnscoped() {
         // The pre-existing platform behaviour: no header, no restriction.
         service.update("id-1", req(), "tester", "req-1", null);
-        verify(tenantRepo).update(any(TenantEntity.class));
+        verify(tenantRepo).update(any(TenantEntity.class), anyInt());
     }
 
     @Test
     void aBlankTenantIdIsTreatedAsAbsent() {
         service.update("id-1", req(), "tester", "req-1", "   ");
-        verify(tenantRepo).update(any(TenantEntity.class));
+        verify(tenantRepo).update(any(TenantEntity.class), anyInt());
     }
 
     @Test
     void aMatchingTenantIdAllowsUpdate() {
         service.update("id-1", req(), "tester", "req-1", "CITYA");
-        verify(tenantRepo).update(any(TenantEntity.class));
+        verify(tenantRepo).update(any(TenantEntity.class), anyInt());
     }
 
     @Test
@@ -91,7 +94,7 @@ class TenantIdScopeTest {
         CustomException ex = assertThrows(CustomException.class,
                 () -> service.update("id-1", req(), "tester", "req-1", "CITYB"));
         assertEquals(HttpStatus.FORBIDDEN, ex.getHttpStatus());
-        verify(tenantRepo, never()).update(any(TenantEntity.class));
+        verify(tenantRepo, never()).update(any(TenantEntity.class), anyInt());
     }
 
     @Test

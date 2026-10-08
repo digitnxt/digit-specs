@@ -20,6 +20,8 @@ import com.digit.account.validator.SignupValidator;
 import com.digit.account.validator.TenantValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.digit.tracer.model.CustomException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,6 +46,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/v3")
 public class TenantController {
+
+    private static final Logger log = LoggerFactory.getLogger(TenantController.class);
 
     private final TenantService service;
     private final OtpClient otpClient;
@@ -154,10 +158,16 @@ public class TenantController {
             }
             throw new CustomException("OTP_SERVICE_ERROR", "Failed to generate OTP: " + e.getMessage(),
                     HttpStatus.SERVICE_UNAVAILABLE);
+        } catch (RuntimeException e) {
+            throw otpUnavailable("Failed to generate OTP", e);
         }
 
         long ttl = otpResp.expiresIn;
-        signupCache.store(otpResp.referenceId, createReq, ttl);
+        try {
+            signupCache.store(otpResp.referenceId, createReq, ttl);
+        } catch (RuntimeException e) {
+            throw cacheFailure("failed to store the registration request", e);
+        }
 
         SignupInitiateResponse resp = new SignupInitiateResponse();
         resp.setReferenceId(otpResp.referenceId);
@@ -178,7 +188,10 @@ public class TenantController {
         try {
             payload = signupCache.get(req.getReferenceId());
         } catch (RuntimeException e) {
-            throw new CustomException("REQUEST_EXPIRED", "OTP request expired or not found: " + e.getMessage(),
+            throw cacheFailure("failed to read the registration request", e);
+        }
+        if (payload == null) {
+            throw new CustomException("REQUEST_EXPIRED", "OTP request expired or not found",
                     HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
@@ -201,6 +214,8 @@ public class TenantController {
             }
             throw new CustomException("OTP_SERVICE_ERROR", "OTP verification failed: " + e.getMessage(),
                     HttpStatus.SERVICE_UNAVAILABLE);
+        } catch (RuntimeException e) {
+            throw otpUnavailable("OTP verification failed", e);
         }
         if (!otpResp.verified) {
             throw new CustomException("INVALID_OTP", "OTP value is incorrect", HttpStatus.UNPROCESSABLE_ENTITY);
@@ -223,9 +238,13 @@ public class TenantController {
         SignupResendRequest req = ControllerSupport.parseBody(objectMapper, body, SignupResendRequest.class);
         ControllerSupport.failIfValidation(SignupValidator.validateSignupResendRequest(req));
 
+        TenantCreateRequest pending;
         try {
-            signupCache.get(req.getReferenceId());
+            pending = signupCache.get(req.getReferenceId());
         } catch (RuntimeException e) {
+            throw cacheFailure("failed to read the registration request", e);
+        }
+        if (pending == null) {
             throw new CustomException("REQUEST_NOT_FOUND",
                     "Request ID not found or expired: The signup request has expired or does not exist",
                     HttpStatus.UNPROCESSABLE_ENTITY);
@@ -249,6 +268,8 @@ public class TenantController {
             }
             throw new CustomException("OTP_SERVICE_ERROR", "Failed to resend OTP: " + e.getMessage(),
                     HttpStatus.SERVICE_UNAVAILABLE);
+        } catch (RuntimeException e) {
+            throw otpUnavailable("Failed to resend OTP", e);
         }
 
         SignupResendResponse resp = new SignupResendResponse();
@@ -256,5 +277,17 @@ public class TenantController {
         resp.setExpiresIn(otpResp.expiresIn);
         resp.setCooldownSeconds(otpResp.cooldownSeconds);
         return ResponseEntity.ok(resp);
+    }
+
+    /** The OTP service could not be reached or answered unreadably: logged, and a 503 like its other failures. */
+    private static CustomException otpUnavailable(String message, RuntimeException cause) {
+        log.error("{}: OTP service call failed", message, cause);
+        return new CustomException("OTP_SERVICE_ERROR", message, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /** The registration store (Redis) failed: the service's own fault, so a 500. */
+    private static CustomException cacheFailure(String message, RuntimeException cause) {
+        log.error("{}", message, cause);
+        return new CustomException("CACHE_ERROR", message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

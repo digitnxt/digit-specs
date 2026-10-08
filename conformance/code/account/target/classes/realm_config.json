@@ -4856,7 +4856,7 @@
             "config": {
               "resources": "[\"billing-v3-business-services-code\"]",
               "scopes": "[\"get\"]",
-              "applyPolicies": "[\"SUPERUSER-policy\", \"EMPLOYEE-policy\", \"view-billing-master-policy\"]"
+              "applyPolicies": "[\"SUPERUSER-policy\", \"CITIZEN-policy\", \"EMPLOYEE-policy\", \"view-billing-master-policy\"]"
             }
           },
           {
@@ -5972,7 +5972,7 @@
             "config": {
               "resources": "[\"filestore-v3-document-categories\"]",
               "scopes": "[\"get\"]",
-              "applyPolicies": "[\"SUPERUSER-policy\", \"view-document-category-policy\"]"
+              "applyPolicies": "[\"SUPERUSER-policy\", \"CITIZEN-policy\", \"EMPLOYEE-policy\", \"view-document-category-policy\"]"
             }
           },
           {
@@ -6200,7 +6200,7 @@
             "config": {
               "resources": "[\"filestore-v3-canonical-document-categories\"]",
               "scopes": "[\"get\"]",
-              "applyPolicies": "[\"SUPERUSER-policy\"]"
+              "applyPolicies": "[\"SUPERUSER-policy\",\"CITIZEN-policy\", \"EMPLOYEE-policy\"]"
             }
           },
           {
@@ -7352,7 +7352,7 @@
             "config": {
               "resources": "[\"registry-v3-code-data-registry\"]",
               "scopes": "[\"get\"]",
-              "applyPolicies": "[\"SUPERUSER-policy\", \"view-registry-record-policy\"]"
+              "applyPolicies": "[\"SUPERUSER-policy\",\"CITIZEN-policy\", \"view-registry-record-policy\"]"
             }
           },
           {

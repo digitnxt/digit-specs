@@ -15,7 +15,6 @@ public class TenantConfigResponse {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String description;
     private boolean isActive;
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     private int version;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private AuditDetail auditDetail;

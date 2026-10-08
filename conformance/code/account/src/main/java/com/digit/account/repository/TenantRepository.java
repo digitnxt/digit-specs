@@ -219,18 +219,23 @@ public class TenantRepository {
     }
 
     /** Full-row update by PK (GORM Save). Unique violations translated. */
-    public void update(TenantEntity t) {
+    /**
+     * Compare-and-swap on {@code version}: writes only if the row still has {@code expectedVersion}.
+     * Returns false when it has moved on, so the caller can report the conflict.
+     */
+    public boolean update(TenantEntity t, int expectedVersion) {
         try {
-            jdbc.update("UPDATE " + TABLE + " SET code = ?, name = ?, email = ?, phone = ?, "
+            return jdbc.update("UPDATE " + TABLE + " SET code = ?, name = ?, email = ?, phone = ?, "
                             + "address = ?, city = ?, state = ?, pincode = ?, country = ?, "
                             + "firstloginurl = ?, additionalattributes = ?::jsonb, "
                             + "isactive = ?, passwordgenerated = ?, version = ?, createdby = ?, modifiedby = ?, "
-                            + "createdtime = ?, modifiedtime = ?, requestid = ? WHERE id = ?",
+                            + "createdtime = ?, modifiedtime = ?, requestid = ? WHERE id = ? AND version = ?",
                     t.getCode(), t.getName(), t.getEmail(), t.getPhone(), t.getAddress(), t.getCity(),
                     t.getState(), t.getPincode(), t.getCountry(), writeUrlList(t.getFirstLoginUrls()),
                     writeJson(t.getAdditionalAttributes()), t.isActive(),
                     t.isPasswordGenerated(), t.getVersion(), t.getCreatedBy(), t.getModifiedBy(),
-                    t.getCreatedTime(), t.getModifiedTime(), t.getRequestId(), t.getId());
+                    t.getCreatedTime(), t.getModifiedTime(), t.getRequestId(), t.getId(),
+                    expectedVersion) == 1;
         } catch (RuntimeException e) {
             throw PgErrors.translate(e);
         }

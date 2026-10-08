@@ -1,5 +1,5 @@
 """
-Auto-generates reports/test_summary_table.md from schema.yaml.
+Auto-generates reports/test_summary_table.md from employee.yaml.
 Run: python generate_summary_table.py
 """
 import yaml
@@ -55,7 +55,7 @@ def rows_for_operation(method, path, operation):
     return rows
 
 
-def generate_table(schema_path="schema.yaml", output_path="reports/test_summary_table.md"):
+def generate_table(schema_path="employee.yaml", output_path="reports/test_summary_table.md"):
     with open(schema_path) as f:
         spec = yaml.safe_load(f)
 

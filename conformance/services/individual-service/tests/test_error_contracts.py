@@ -96,13 +96,17 @@ class TestCreateValidationErrors:
         _assert_error_body(response)
         assert_gateway_headers(response, gateway_headers_spec)
 
-    def test_missing_gender_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
+    def test_missing_gender_is_accepted(self, request, base_url, auth_headers, gateway_headers_spec):
+        """Per spec (401e8e3): gender is optional on create — only an invalid value is a 400."""
         response = _send(request.node, "POST", f"{base_url}/individuals",
                          headers=auth_headers,
                          json_body=make_invalid_individual("missing_gender"))
-        assert response.status_code == 400
-        _assert_error_body(response)
-        assert_gateway_headers(response, gateway_headers_spec)
+        try:
+            assert response.status_code == 201, f"got {response.status_code}: {response.text}"
+            assert_gateway_headers(response, gateway_headers_spec)
+        finally:
+            if response.status_code == 201:
+                req_lib.delete(f"{base_url}/individuals/{response.json()['id']}", headers=auth_headers)
 
     def test_missing_mobile_and_email_returns_400(self, request, base_url, auth_headers, gateway_headers_spec):
         """Per spec: at least one of mobileNumber or email must be supplied."""

@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 
 import com.digit.employee.constants.ErrorCodes;
 
+import com.digit.employee.client.IdGenApiException;
 import com.digit.employee.client.IdGenClient;
 import com.digit.employee.client.IndividualApiException;
 import com.digit.employee.client.IndividualClient;
@@ -88,7 +89,8 @@ public class EmployeeService {
 
     private String generateEmployeeCode(String tenantId) {
         // idgen is a downstream dependency — a failure/empty answer is not the client's fault, so
-        // classify as DOWNSTREAM_ERROR (502, retryable), matching Go generateEmployeeCode.
+        // classify as DOWNSTREAM_ERROR (502, retryable), matching Go generateEmployeeCode. A missing
+        // template is the exception: retrying cannot succeed until the tenant's template is created.
         List<String> ids;
         try {
             ids = idGenClient.generateIDs(tenantId, 1, null);
@@ -98,6 +100,12 @@ public class EmployeeService {
             // CustomException message is echoed to the caller, so it must not carry it. Without
             // this the failure is undiagnosable.
             log.error("idgen employee-code generation failed tenantId={}", tenantId, e);
+            if (e instanceof IdGenApiException idgen && idgen.getStatusCode() == 404) {
+                throw new CustomException(ErrorCodes.IDGEN_TEMPLATE_NOT_FOUND,
+                        "failed to generate employee code: idgen template '" + config.getIdgen().getIdgenName()
+                                + "' not found for tenant " + tenantId,
+                        HttpStatus.INTERNAL_SERVER_ERROR);
+            }
             throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to generate employee code", HttpStatus.BAD_GATEWAY);
         }
         if (ids.isEmpty()) {
@@ -122,7 +130,18 @@ public class EmployeeService {
         String individual;
         try {
             individual = individualClient.getIndividualByID(tenantId, individualID);
+        } catch (IndividualApiException e) {
+            // A 400 rejects the id the caller sent (e.g. not a UUID); anything else is the dependency's.
+            if (e.getStatusCode() == 400) {
+                log.warn("individual rejected individualId tenantId={}", tenantId, e);
+                String reason = e.errorMessage();
+                throw new CustomException(ErrorCodes.INVALID_REQUEST,
+                        reason == null ? "invalid individualId" : "invalid individualId: " + reason);
+            }
+            log.error("failed to validate individual ID tenantId={}", tenantId, e);
+            throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to validate individual ID", HttpStatus.BAD_GATEWAY);
         } catch (Exception e) {
+            log.error("failed to validate individual ID tenantId={}", tenantId, e);
             throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to validate individual ID", HttpStatus.BAD_GATEWAY);
         }
         if (individual == null) {
@@ -146,6 +165,7 @@ public class EmployeeService {
         try {
             user = keycloakClient.getUserByID(tenantId, userID, authHeader);
         } catch (Exception e) {
+            log.error("failed to validate user ID tenantId={}", tenantId, e);
             throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to validate user ID", HttpStatus.BAD_GATEWAY);
         }
         if (user == null) {
@@ -189,7 +209,7 @@ public class EmployeeService {
         r.setDateOfAppointment(emp.getDateOfAppointment());
         r.setDepartment(emp.getDepartment());
         r.setDesignation(emp.getDesignation());
-        r.setActive(emp.isActive());
+        r.setIsActive(emp.getIsActive());
         r.setVersion(emp.getVersion());
         r.setJurisdictions(jurisdictions);
         r.setAuditDetail(emp.getAuditDetails());
@@ -241,14 +261,14 @@ public class EmployeeService {
             employee.setDateOfAppointment(r.getDateOfAppointment());
             employee.setDepartment(r.getDepartment());
             employee.setDesignation(r.getDesignation());
-            employee.setActive(true);
+            employee.setIsActive(true);
             employee.setTenantId(tenantId);
             employee.getAuditDetails().setCreatedBy(userId);
             employee.getAuditDetails().setModifiedBy(userId);
             employee.getAuditDetails().setCreatedTime(now);
             employee.getAuditDetails().setModifiedTime(now);
             if (r.getIsActive() != null) {
-                employee.setActive(r.getIsActive());
+                employee.setIsActive(r.getIsActive());
             }
 
             List<CreateJurisdictionRequest> jurisdictions = new ArrayList<>();
@@ -261,7 +281,7 @@ public class EmployeeService {
                     jurisdictionSvc.validateRelations(tenantId, j.getBoundaryRelation());
                     CreateJurisdictionRequest jurisReq = new CreateJurisdictionRequest();
                     jurisReq.setBoundaryRelation(j.getBoundaryRelation());
-                    jurisReq.setIsActive(j.isActive());
+                    jurisReq.setIsActive(j.getIsActive());
                     jurisdictions.add(jurisReq);
                 }
             }
@@ -314,6 +334,7 @@ public class EmployeeService {
             try {
                 userIds = keycloakClient.getUserIDsByRole(criteria.getTenantId(), criteria.getRole(), authHeader);
             } catch (Exception e) {
+                log.error("keycloak role lookup failed tenantId={}", criteria.getTenantId(), e);
                 throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "keycloak role lookup failed", HttpStatus.BAD_GATEWAY);
             }
             if (userIds == null || userIds.isEmpty()) {
@@ -389,6 +410,7 @@ public class EmployeeService {
                 try {
                     role = keycloakClient.getRealmRole(tenantId, name, authHeader);
                 } catch (Exception e) {
+                    log.error("failed to look up realm role tenantId={}", tenantId, e);
                     throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to look up realm role", HttpStatus.BAD_GATEWAY);
                 }
                 if (role == null) {
@@ -409,9 +431,9 @@ public class EmployeeService {
             if (e.getStatusCode() == 409) {
                 throw new CustomException(ErrorCodes.CONFLICT, "a user with this mobile number or email already exists", HttpStatus.CONFLICT);
             }
-            throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to create user in keycloak", HttpStatus.BAD_GATEWAY);
+            throw mapCallerKeycloakError(e, tenantId, "failed to create user in keycloak", "not permitted to create users in this tenant");
         } catch (Exception e) {
-            throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to create user in keycloak", HttpStatus.BAD_GATEWAY);
+            throw mapCallerKeycloakError(e, tenantId, "failed to create user in keycloak", "not permitted to create users in this tenant");
         }
 
         // --- step 2: assign roles; compensate (delete user) on failure ---
@@ -420,10 +442,7 @@ public class EmployeeService {
                 keycloakClient.assignRealmRoles(tenantId, kcUserID, roleReps, authHeader);
             } catch (Exception e) {
                 compensateUser(tenantId, kcUserID, authHeader);
-                if (e instanceof KeycloakApiException && ((KeycloakApiException) e).getStatusCode() == 403) {
-                    throw new CustomException(ErrorCodes.FORBIDDEN, "not permitted to assign one of the requested roles", HttpStatus.FORBIDDEN);
-                }
-                throw new CustomException(ErrorCodes.DOWNSTREAM_ERROR, "failed to assign roles to user", HttpStatus.BAD_GATEWAY);
+                throw mapCallerKeycloakError(e, tenantId, "failed to assign roles to user", "not permitted to assign one of the requested roles");
             }
         }
 
@@ -433,7 +452,7 @@ public class EmployeeService {
             indResp = individualClient.createIndividual(tenantId, userId, kcUserID, individual);
         } catch (Exception e) {
             compensateUser(tenantId, kcUserID, authHeader);
-            throw mapIndividualError(e, "failed to create individual");
+            throw mapIndividualError(e, tenantId, "failed to create individual");
         }
         Object idVal = indResp.get("id");
         String individualUuid = idVal == null ? "" : idVal.toString();
@@ -482,16 +501,53 @@ public class EmployeeService {
      * (the client's individual payload), and everything else (5xx, transport) is a downstream failure.
      * Mirrors Go {@code mapIndividualErrCode}.
      */
-    private CustomException mapIndividualError(Exception e, String message) {
-        if (e instanceof IndividualApiException) {
-            int sc = ((IndividualApiException) e).getStatusCode();
-            if (sc == 409) {
-                return new CustomException(ErrorCodes.CONFLICT, message, HttpStatus.CONFLICT);
-            }
-            if (sc >= 400 && sc < 500) {
-                return new CustomException(ErrorCodes.INVALID_REQUEST, message);
+    /**
+     * Maps a failed Keycloak call made with the caller's token. Keycloak's 400/401/403/409 are about
+     * the caller (their input or their permissions) and keep their status; anything else is a
+     * downstream failure (502). The Keycloak status and body are logged, since the client message
+     * carries at most Keycloak's errorMessage.
+     */
+    private CustomException mapCallerKeycloakError(Exception e, String tenantId, String failedMessage, String forbiddenMessage) {
+        if (!(e instanceof KeycloakApiException kc)) {
+            log.error("{} tenantId={}", failedMessage, tenantId, e);
+            return new CustomException(ErrorCodes.DOWNSTREAM_ERROR, failedMessage, HttpStatus.BAD_GATEWAY);
+        }
+        String reason = kc.errorMessage();
+        String detailed = reason == null ? failedMessage : failedMessage + ": " + reason;
+        CustomException mapped = switch (kc.getStatusCode()) {
+            case 400 -> new CustomException(ErrorCodes.INVALID_REQUEST, detailed, HttpStatus.BAD_REQUEST);
+            case 401 -> new CustomException(ErrorCodes.UNAUTHORIZED, "caller token rejected by keycloak", HttpStatus.UNAUTHORIZED);
+            case 403 -> new CustomException(ErrorCodes.FORBIDDEN, forbiddenMessage, HttpStatus.FORBIDDEN);
+            case 409 -> new CustomException(ErrorCodes.CONFLICT, detailed, HttpStatus.CONFLICT);
+            default -> null;
+        };
+        if (mapped != null) {
+            log.warn("{} tenantId={}", failedMessage, tenantId, e);
+            return mapped;
+        }
+        log.error("{} tenantId={}", failedMessage, tenantId, e);
+        return new CustomException(ErrorCodes.DOWNSTREAM_ERROR, failedMessage, HttpStatus.BAD_GATEWAY);
+    }
+
+    /**
+     * Maps a failed individual-service call. Its 400/422/409 reject the individual payload the caller
+     * sent, so they keep their meaning and carry the service's reason. Anything else — including
+     * 401/403, which concern employee's own call (the caller's token is not forwarded) — is a
+     * downstream failure (502).
+     */
+    private CustomException mapIndividualError(Exception e, String tenantId, String message) {
+        if (e instanceof IndividualApiException ind) {
+            int sc = ind.getStatusCode();
+            if (sc == 400 || sc == 422 || sc == 409) {
+                log.warn("{} tenantId={}", message, tenantId, e);
+                String reason = ind.errorMessage();
+                String detailed = reason == null ? message : message + ": " + reason;
+                return sc == 409
+                        ? new CustomException(ErrorCodes.CONFLICT, detailed, HttpStatus.CONFLICT)
+                        : new CustomException(ErrorCodes.INVALID_REQUEST, detailed);
             }
         }
+        log.error("{} tenantId={}", message, tenantId, e);
         return new CustomException(ErrorCodes.DOWNSTREAM_ERROR, message, HttpStatus.BAD_GATEWAY);
     }
 
@@ -555,7 +611,7 @@ public class EmployeeService {
         existing.setDepartment(req.getDepartment());
         existing.setDesignation(req.getDesignation());
         existing.setStatus(req.getStatus());
-        existing.setActive(req.getIsActive());
+        existing.setIsActive(req.getIsActive());
         existing.getAuditDetails().setModifiedBy(userId);
         existing.getAuditDetails().setModifiedTime(System.currentTimeMillis());
 
@@ -703,11 +759,11 @@ public class EmployeeService {
     @Transactional
     public EmployeeResponse deactivateEmployee(String uuid, String tenantId, String userId) {
         Employee existing = repo.findByUUID(uuid, tenantId); // throws NOT_FOUND
-        if (!existing.isActive()) {
+        if (!existing.getIsActive()) {
             throw new CustomException(ErrorCodes.EMPLOYEE_ALREADY_INACTIVE, "employee is already inactive", HttpStatus.CONFLICT);
         }
         int expectedVersion = existing.getVersion();
-        existing.setActive(false);
+        existing.setIsActive(false);
         existing.getAuditDetails().setModifiedBy(userId);
         existing.getAuditDetails().setModifiedTime(System.currentTimeMillis());
         repo.update(existing, expectedVersion);
@@ -722,11 +778,11 @@ public class EmployeeService {
     @Transactional
     public EmployeeResponse reactivateEmployee(String uuid, String tenantId, String userId) {
         Employee existing = repo.findByUUID(uuid, tenantId); // throws NOT_FOUND
-        if (existing.isActive()) {
+        if (existing.getIsActive()) {
             throw new CustomException(ErrorCodes.EMPLOYEE_ALREADY_ACTIVE, "employee is already active", HttpStatus.CONFLICT);
         }
         int expectedVersion = existing.getVersion();
-        existing.setActive(true);
+        existing.setIsActive(true);
         existing.getAuditDetails().setModifiedBy(userId);
         existing.getAuditDetails().setModifiedTime(System.currentTimeMillis());
         repo.update(existing, expectedVersion);

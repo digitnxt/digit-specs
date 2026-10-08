@@ -64,7 +64,8 @@ public class BoundaryClient {
                     .GET();
             HttpResponse<String> resp = http.send(req);
             if (resp.statusCode() != 200) {
-                throw new RuntimeException("boundary relationship service returned status: " + resp.statusCode());
+                throw new RuntimeException("boundary relationship service returned status: " + resp.statusCode()
+                        + " body=" + resp.body());
             }
 
             Set<String> requested = new HashSet<>(codes);

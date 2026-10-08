@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.digit.account.clients.keycloak.TokenLifespanConfigTest
 -------------------------------------------------------------------------------
-Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.447 s -- in com.digit.account.clients.keycloak.TokenLifespanConfigTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.271 s -- in com.digit.account.clients.keycloak.TokenLifespanConfigTest

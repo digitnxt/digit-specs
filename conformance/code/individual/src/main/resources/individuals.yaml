@@ -228,13 +228,22 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '502':
           description: |
             A dependency failed (`DOWNSTREAM_ERROR`); nothing is persisted, retry once it
-            recovers. Either IDGen could not assign an `individualId` (unreachable or timed
-            out, or it rejected the request, e.g. a missing template, in which case its own
-            code and message are included), or Vault could not encrypt the personal data.
+            recovers. Either IDGen could not assign an `individualId` (unreachable, timed
+            out or failed), or Vault could not encrypt the personal data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
           content:
             application/json:
               schema:
@@ -242,11 +251,15 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. `IDGEN_TEMPLATE_NOT_FOUND` when the tenant has no IDGen
+            template for `individualId`; create the template. Retrying does not help.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: Search / list individuals
@@ -341,12 +354,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ──────────────────────────────────────────────────────────────────────────────
 
@@ -434,12 +457,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ──────────────────────────────────────────────────────────────────────────────
 
@@ -509,12 +542,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
       summary: Update individual
@@ -654,12 +697,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       summary: Delete individual (soft delete)
@@ -717,12 +770,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # LAYER 2 — TENANT CONFIGURATION
@@ -824,12 +887,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: Get tenant validation configuration
@@ -869,13 +942,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid authentication credentials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
@@ -1504,9 +1589,6 @@ components:
           additionalProperties:
             type: string
             maxLength: 1024
-          propertyNames:
-            pattern: '^[a-zA-Z0-9_.-]+$'
-            maxLength: 128
           example:
             occupation: engineer
             preferredLanguage: kn

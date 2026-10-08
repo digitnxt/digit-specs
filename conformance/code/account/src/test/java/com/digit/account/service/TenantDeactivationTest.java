@@ -15,6 +15,7 @@ import org.mockito.InOrder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -49,10 +50,12 @@ class TenantDeactivationTest {
         e.setEmail("a@example.com");
         e.setActive(active);
         when(tenantRepo.getById("id-1")).thenReturn(e);
+        when(tenantRepo.update(any(TenantEntity.class), anyInt())).thenReturn(true);
     }
 
     private static TenantUpdateRequest req(Boolean isActive) {
         TenantUpdateRequest r = new TenantUpdateRequest();
+        r.setVersion(0);
         r.setIsActive(isActive);
         return r;
     }
@@ -66,7 +69,7 @@ class TenantDeactivationTest {
         // tenant marked inactive whose users can still authenticate.
         InOrder order = inOrder(keycloak, tenantRepo);
         order.verify(keycloak).setRealmEnabled("CITYA", false);
-        order.verify(tenantRepo).update(any(TenantEntity.class));
+        order.verify(tenantRepo).update(any(TenantEntity.class), anyInt());
     }
 
     @Test
@@ -98,13 +101,13 @@ class TenantDeactivationTest {
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> service.update("id-1", req(false), "tester", "req-1"));
         assertTrue(ex.getMessage().contains("failed to disable Keycloak realm"), ex.getMessage());
-        verify(tenantRepo, never()).update(any(TenantEntity.class));
+        verify(tenantRepo, never()).update(any(TenantEntity.class), anyInt());
     }
 
     @Test
     void aFailedDbWriteRestoresThePreviousRealmState() {
         existing(true);
-        doThrow(new RuntimeException("db down")).when(tenantRepo).update(any(TenantEntity.class));
+        doThrow(new RuntimeException("db down")).when(tenantRepo).update(any(TenantEntity.class), anyInt());
 
         assertThrows(RuntimeException.class,
                 () -> service.update("id-1", req(false), "tester", "req-1"));
@@ -115,7 +118,7 @@ class TenantDeactivationTest {
     @Test
     void aFailedRollbackSaysManualCleanupIsNeeded() {
         existing(true);
-        doThrow(new RuntimeException("db down")).when(tenantRepo).update(any(TenantEntity.class));
+        doThrow(new RuntimeException("db down")).when(tenantRepo).update(any(TenantEntity.class), anyInt());
         doThrow(new RuntimeException("keycloak down")).when(keycloak).setRealmEnabled("CITYA", true);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
@@ -126,7 +129,7 @@ class TenantDeactivationTest {
     @Test
     void aFailedDbWriteWithNoFlipDoesNotTouchKeycloak() {
         existing(true);
-        doThrow(new RuntimeException("db down")).when(tenantRepo).update(any(TenantEntity.class));
+        doThrow(new RuntimeException("db down")).when(tenantRepo).update(any(TenantEntity.class), anyInt());
 
         assertThrows(RuntimeException.class,
                 () -> service.update("id-1", req(null), "tester", "req-1"));

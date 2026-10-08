@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.7</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.digit</groupId>
+    <artifactId>billing</artifactId>
+    <version>3.0.0-SNAPSHOT</version>
+    <name>billing</name>
+    <description>DIGIT 3.0 Billing service — business services, tax heads, demands, bills, payments</description>
+
+    <properties>
+        <java.version>25</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Platform cross-cutting: correlation/tenant filter, error contract,
+             PubSubClient, logAwareRestClient, observability. Brings webmvc,
+             kafka, redis, actuator, OTel and Prometheus transitively. -->
+        <dependency>
+            <groupId>org.digit</groupId>
+            <artifactId>tracer</artifactId>
+            <version>3.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Per-tenant schemas: consumes account-migration to provision a schema per
+             tenant, then routes each request to it via X-Tenant-ID. Auto-configured for
+             request threads; the consumer threads set search_path themselves via
+             TenantSchema. See ../TENANT_MIGRATION_PLAN.md. -->
+        <dependency>
+            <groupId>com.digit</groupId>
+            <artifactId>tenant-migration</artifactId>
+            <version>3.2.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Boot 4 modular auto-configuration: flyway-core alone is NOT auto-run —
+             the starter brings the spring-boot-flyway module that migrates at boot
+             (url-shortener Phase 6 lesson: with only flyway-core the app starts
+             silently unmigrated) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Boot 4 modular test support: @AutoConfigureMockMvc lives here now -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>repo.egovernments.org</id>
+            <name>eGov ERP Releases Repository</name>
+            <url>https://nexus-repo.egovernments.org/nexus/content/repositories/releases/</url>
+        </repository>
+        <repository>
+            <id>repo.egovernments.org.snapshots</id>
+            <name>eGov ERP Releases Repository</name>
+            <url>https://nexus-repo.egovernments.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+    </repositories>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

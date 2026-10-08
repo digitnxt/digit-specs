@@ -48,7 +48,7 @@ public class IndividualClient {
                 return null;
             }
             if (resp.statusCode() != 200) {
-                throw new RuntimeException("individual service returned status: " + resp.statusCode());
+                throw new IndividualApiException(resp.statusCode(), resp.body());
             }
             JsonNode node = objectMapper.readTree(resp.body());
             String id = node.has("id") ? node.get("id").asText("") : "";

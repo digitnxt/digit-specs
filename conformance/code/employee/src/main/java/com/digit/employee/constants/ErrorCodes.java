@@ -38,6 +38,7 @@ public final class ErrorCodes {
     public static final String BAD_GATEWAY = "BAD_GATEWAY";
 
     // 500
+    public static final String IDGEN_TEMPLATE_NOT_FOUND = "IDGEN_TEMPLATE_NOT_FOUND";
     public static final String DATABASE_ERROR = "DATABASE_ERROR";
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
 }

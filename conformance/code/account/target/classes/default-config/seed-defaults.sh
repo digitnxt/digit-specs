@@ -1,33 +1,38 @@
 #!/usr/bin/env bash
-# Creates the notification configs and provider mappings that account and otp need
-# once they are pointed at notify, plus the EMAIL/SMS provider mappings.
+# Seeds everything a tenant needs before account onboarding can send anything:
+# notify's templates and provider mappings, and otp's per-purpose configs.
 #
-#   ./seed-notify.sh [base-url] [tenant]
+#   ./seed-defaults.sh [notify-base] [tenant] [otp-base]
 #
-# base-url must already include notify's context path, which differs by
-# environment: the chart sets SERVER_SERVLET_CONTEXT_PATH=/notify, while
-# docker-compose leaves it at the default "/".
-#   local compose : ./seed-notify.sh http://localhost:8080 default
-#   cluster       : ./seed-notify.sh http://notify.egov:8080/notify default
+# Each base URL must already include that service's context path, which differs
+# by environment -- the charts set /notify and /otp, docker-compose leaves the
+# default "/".
+#   local compose : ./seed-defaults.sh http://localhost:8080 default http://localhost:8110/otp
+#   cluster       : ./seed-defaults.sh http://notify.egov:8080/notify default http://otp.egov:8080/otp
 #
-# Re-running is safe to attempt but not idempotent: notify answers 409 for a
-# config that already exists, which this reports and skips.
+# Normally only needed for the platform tenant. A tenant created through account
+# gets its otp configs automatically from the provisioning event, and inherits
+# notify's templates from the platform tenant -- see ONBOARDING-DEFAULTS.md.
+#
+# Re-running is safe to attempt but not idempotent: both services answer 409 for
+# something that already exists, which this reports and skips.
 set -uo pipefail
 
 BASE="${1:-http://localhost:8080}"
 TENANT="${2:-default}"
+OTP_BASE="${3:-http://localhost:8110/otp}"
 CFG="$BASE/v3/notification-configs"
 MAP="$BASE/v3/provider-mappings"
 
 post() {
   local label="$1" url="$2" body="$3"
   local code
-  code=$(curl -s -o /tmp/seed-notify.out -w '%{http_code}' -X POST "$url" \
+  code=$(curl -s -o /tmp/seed-defaults-notify.out -w '%{http_code}' -X POST "$url" \
     -H 'Content-Type: application/json' -H "X-Tenant-ID: $TENANT" -d "$body")
   case "$code" in
     2*) printf '  %-34s created (%s)\n' "$label" "$code" ;;
     409) printf '  %-34s already exists, skipped\n' "$label" ;;
-    *)  printf '  %-34s FAILED (%s): %s\n' "$label" "$code" "$(cat /tmp/seed-notify.out)" ;;
+    *)  printf '  %-34s FAILED (%s): %s\n' "$label" "$code" "$(cat /tmp/seed-defaults-notify.out)" ;;
   esac
 }
 
@@ -110,3 +115,28 @@ post "SMS -> smscountry" "$MAP" '{ "channel": "SMS", "providers": ["smscountry"]
 echo
 echo "Loaded providers:"
 curl -s "$BASE/v3/providers" -H "X-Tenant-ID: $TENANT"; echo
+
+
+# --- otp ------------------------------------------------------------------
+# otp resolves its config strictly by (tenantId, purpose) with no fallback to
+# the platform tenant, unlike notify's templates -- so every purpose a tenant
+# will use needs a row of its own. Posting only the purpose is deliberate: the
+# service fills every other field from ConfigValidation's defaults, which keeps
+# the definition of a default config in one place.
+echo
+echo "otp configs at $OTP_BASE (one per accepted purpose):"
+if ! curl -s -m 5 -o /dev/null "$OTP_BASE/health"; then
+  echo "  otp not reachable at $OTP_BASE -- skipped."
+  echo "  Pass its base URL as the third argument if it lives elsewhere."
+else
+  for purpose in forgot-password login phone-verify registration transaction; do
+    code=$(curl -s -o /tmp/seed-otp.out -w '%{http_code}' -X POST "$OTP_BASE/v3/config" \
+      -H 'Content-Type: application/json' -H "X-Tenant-Id: $TENANT" -H 'X-User-Id: system' \
+      -d "{\"purpose\":\"$purpose\"}")
+    case "$code" in
+      2*)  printf '  %-34s created (%s)\n' "$purpose" "$code" ;;
+      409) printf '  %-34s already exists, skipped\n' "$purpose" ;;
+      *)   printf '  %-34s FAILED (%s): %s\n' "$purpose" "$code" "$(cat /tmp/seed-otp.out)" ;;
+    esac
+  done
+fi

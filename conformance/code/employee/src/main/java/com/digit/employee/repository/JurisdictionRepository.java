@@ -51,7 +51,7 @@ public class JurisdictionRepository {
         Object empId = rs.getObject("employee_id");
         j.setEmployeeId(empId == null ? null : empId.toString());
         j.setBoundaryRelation(parseRelation(rs.getString("boundary_relation")));
-        j.setActive(rs.getBoolean("is_active"));
+        j.setIsActive(rs.getBoolean("is_active"));
         j.setVersion(rs.getInt("version"));
         j.setTenantId(rs.getString("tenant_id"));
         AuditDetails ad = new AuditDetails();
@@ -102,7 +102,7 @@ public class JurisdictionRepository {
                     UUID.fromString(j.getId()),
                     j.getEmployeeId() == null ? null : UUID.fromString(j.getEmployeeId()),
                     writeRelation(j.getBoundaryRelation()),
-                    j.isActive(), j.getVersion(), j.getTenantId(),
+                    j.getIsActive(), j.getVersion(), j.getTenantId(),
                     j.getAuditDetails().getCreatedBy(), j.getAuditDetails().getModifiedBy(),
                     j.getAuditDetails().getCreatedTime(), j.getAuditDetails().getModifiedTime());
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
@@ -155,7 +155,7 @@ public class JurisdictionRepository {
             int affected = jdbc.update(
                     "UPDATE " + TABLE + " SET boundary_relation = ?::jsonb, is_active = ?, version = ?, "
                             + "\"modifiedBy\" = ?, \"modifiedTime\" = ? WHERE id = ? AND version = ?",
-                    writeRelation(j.getBoundaryRelation()), j.isActive(), expectedVersion + 1, modifiedBy, now,
+                    writeRelation(j.getBoundaryRelation()), j.getIsActive(), expectedVersion + 1, modifiedBy, now,
                     UUID.fromString(j.getId()), expectedVersion);
             if (affected == 0) {
                 throw new CustomException(ErrorCodes.ROW_VERSION_MISMATCH, "jurisdiction was modified concurrently", HttpStatus.CONFLICT);

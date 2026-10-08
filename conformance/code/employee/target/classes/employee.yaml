@@ -201,7 +201,8 @@ paths:
           description: |
             Validation error — one or more employee records failed field-level
             or business-rule validation. Error array contains record index and
-            field-level details. No records are persisted.
+            field-level details. An `individualId` rejected by the individual
+            service returns its reason. No records are persisted.
           content:
             application/json:
               schema:
@@ -225,7 +226,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. `IDGEN_TEMPLATE_NOT_FOUND` when `code` is omitted
+            and the tenant has no idgen template for employee codes; create the
+            template or send `code`. Retrying does not help.
           content:
             application/json:
               schema:
@@ -606,8 +610,10 @@ paths:
           description: |
             Validation error — a missing `user`, `individual` or `employee` block, a
             missing `user.mobileNumber` / `user.password`, a role that does not exist
-            in the realm, or an individual/employee payload rejected by its own
-            validation.
+            in the realm, a user or role assignment rejected by Keycloak (its
+            `errorMessage` is appended, e.g. `email: error-invalid-email`), or an
+            individual/employee payload rejected by its own validation (the
+            individual service's reason is appended).
           content:
             application/json:
               schema:
@@ -624,8 +630,9 @@ paths:
                   $ref: '#/components/schemas/Error'
         '403':
           description: |
-            The caller is not permitted to assign one of the requested roles. The
-            Keycloak user created in step 1 is deleted.
+            The caller's token may not create users in the realm (nothing is
+            created), or may not assign one of the requested roles (the Keycloak
+            user created in step 1 is deleted).
           content:
             application/json:
               schema:
@@ -643,7 +650,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. `IDGEN_TEMPLATE_NOT_FOUND` when `code` is omitted
+            and the tenant has no idgen template for employee codes; create the
+            template or send `code`. Retrying does not help.
           content:
             application/json:
               schema:
