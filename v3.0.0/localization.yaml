@@ -1,8 +1,10 @@
 openapi: 3.0.3
 info:
   title: Localization Service API
-  description: A Go-based service for managing and retrieving localization messages
-    for applications.
+  description: >
+    Service for managing and retrieving localization messages for applications.
+    Messages support active, inactive, disabled, and draft statuses. Searches
+    default to active when status is omitted.
   version: 3.0.0
 servers:
 - url: https://api.example.com/localization/v3
@@ -55,6 +57,11 @@ components:
     TimeStamp:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TimeStamp
   schemas:
+    MessageStatus:
+      type: string
+      enum: [active, inactive, disabled, draft]
+      description: Lifecycle status of a localization message. Values are case-sensitive.
+      example: draft
     Message:
       type: object
       required:
@@ -81,6 +88,13 @@ components:
         message:
           type: string
           description: The text to display
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MessageStatus'
+          description: >
+            Defaults to active when creating a message, including a new upserted
+            message. Omit on upsert to preserve an existing message's status.
+          example: draft
     UpdateMessage:
       type: object
       required:
@@ -96,6 +110,11 @@ components:
           type: string
         message:
           type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MessageStatus'
+          description: New status. Omit to preserve the current status. Set active to publish a draft.
+          example: active
     CreateMessagesRequest:
       type: object
       required:
@@ -217,7 +236,12 @@ paths:
       tags:
       - Messages
       summary: Search for localization messages
-      description: Searches for localization messages using URL query parameters.
+      description: >
+        Searches for localization messages using URL query parameters. If status
+        is omitted, only active messages are returned. Use status=draft to find
+        drafts, or explicitly select active, inactive, or disabled. Status filtering
+        applies to code searches and is performed before pagination. Unsupported
+        status values return HTTP 400.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -227,6 +251,54 @@ paths:
       - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: status
+        in: query
+        required: false
+        description: Filter by status. Omitted status defaults to active.
+        schema:
+          allOf:
+          - $ref: '#/components/schemas/MessageStatus'
+          default: active
+        examples:
+          active:
+            summary: Search active messages (also the default)
+            value: active
+          draft:
+            summary: Search draft messages
+            value: draft
+      - name: module
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: locale
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: codes
+        in: query
+        required: false
+        description: Comma-separated message codes. Status filtering also applies to code searches.
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: limit
+        in: query
+        required: false
+        description: Positive page size enables pagination.
+        schema:
+          type: integer
+      - name: offset
+        in: query
+        required: false
+        description: Pagination offset; used only when a positive limit is provided.
+        schema:
+          type: integer
+          default: 0
       responses:
         '200':
           description: A list of found messages
@@ -291,7 +363,7 @@ paths:
       tags:
       - Messages
       summary: Create new localization messages
-      description: Creates one or more new localization messages.
+      description: Creates one or more new localization messages. Status defaults to active when omitted.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -306,7 +378,33 @@ paths:
         required: true
         content:
           application/json:
-            example: {}
+            examples:
+              active:
+                summary: Create an active message explicitly
+                value:
+                  messages:
+                  - code: COMMON_SUBMIT
+                    message: Submit
+                    module: common
+                    locale: en_IN
+                    status: active
+              draft:
+                summary: Create a draft message
+                value:
+                  messages:
+                  - code: COMMON_SUBMIT_DRAFT
+                    message: Submit draft
+                    module: common
+                    locale: en_IN
+                    status: draft
+              defaultActive:
+                summary: Omitted status defaults to active
+                value:
+                  messages:
+                  - code: COMMON_CANCEL
+                    message: Cancel
+                    module: common
+                    locale: en_IN
             schema:
               $ref: '#/components/schemas/CreateMessagesRequest'
       responses:
@@ -381,8 +479,10 @@ paths:
       tags:
       - Messages
       summary: Update existing localization messages
-      description: Updates one or more existing localization messages for a specific
-        tenant, module, and locale.
+      description: >
+        Updates messages by UUID within the tenant. Set status to active to publish
+        a draft. Omit status to preserve its current value. Writes invalidate
+        affected cached search results after commit.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -399,6 +499,20 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateMessagesRequest'
+            examples:
+              publishDraft:
+                summary: Update a draft to active
+                value:
+                  messages:
+                  - uuid: 29a11e6d-5c28-45f6-a473-f7e470d16e75
+                    message: Submit
+                    status: active
+              preserveStatus:
+                summary: Change text while preserving status
+                value:
+                  messages:
+                  - uuid: 29a11e6d-5c28-45f6-a473-f7e470d16e75
+                    message: Updated submit text
       responses:
         '200':
           description: Messages updated successfully
@@ -568,7 +682,8 @@ paths:
       summary: Create or update localization messages
       description: Creates or updates one or more localization messages. If a message
         with the same unique identifiers already exists, it will be updated; otherwise,
-        a new one will be created.
+        a new one will be created. Explicit status replaces the stored status.
+        Omitted status preserves an existing status and defaults new messages to active.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
