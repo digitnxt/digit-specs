@@ -8,6 +8,14 @@ info:
     The service manages schema lifecycle and schema-bound registry records for multi-tenant
     clients, including sync and async persistence modes.
 
+
+    Every successful response is wrapped in `{success:true, data, error:null, message}`
+    (see SuccessEnvelope). Every error the service itself produces is a bare JSON array
+    of Error objects with the HTTP status of the failure; the codes used are
+    `ValidationError`, `NotFound`, `Conflict` and `InternalServerError`, plus
+    framework-derived codes for malformed JSON, bean-validation failures and missing
+    query parameters (empty `code`).
+
     '
 servers:
 - url: https://api.example.com/registry/v3
@@ -76,7 +84,25 @@ components:
       required: true
       schema:
         type: string
-      description: UUID of a registry data row or registryId for delete operations.
+        format: uuid
+      description: UUID of the active registry data row. Values that are not a UUID
+        are rejected with 404 before any lookup; registryId is not accepted here.
+    VerifyIdQuery:
+      name: id
+      in: query
+      required: false
+      schema:
+        type: string
+      description: UUID of the version row or the stable registryId. When blank or
+        omitted, `registryId` is used instead.
+    VerifyRegistryIdQuery:
+      name: registryId
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Fallback identifier used only when `id` is omitted. If both are
+        omitted the lookup fails with 404.
     SchemaVersionQuery:
       name: version
       in: query
@@ -84,27 +110,31 @@ components:
       schema:
         type: integer
         minimum: 1
-      description: Specific schema version to retrieve.
+      description: Specific schema version to retrieve. When omitted the latest active
+        version is returned; an unknown version yields 404.
     LimitQuery:
       name: limit
       in: query
       required: false
       schema:
         type: integer
-        minimum: 1
         default: 100
-      description: Maximum number of rows to return.
+      description: Fallback page size, used only when the request body omits `limit`
+        or sets it to 0/null. A resolved value below 1 or above 1000 is silently
+        replaced by 1000 (never rejected).
     OffsetQuery:
       name: offset
       in: query
       required: false
       schema:
         type: integer
-        minimum: 0
         default: 0
-      description: Offset for paginated queries.
+      description: Fallback offset, used only when the request body omits `offset`.
+        Negative values are treated as 0.
     TenantIdHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+    UserIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader
     ClientId:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ClientId
   headers:
@@ -136,13 +166,24 @@ components:
       - schemaCode
       - definition
       properties:
+        tenantId:
+          type: string
+          description: Accepted but ignored; the tenant always comes from the request
+            context.
         schemaCode:
           type: string
           minLength: 1
+          description: Must be non-blank; a blank or missing value is rejected with 400.
         definition:
           type: object
           additionalProperties: true
-          description: JSON Schema Draft 2020-12 definition for the data payload.
+          description: JSON Schema Draft 2020-12 definition for the data payload. A
+            missing `$schema` is filled in with the 2020-12 URI; any other `$schema`
+            value, or a definition that fails the 2020-12 meta-schema, is rejected with
+            400 ValidationError. The stored (and returned) definition always carries
+            `$schema`.
+        webhook:
+          $ref: '#/components/schemas/WebhookConfig'
         x-unique:
           type: array
           description: List of unique constraints; each entry is an array of one or
@@ -161,29 +202,141 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SchemaIndex'
-    Schema:
-      allOf:
-      - $ref: '#/components/schemas/SchemaRequest'
-      - type: object
-        required:
-        - id
-        - version
-        - isLatest
-        - isActive
-        - auditDetails
-        properties:
-          id:
+    SchemaUpdateRequest:
+      type: object
+      required:
+      - definition
+      description: Body of PUT /schema/{schemaCode}. Same shape as SchemaRequest, but
+        bean validation is not applied and `schemaCode` in the body is ignored (the
+        path value wins). A missing or null `definition` is still rejected with 400
+        ValidationError ("definition is required").
+      properties:
+        tenantId:
+          type: string
+          description: Accepted but ignored; the tenant always comes from the request
+            context.
+        schemaCode:
+          type: string
+          description: Ignored; the path parameter is used.
+        definition:
+          type: object
+          additionalProperties: true
+          description: JSON Schema Draft 2020-12 definition; validated exactly as on
+            create.
+        webhook:
+          $ref: '#/components/schemas/WebhookConfig'
+        x-unique:
+          type: array
+          items:
+            type: array
+            minItems: 1
+            items:
+              type: string
+        x-ref-schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefSchema'
+        x-indexes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaIndex'
+    WebhookConfig:
+      type: object
+      description: Optional outbound callback invoked after every successful data
+        CREATE, UPDATE and DELETE on the schema, with body `{action, schemaCode,
+        tenantId, data}`. Only fired when `active` is true and `url` is non-blank.
+      properties:
+        url:
+          type: string
+        method:
+          type: string
+          description: HTTP method (upper-cased); POST when omitted.
+        apiKey:
+          type: string
+          description: When set, sent to the callback as the X-API-Key header.
+        headers:
+          type: object
+          additionalProperties:
             type: string
-            format: uuid
-          version:
-            type: integer
-            minimum: 1
-          isLatest:
-            type: boolean
-          isActive:
-            type: boolean
-          auditDetails:
-            $ref: '#/components/schemas/AuditDetail'
+          description: Extra headers sent with the callback.
+        active:
+          type: boolean
+          default: false
+    Schema:
+      type: object
+      description: Schema as serialised by the service. The extension keys are emitted
+        in camelCase (`xUnique`, `xRefSchema`, `xIndexes`) even though requests use
+        the hyphenated `x-unique`/`x-ref-schema`/`x-indexes`, and audit fields are
+        flattened (ISO-8601 strings) rather than nested under `auditDetails`.
+      required:
+      - id
+      - tenantId
+      - schemaCode
+      - version
+      - definition
+      - isLatest
+      - isActive
+      - createdTime
+      - createdBy
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifier of this schema version row; each version has its own id.
+        tenantId:
+          type: string
+        schemaCode:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+          description: Schema version; starts at 1 and increments on every effective
+            update.
+        definition:
+          type: object
+          additionalProperties: true
+          description: Normalised JSON Schema definition (always includes `$schema`).
+        xUnique:
+          type: array
+          description: Unique constraints (see `x-unique` in SchemaRequest). Empty
+            array when none were supplied.
+          items:
+            type: array
+            items:
+              type: string
+        xRefSchema:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefSchema'
+        xIndexes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaIndex'
+        webhook:
+          allOf:
+          - $ref: '#/components/schemas/WebhookConfig'
+          nullable: true
+        isLatest:
+          type: boolean
+        isActive:
+          type: boolean
+        createdTime:
+          type: string
+          format: date-time
+        modifiedTime:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+        modifiedBy:
+          type: string
+          nullable: true
+        requestId:
+          type: string
+          nullable: true
+          description: Request identifier captured when this version was written;
+            empty string when the request carried none.
     RefSchema:
       type: object
       required:
@@ -193,6 +346,8 @@ components:
         fieldPath:
           type: string
           description: Dot-notation path inside the data payload containing the reference.
+            A missing or blank value in a record is rejected with 400 ValidationError;
+            an unresolvable reference with 404 NotFound.
         schemaCode:
           type: string
           description: Referenced schema whose data must contain the foreign value.
@@ -201,12 +356,19 @@ components:
           description: Optional field path in the referenced schema (defaults to registryId).
         external:
           type: boolean
+          default: false
           description: When true, validate the reference via an external registry
-            service.
+            service. Null is normalised to false, so responses always carry a boolean.
         registry:
           type: string
+          nullable: true
           description: Discovery key identifying the target registry for external
             validation. Defaults to schemaCode when omitted.
+        x-ref-schema:
+          type: string
+          nullable: true
+          description: Marker key emitted by the service on every RefSchema in
+            responses; always null. Ignored on input.
     SchemaIndex:
       type: object
       required:
@@ -214,14 +376,21 @@ components:
       properties:
         name:
           type: string
+          nullable: true
+          description: Index name; derived from the table, field path and method when
+            omitted.
         fieldPath:
           type: string
+          description: Dot-notation path inside `data`. Each segment must match
+            `[A-Za-z0-9_-]+`; anything else is rejected with 400 ValidationError.
         method:
           type: string
           enum:
           - btree
           - gin
-          description: Postgres index method; btree if omitted.
+          description: Postgres index method, matched case-insensitively; btree if
+            omitted. Any other value is rejected with 400 ValidationError
+            ("unsupported index method").
     AuditDetail:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
     DataRequest:
@@ -229,38 +398,59 @@ components:
       required:
       - data
       properties:
+        tenantId:
+          type: string
+          description: Accepted but ignored; the tenant always comes from the request
+            context.
+        schemaCode:
+          type: string
+          description: Accepted but ignored; the path parameter is used.
         version:
           type: integer
-          minimum: 1
-          description: Required for updates to ensure optimistic locking.
+          description: 'Ignored on create. Required on update and must equal the
+            current record `version`; a missing/non-positive value is rejected with 400
+            ValidationError "version is required for update", a different value with
+            400 ValidationError "version mismatch: expected N".'
         data:
           type: object
           additionalProperties: true
-          description: Arbitrary JSON payload validated by the schema definition.
+          description: Arbitrary JSON payload validated by the schema definition. A
+            missing or null value is rejected with 400.
     RegistryData:
       type: object
+      description: Registry record as serialised by the service. Audit fields are
+        flattened (ISO-8601 strings) rather than nested under `auditDetails`.
       required:
       - id
       - registryId
+      - tenantId
       - schemaCode
       - schemaVersion
       - version
       - data
       - isActive
       - effectiveFrom
-      - auditDetails
+      - createdTime
+      - createdBy
       properties:
         id:
           type: string
           format: uuid
+          description: Identifier of this version row. Every update inserts a new row
+            with a new id; use `registryId` to address the record across versions.
         registryId:
+          type: string
+          description: Stable identifier generated via idgen at create time.
+        tenantId:
           type: string
         schemaCode:
           type: string
         schemaVersion:
           type: integer
+          description: Schema version the payload was validated against.
         version:
           type: integer
+          description: Record version; 1 on create, incremented on every update.
         data:
           type: object
           additionalProperties: true
@@ -273,25 +463,51 @@ components:
           type: string
           format: date-time
           nullable: true
-        auditDetails:
-          $ref: '#/components/schemas/AuditDetail'
+          description: Null while the row is the active version; set when it is
+            superseded or deleted.
+        createdTime:
+          type: string
+          format: date-time
+        modifiedTime:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+        modifiedBy:
+          type: string
+          nullable: true
+        requestId:
+          type: string
+          nullable: true
     SearchRequest:
       type: object
       properties:
+        tenantId:
+          type: string
+          description: Accepted but ignored; the tenant always comes from the request
+            context.
+        schemaCode:
+          type: string
+          description: Accepted but ignored; the path parameter is used.
         filters:
           type: object
           additionalProperties: {}
-          description: Equality filters applied using data->>'key'.
+          description: Equality filters on dot-notation paths inside `data`, compared
+            as text. Each path segment must match `[A-Za-z0-9_-]+` (400 otherwise).
         contains:
           type: object
           additionalProperties: {}
-          description: JSON containment predicates applied with data @> value.
+          description: JSON containment predicate applied with data @> value.
         limit:
           type: integer
-          minimum: 1
+          description: Page size. Omitted, null or 0 falls back to the `limit` query
+            parameter, then to 100. A resolved value below 1 or above 1000 is silently
+            replaced by 1000 (never rejected).
         offset:
           type: integer
-          minimum: 0
+          description: Omitted or null falls back to the `offset` query parameter,
+            then to 0. Negative values are treated as 0.
     ExistsResponse:
       type: object
       required:
@@ -299,35 +515,70 @@ components:
       properties:
         exists:
           type: boolean
-    VerificationResponse:
+    SuccessEnvelope:
+      type: object
+      description: Envelope returned by every 2xx response.
+      required:
+      - success
+      - data
+      - error
+      - message
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        data:
+          nullable: true
+          description: Payload; varies by endpoint. Null for 202 responses and for
+            deletes.
+        error:
+          type: string
+          nullable: true
+          description: Always null on success.
+        message:
+          type: string
+          nullable: true
+          description: Human-readable outcome for mutating operations (for example
+            "Schema created successfully", "Data persistence queued successfully");
+            null for reads, searches and existence checks.
+    MessageResponse:
       allOf:
-      - $ref: '#/components/schemas/ResponseEnvelope'
+      - $ref: '#/components/schemas/SuccessEnvelope'
       - type: object
         properties:
           data:
             type: object
+            nullable: true
+            description: Always null.
+    VerificationResponse:
+      allOf:
+      - $ref: '#/components/schemas/SuccessEnvelope'
+      - type: object
+        properties:
+          data:
+            type: object
+            required:
+            - valid
             properties:
               valid:
                 type: boolean
     ResponseEnvelope:
       oneOf:
-      - type: object
-        properties:
-          data:
-            description: Payload returned on success; varies by endpoint.
+      - $ref: '#/components/schemas/SuccessEnvelope'
       - type: array
         items:
           $ref: '#/components/schemas/Error'
     SchemaResponse:
       allOf:
-      - $ref: '#/components/schemas/ResponseEnvelope'
+      - $ref: '#/components/schemas/SuccessEnvelope'
       - type: object
         properties:
           data:
             $ref: '#/components/schemas/Schema'
     SchemaListResponse:
       allOf:
-      - $ref: '#/components/schemas/ResponseEnvelope'
+      - $ref: '#/components/schemas/SuccessEnvelope'
       - type: object
         properties:
           data:
@@ -336,14 +587,14 @@ components:
               $ref: '#/components/schemas/Schema'
     RegistryDataResponse:
       allOf:
-      - $ref: '#/components/schemas/ResponseEnvelope'
+      - $ref: '#/components/schemas/SuccessEnvelope'
       - type: object
         properties:
           data:
             $ref: '#/components/schemas/RegistryData'
     RegistryDataListResponse:
       allOf:
-      - $ref: '#/components/schemas/ResponseEnvelope'
+      - $ref: '#/components/schemas/SuccessEnvelope'
       - type: object
         properties:
           data:
@@ -352,7 +603,7 @@ components:
               $ref: '#/components/schemas/RegistryData'
     ExistsEnvelope:
       allOf:
-      - $ref: '#/components/schemas/ResponseEnvelope'
+      - $ref: '#/components/schemas/SuccessEnvelope'
       - type: object
         properties:
           data:
@@ -360,15 +611,20 @@ components:
     IsExistRequest:
       type: object
       properties:
+        tenantId:
+          type: string
+          description: Accepted but ignored; the tenant always comes from the request
+            context.
         field:
           type: string
-          description: Field path or column to test (registryId by default).
+          description: Field to test - `registryId` (default when omitted or blank),
+            `id` (version-row UUID) or a dot-notation path inside `data` (each segment
+            `[A-Za-z0-9_-]+`, otherwise 400).
         value:
           type: string
-          minLength: 1
-          description: Value to verify.
-      required:
-      - value
+          description: Value to compare. Not validated as required - when omitted
+            the check simply reports `exists:false` (or fails with 400 when `field`
+            is `id`, which needs a UUID).
     Error:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
   securitySchemes:
@@ -385,13 +641,17 @@ paths:
       tags:
       - Schema
       summary: Create schema
-      description: Creates the first version of a schema for the tenant and provisions
-        the backing data table.
+      description: Creates version 1 of a schema for the tenant and provisions the
+        backing data table (including any `x-indexes`). The definition is validated
+        against the JSON Schema 2020-12 meta-schema before the duplicate check. The
+        response wraps the stored schema in the success envelope with message
+        "Schema created successfully".
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -474,11 +734,13 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Schema already exists
+          description: Schema already exists for the tenant (error code `Conflict`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -486,11 +748,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
         '500':
-          description: Internal server error
+          description: Internal server error (error code `InternalServerError`, e.g.
+            audit-log persistence or validation-webhook failure).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -510,6 +775,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -543,7 +809,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Validation error
           content:
@@ -552,12 +820,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Schema not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
         '401':
           description: Unauthorized
           content:
@@ -573,7 +835,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs GET on /registry/v3/schema.
+      description: Lists the latest active version of every schema for the tenant,
+        ordered by schemaCode. Returns an empty `data` array (200) when the tenant
+        has no schemas; never 404.
       operationId: searchSchemas
   /schema/{schemaCode}:
     get:
@@ -585,10 +849,12 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/SchemaVersionQuery'
       responses:
         '200':
           description: Schema definition
@@ -614,11 +880,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/SchemaResponse'
         '404':
-          description: Data not found
+          description: Schema not found for the tenant, or the requested `version`
+            does not exist (error code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Validation error
           content:
@@ -638,7 +907,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -648,7 +919,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs GET on /registry/v3/schema/{schemaCode}.
+      description: Returns the latest active version of the schema, or the specific
+        active version selected by the `version` query parameter.
       operationId: getSchemaByCode
     put:
       tags:
@@ -659,6 +931,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -668,10 +941,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SchemaRequest'
+              $ref: '#/components/schemas/SchemaUpdateRequest'
       responses:
         '200':
-          description: Schema updated or unchanged
+          description: Schema updated (a new version row is created and becomes
+            latest) or unchanged (the current version is returned as-is when the
+            definition, constraints, indexes and webhook are identical). Either way
+            the message is "Schema updated successfully".
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -702,11 +978,22 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Schema not found
+          description: Schema not found (error code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Concurrent update produced a duplicate version row (error
+            code `Conflict`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -718,7 +1005,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -728,7 +1017,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs PUT on /registry/v3/schema/{schemaCode}.
+      description: Replaces the schema definition by creating a new schema version.
+        The body's `schemaCode` is ignored; the path value is used.
       operationId: updateSchemaByCode
     delete:
       tags:
@@ -739,6 +1029,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -766,13 +1057,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                $ref: '#/components/schemas/MessageResponse'
         '404':
-          description: Data not found
+          description: Schema not found (error code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Validation error
           content:
@@ -792,7 +1085,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -802,7 +1097,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs DELETE on /registry/v3/schema/{schemaCode}.
+      description: Soft-deletes every version of the schema (marks them inactive and
+        not latest); the data table is left in place. Responds with
+        `{success:true, data:null, error:null, message:"Schema deleted successfully"}`.
       operationId: deleteSchemaByCode
     parameters:
     - name: schemaCode
@@ -815,13 +1112,16 @@ paths:
       tags:
       - Schema
       summary: Check existence by field
-      description: Validates whether a record exists for the given tenant and field
-        value; used for cross-registry reference checks.
+      description: Reports whether an active record of the schema has the given
+        field value; used for cross-registry reference checks. Responds with
+        `{success:true, data:{exists:boolean}, error:null, message:null}`. The schema
+        must exist (404 otherwise).
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -865,11 +1165,13 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Data not found
+          description: Schema not found (error code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -881,7 +1183,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -908,6 +1212,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -938,13 +1243,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistryDataResponse'
         '404':
-          description: Data not found
+          description: Schema not found, or no active record matches `id` (error
+            code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
-          description: Validation error
+          description: Validation error. A missing `id` query parameter yields an
+            Error with an empty `code`, the Spring "Required parameter 'id' is not
+            present" message and `params:["id"]`.
           content:
             application/json:
               schema:
@@ -962,7 +1272,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -972,7 +1284,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs GET on /registry/v3/schema/{schemaCode}/data.
+      description: Fetches the active record by `id`. A UUID selects the version row
+        directly; any other value is treated as a registryId and resolves to its
+        latest active version.
       operationId: fetchRegistryData
     put:
       tags:
@@ -983,6 +1297,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -996,8 +1311,10 @@ paths:
               $ref: '#/components/schemas/DataRequest'
       responses:
         '202':
-          description: Data update accepted for asynchronous processing when async
-            mode is enabled.
+          description: Data update queued for asynchronous processing when async
+            persistence is enabled. The body is `{success:true, data:null, error:null,
+            message:"Data update queued successfully"}`; no validation (existence,
+            version, schema) has been performed at this point.
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1018,9 +1335,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                $ref: '#/components/schemas/MessageResponse'
         '200':
-          description: Registry data updated
+          description: Registry data updated synchronously; `data` is the newly
+            inserted version row (new `id`, same `registryId`, `version` + 1) and the
+            message is "Data updated successfully".
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1043,7 +1362,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistryDataResponse'
         '400':
-          description: Validation error
+          description: 'Validation error (error code `ValidationError`) - missing
+            `id` query parameter (empty `code`), missing/non-positive `version`
+            ("version is required for update"), stale `version` ("version mismatch:
+            expected N"), payload failing the schema definition, missing unique or
+            reference fields, or a rejection from the validation webhook.'
           content:
             application/json:
               schema:
@@ -1051,11 +1374,23 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Data not found
+          description: Schema not found, no active record matches `id`, or a
+            referenced record (`x-ref-schema`) does not exist (error code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Another active record already holds one of the schema's
+            `x-unique` value combinations (error code `Conflict`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -1067,7 +1402,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -1077,7 +1414,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs PUT on /registry/v3/schema/{schemaCode}/data.
+      description: Creates a new version of the record identified by `id` (version
+        row UUID or registryId). The body must carry the current `version`; the
+        payload is validated against the schema version the record was created with.
+        The previous row is closed (`isActive:false`, `effectiveTo` set).
       operationId: updateRegistryData
     parameters:
     - name: schemaCode
@@ -1094,6 +1434,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -1106,8 +1447,10 @@ paths:
               $ref: '#/components/schemas/DataRequest'
       responses:
         '202':
-          description: Data persistence accepted for asynchronous processing when
-            async mode is enabled.
+          description: Data persistence queued for asynchronous processing when
+            async persistence is enabled. The body is `{success:true, data:null,
+            error:null, message:"Data persistence queued successfully"}`; no
+            validation has been performed at this point.
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1128,9 +1471,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                $ref: '#/components/schemas/MessageResponse'
         '201':
-          description: Registry data created
+          description: Registry data created synchronously; `data` is the stored
+            record (`version` 1) and the message is "Data created successfully".
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1153,7 +1497,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistryDataResponse'
         '400':
-          description: Validation error
+          description: Validation error (error code `ValidationError`) - missing
+            `data`, payload failing the schema definition, missing unique or
+            reference fields, or a rejection from the validation webhook.
           content:
             application/json:
               schema:
@@ -1161,11 +1507,23 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Schema not found
+          description: Schema not found, or a referenced record (`x-ref-schema`)
+            does not exist (error code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: An active record already holds one of the schema's `x-unique`
+            value combinations (error code `Conflict`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -1173,11 +1531,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
         '500':
-          description: Internal server error
+          description: Internal server error (error code `InternalServerError`, e.g.
+            idgen, external-registry, audit-log or validation-webhook failure).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -1187,7 +1548,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Create a registry record for the specified schema.
+      description: Creates a registry record for the schema's latest version. The
+        payload is validated against the definition, then `x-ref-schema` references
+        and `x-unique` constraints are checked; a registryId is generated via idgen.
+        The body's `tenantId`/`schemaCode`/`version` are ignored.
       operationId: createRegistryData
   /{schemaCode}/data/{id}:
     delete:
@@ -1199,14 +1563,17 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       responses:
         '202':
-          description: Data deletion accepted for asynchronous processing when async
-            mode is enabled.
+          description: Data deletion queued for asynchronous processing when async
+            persistence is enabled. The body is `{success:true, data:null, error:null,
+            message:"Data deletion queued successfully"}`; existence of the record is
+            not checked at this point (only the UUID format of `id`).
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1227,9 +1594,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                $ref: '#/components/schemas/MessageResponse'
         '200':
-          description: Record deleted (soft)
+          description: Record soft-deleted synchronously (`isActive:false`,
+            `effectiveTo` set). The body is `{success:true, data:null, error:null,
+            message:"Data deleted successfully"}`.
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1250,13 +1619,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                $ref: '#/components/schemas/MessageResponse'
         '404':
-          description: Data not found
+          description: '`id` is not a UUID (checked before any lookup, message "data
+            not found"), schema not found, or no active record has that id (error
+            code `NotFound`).'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
           description: Validation error
           content:
@@ -1276,7 +1649,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -1286,7 +1661,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs DELETE on /registry/v3/schema/{schemaCode}/data/{id}.
+      description: Soft-deletes the active version row identified by its UUID. Unlike
+        the other data endpoints, a registryId is not accepted here.
       operationId: deleteRegistryDataById
     parameters:
     - name: schemaCode
@@ -1294,11 +1670,7 @@ paths:
       required: true
       schema:
         type: string
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
+    - $ref: '#/components/parameters/RecordIdPath'
   /{schemaCode}/data/_exists:
     get:
       tags:
@@ -1309,6 +1681,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -1339,7 +1712,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExistsEnvelope'
         '400':
-          description: Validation error
+          description: Validation error (a missing `id` query parameter yields an
+            Error with an empty `code` and `params:["id"]`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Schema not found (error code `NotFound`). A missing record is
+            not a 404; it is reported as `exists:false`.
           content:
             application/json:
               schema:
@@ -1357,7 +1740,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -1367,7 +1752,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs GET on /registry/v3/schema/{schemaCode}/data/_exists.
+      description: Reports whether an active record exists for `id` (version row UUID
+        or registryId). Responds with `{success:true, data:{exists:boolean},
+        error:null, message:null}`.
       operationId: checkRegistryDataExists
     parameters:
     - name: schemaCode
@@ -1385,14 +1772,19 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
       - $ref: '#/components/parameters/RegistryIdQuery'
+      - $ref: '#/components/parameters/HistoryQuery'
       responses:
         '200':
-          description: Latest record or history
+          description: With `history=false` (default) `data` is the single latest
+            active record (RegistryDataResponse); with `history=true` `data` is the
+            array of every version, active or not, newest first
+            (RegistryDataListResponse).
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1417,13 +1809,17 @@ paths:
                 - $ref: '#/components/schemas/RegistryDataResponse'
                 - $ref: '#/components/schemas/RegistryDataListResponse'
         '404':
-          description: RegistryId not found
+          description: Schema not found, or no rows exist for the registryId (error
+            code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
-          description: Validation error
+          description: Validation error (a missing `registryId` query parameter
+            yields an Error with an empty `code` and `params:["registryId"]`).
           content:
             application/json:
               schema:
@@ -1441,7 +1837,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -1451,7 +1849,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs GET on /registry/v3/schema/{schemaCode}/data/_registry.
+      description: Looks up a record by its stable registryId, optionally returning
+        its full version history.
       operationId: fetchRegistryDataByRegistryId
     parameters:
     - name: schemaCode
@@ -1464,21 +1863,27 @@ paths:
       tags:
       - Data
       summary: Verify registry data signature
-      description: Validates the stored audit signature for the specified record UUID
-        (`id`) or stable `registryId`.
+      description: Resolves the active record by `id` (version row UUID or
+        registryId) or, when `id` is blank, by `registryId`; then re-computes the
+        hash of its latest DATA audit-log entry and asks Vault Transit to verify the
+        stored signature. Responds with `{success:true, data:{valid:boolean},
+        error:null, message:null}`.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - $ref: '#/components/parameters/DataIdQuery'
+      - $ref: '#/components/parameters/VerifyIdQuery'
+      - $ref: '#/components/parameters/VerifyRegistryIdQuery'
       responses:
         '200':
-          description: Verification status
+          description: Verification status (`valid` is false when Vault rejects the
+            signature or returns no verdict).
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1509,17 +1914,25 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Record or audit log not found
+          description: Schema not found, no active record matches the identifier
+            (including when both `id` and `registryId` are omitted), or no audit log
+            exists for the record (error code `NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '501':
-          description: Signature verification is not configured
+          description: Vault is not configured, so signature verification is
+            unavailable. Error code `InternalServerError`, message "signature
+            verification unavailable".
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:
@@ -1527,11 +1940,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
         '500':
-          description: Internal server error
+          description: Stored payload hash does not match the recomputed digest
+            (error code `InternalServerError`, message "payload hash mismatch"), or
+            an internal failure.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -1558,10 +1975,13 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - $ref: '#/components/parameters/LimitQuery'
+      - $ref: '#/components/parameters/OffsetQuery'
       requestBody:
         required: true
         content:
@@ -1570,7 +1990,8 @@ paths:
               $ref: '#/components/schemas/SearchRequest'
       responses:
         '200':
-          description: Matching records
+          description: Matching active records (`data` is a plain array; no total
+            count or pagination metadata is returned).
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -1593,7 +2014,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistryDataListResponse'
         '400':
-          description: Validation error
+          description: Validation error (error code `ValidationError`, e.g. an
+            invalid `filters` field path).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Schema not found (error code `NotFound`).
           content:
             application/json:
               schema:
@@ -1611,7 +2041,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResponseEnvelope'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests
           headers:
@@ -1621,7 +2053,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseEnvelope'
-      description: Performs POST on /registry/v3/schema/{schemaCode}/data/_search.
+      description: Searches active records of the schema by equality `filters` and
+        JSON containment `contains`. Paging comes from the body, falling back to the
+        `limit`/`offset` query parameters, then to 100/0; the effective limit is
+        capped at 1000.
       operationId: searchRegistryData
     parameters:
     - name: schemaCode

@@ -46,8 +46,10 @@ components:
     UserIdHeader:
       name: X-User-ID
       in: header
-      required: false
-      description: Unique identifier assigned to the user making the request.
+      required: true
+      description: Unique identifier assigned to the user making the request. Required
+        on every operation that references this parameter; the service answers 400
+        when it is absent.
       schema:
         type: string
         minLength: 2

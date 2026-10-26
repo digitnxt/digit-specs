@@ -5,6 +5,12 @@ info:
     Service for managing and retrieving localization messages for applications.
     Messages support active, inactive, disabled, and draft statuses. Searches
     default to active when status is omitted.
+
+    Service-raised errors are returned as a bare JSON array of `{code, message}`
+    objects. Codes: Localization.MissingTenantId (400), Localization.InvalidRequest
+    (400: missing/malformed body, failed field validation, unsupported status),
+    Localization.InvalidInput (400: malformed UUID), Localization.MissingUUID (400),
+    Localization.Conflict (409), Localization.NotFound (404).
   version: 3.0.0
 servers:
 - url: https://api.example.com/localization/v3
@@ -68,11 +74,15 @@ components:
       - code
       - module
       - locale
+      - message
       properties:
         uuid:
           type: string
           format: uuid
-          description: Unique identifier of the record
+          description: >
+            Unique identifier of the record. Always present in responses. On create
+            it is ignored (the service generates a new UUID). On upsert it is used
+            for a newly inserted row; an existing row keeps its stored UUID.
         module:
           type: string
           description: Tag associated with the message (used for grouping)
@@ -87,7 +97,8 @@ components:
           minLength: 1
         message:
           type: string
-          description: The text to display
+          description: The text to display. Required and must be non-empty on create and upsert.
+          minLength: 1
         status:
           allOf:
           - $ref: '#/components/schemas/MessageStatus'
@@ -99,6 +110,7 @@ components:
       type: object
       required:
       - uuid
+      - message
       properties:
         uuid:
           type: string
@@ -106,10 +118,13 @@ components:
           description: Unique identifier of the record
           minLength: 1
         code:
-          description: The code of the message
+          description: Accepted but ignored; the stored code of a message is never changed by an update.
           type: string
         message:
           type: string
+          description: >
+            New text. Effectively required: the stored text is replaced (not preserved)
+            on every update, and the column is NOT NULL, so omitting it fails with 500.
         status:
           allOf:
           - $ref: '#/components/schemas/MessageStatus'
@@ -142,12 +157,13 @@ components:
       properties:
         uuid:
           type: string
-          description: Unique identifier of the record
+          description: Accepted but ignored; only the per-item `uuid` is used.
         locale:
-          description: The language code for which the message is added
+          description: Accepted but ignored; the locale of a message is never changed by an update.
           type: string
         module:
           type: string
+          description: Accepted but ignored; the module of a message is never changed by an update.
         messages:
           type: array
           minItems: 1
@@ -218,8 +234,10 @@ components:
       properties:
         message:
           type: string
+          example: Cache bust operation completed successfully
         success:
           type: boolean
+          example: true
     Error:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
   securitySchemes:
@@ -239,9 +257,15 @@ paths:
       description: >
         Searches for localization messages using URL query parameters. If status
         is omitted, only active messages are returned. Use status=draft to find
-        drafts, or explicitly select active, inactive, or disabled. Status filtering
-        applies to code searches and is performed before pagination. Unsupported
-        status values return HTTP 400.
+        drafts, or explicitly select active, inactive, or disabled. Unsupported
+        status values return HTTP 400 (Localization.InvalidRequest).
+
+        When `codes` is supplied the search is by code (optionally narrowed by
+        `locale`); `module`, `limit` and `offset` are ignored, the result is not
+        ordered, and the cache is bypassed. Otherwise the search is by optional
+        `module`/`locale`, ordered by code ascending; status is applied in SQL
+        before pagination when a positive `limit` is given, and non-paginated
+        results are served from the cache when available.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -279,7 +303,10 @@ paths:
       - name: codes
         in: query
         required: false
-        description: Comma-separated message codes. Status filtering also applies to code searches.
+        description: >
+          Comma-separated message codes (a repeated `codes` parameter is also
+          accepted). When present, `module`, `limit` and `offset` are ignored.
+          Status filtering also applies to code searches.
         style: form
         explode: false
         schema:
@@ -289,13 +316,17 @@ paths:
       - name: limit
         in: query
         required: false
-        description: Positive page size enables pagination.
+        description: >
+          Positive page size enables pagination. Non-numeric or non-positive
+          values are treated as 0 (no pagination) rather than rejected.
         schema:
           type: integer
       - name: offset
         in: query
         required: false
-        description: Pagination offset; used only when a positive limit is provided.
+        description: >
+          Pagination offset; read only when `limit` is also provided. Non-numeric
+          values are treated as 0 rather than rejected.
         schema:
           type: integer
           default: 0
@@ -363,7 +394,14 @@ paths:
       tags:
       - Messages
       summary: Create new localization messages
-      description: Creates one or more new localization messages. Status defaults to active when omitted.
+      description: >
+        Creates one or more new localization messages. Status defaults to active
+        when omitted. Each item must carry non-empty code, message, module and
+        locale; a missing or empty body, malformed JSON, or an empty `messages`
+        array returns 400 (Localization.InvalidRequest). Any `uuid` supplied in an
+        item is ignored and a new one is generated. The batch is all-or-nothing:
+        a duplicate key within the batch, or one that already exists for the
+        tenant, rejects the whole request with 409 (Localization.Conflict).
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -425,7 +463,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict — a message with the same tenant/locale/module/code already exists
+          description: >
+            Conflict (Localization.Conflict) — a message with the same
+            tenant/locale/module/code already exists, or the same key appears
+            twice in the request. Nothing from the batch is created.
           content:
             application/json:
               schema:
@@ -480,9 +521,16 @@ paths:
       - Messages
       summary: Update existing localization messages
       description: >
-        Updates messages by UUID within the tenant. Set status to active to publish
-        a draft. Omit status to preserve its current value. Writes invalidate
-        affected cached search results after commit.
+        Updates the text and optionally the status of messages by UUID within the
+        tenant. Set status to active to publish a draft. Omit status to preserve
+        its current value. Only `uuid`, `message` and `status` of each item are
+        used; `code` and the top-level `uuid`/`locale`/`module` are ignored.
+        A missing/empty body, malformed JSON, empty `messages` array or an item
+        without `uuid` returns 400 (Localization.InvalidRequest); a malformed UUID
+        returns 400 (Localization.InvalidInput); if any UUID does not exist for
+        the tenant the whole batch is rejected with 404 (Localization.NotFound).
+        The response returns the full updated records. Writes invalidate affected
+        cached search results after commit.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -554,7 +602,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: One or more message UUIDs not found
+          description: One or more message UUIDs not found for the tenant (Localization.NotFound); nothing is updated
           content:
             application/json:
               schema:
@@ -586,8 +634,13 @@ paths:
       - Messages
       summary: Delete localization messages
       description: >
-        Deletes one or more localization messages by UUID. At least one `uuid`
-        or `uuids` query parameter must be provided; omitting both returns 400.
+        Deletes one or more localization messages by UUID within the tenant. At
+        least one `uuid` or `uuids` query parameter must be provided; omitting
+        both returns 400 (Localization.MissingUUID). A malformed UUID returns 400
+        (Localization.InvalidInput). Duplicates are collapsed and UUIDs that do
+        not exist are ignored, so the response is `success: true` regardless of
+        how many rows were actually deleted. The tenant's cached search results
+        are cleared after commit.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -599,11 +652,11 @@ paths:
       - $ref: '#/components/parameters/TimeStamp'
       - name: uuid
         in: query
-        required: true
+        required: false
         schema:
           type: string
           format: uuid
-        description: UUID of the message to delete.
+        description: UUID of a single message to delete. At least one of `uuid` or `uuids` is required.
       - name: uuids
         in: query
         required: false
@@ -614,7 +667,10 @@ paths:
           items:
             type: string
             format: uuid
-        description: UUIDs of multiple messages to delete. At least one of `uuid` or `uuids` is required.
+        description: >
+          UUIDs of multiple messages to delete (repeated parameter; a
+          comma-separated value is also accepted). At least one of `uuid` or
+          `uuids` is required.
       responses:
         '200':
           description: Messages deleted successfully
@@ -680,10 +736,17 @@ paths:
       tags:
       - Messages
       summary: Create or update localization messages
-      description: Creates or updates one or more localization messages. If a message
-        with the same unique identifiers already exists, it will be updated; otherwise,
-        a new one will be created. Explicit status replaces the stored status.
-        Omitted status preserves an existing status and defaults new messages to active.
+      description: >
+        Creates or updates one or more localization messages keyed on
+        tenant/locale/module/code. If a message with the same key already exists,
+        its text is updated and it keeps its stored UUID; otherwise a new one is
+        created (using the item's `uuid` if supplied, else a generated one).
+        Explicit status replaces the stored status. Omitted status preserves an
+        existing status and defaults new messages to active. Each item must carry
+        non-empty code, message, module and locale; otherwise 400
+        (Localization.InvalidRequest). Items repeating the same key within one
+        request are collapsed to the first occurrence, so the response may contain
+        fewer messages than the request.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -767,10 +830,14 @@ paths:
       summary: Find missing localization codes for a tenant in the given locales
       description: >
         Finds all message codes that are missing for one or more locales within a
-        tenant, grouped by module. The response is a map of module → locale →
+        tenant, grouped by module, using an in-memory index of all stored
+        messages regardless of status. The response is a map of module → locale →
         [missing codes]. If the request body is empty all locales are checked;
         otherwise only the provided locales are checked. An optional `module` query
-        parameter narrows the result to a single module.
+        parameter narrows the result to a single module. A tenant with no
+        messages, an unknown module, or no missing codes yields 200 with an empty
+        object `{}`; this endpoint never returns 404. A malformed JSON body
+        returns 400 (Localization.InvalidRequest).
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -818,14 +885,6 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-        '404':
-          description: Not Found - Tenant has no messages
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '400':
           description: Validation error
           content:
@@ -866,8 +925,12 @@ paths:
     delete:
       tags:
       - Cache
-      summary: Clear the Redis cache
-      description: Invalidates and clears the entire Redis cache for the search API.
+      summary: Clear the search cache for the tenant
+      description: >
+        Invalidates cached search results for the calling tenant only. When both
+        `module` and `locale` are given, only that module/locale entry is
+        cleared; otherwise (neither, or only one of them) every cached entry of
+        the tenant is cleared. Caches of other tenants are never touched.
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -877,6 +940,18 @@ paths:
       - $ref: '#/components/parameters/UserId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: module
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Module to narrow the invalidation to. Only effective together with `locale`.
+      - name: locale
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Locale to narrow the invalidation to. Only effective together with `module`.
       responses:
         '200':
           description: Cache cleared successfully

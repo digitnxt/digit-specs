@@ -39,7 +39,8 @@ info:
     |---|---|
     | `Process.code` | Human-readable process slug — the **only** identifier used in all paths and cross-resource references. Never use UUID in paths. |
     | `State.code` | Human-readable state code — used in paths, `nextState` references, and escalation configs |
-    | `State.type` | Lifecycle role of the state: `INITIAL`, `INTERMEDIATE`, `DECISION`, `TERMINAL_SUCCESS`, or `TERMINAL_FAILURE`. Exactly one state per process must be `INITIAL`. |
+    | `State.type` | Lifecycle role of the state: `INITIAL`, `INTERMEDIATE`, `DECISION`, `TERMINAL_SUCCESS`, or `TERMINAL_FAILURE`. The composite definition endpoints require exactly one `INITIAL` state; the granular state endpoints do not enforce this. |
+    | `Process.version` | A process code may exist in several versions; `(code, version)` is unique per tenant. Where a `version` query is not given, the most recently created version of the code is used. |
     | `Action.code` | Human-readable action code — used in paths and `TransitionRequest.action` |
     | `entityId` | The business entity (e.g. certificate application, grievance) the process instance tracks |
     | `sla` | Service Level Agreement in milliseconds at the process level |
@@ -110,20 +111,33 @@ paths:
       tags: [ProcessDefinition]
       description: |
         Creates a complete workflow process definition — process metadata,
-        all states, and all actions — atomically in a single request.
+        all states, and all actions — in a single request.
 
-        This is the primary way to author a workflow. The entire definition is
-        validated and persisted together. If any part fails validation the
-        whole operation is rolled back.
+        This is the primary way to author a workflow. The whole payload is
+        validated up front (structural rules below) before anything is written,
+        but persistence is **not atomic**: the process row is committed first
+        and the states and actions are then inserted one by one. If a state or
+        action insert fails (for example a database length limit), the process
+        row and the rows inserted so far remain and the error is returned.
 
         **Business Rules:**
-        - `code` must be unique within the tenant and is immutable after creation.
-        - Each state `code` must be unique within the process.
+        - `(code, version)` must be unique within the tenant; a duplicate
+          returns `409`. The same `code` may be created again with a different
+          `version`. `version` defaults to `v1` when omitted.
+        - Metadata validation: `name` and `code` 1–128 characters, `code`
+          limited to `A-Z a-z 0-9 _ . : / @ + - space`, `description` up to
+          512, `version` up to 32, `slotPercentage` 1–99. Any field failure
+          returns `400` with the single message `Invalid input data`.
+        - Each state `code` must be unique within the process; each state
+          needs `code`, `name` and `type`.
         - Exactly one state must have `type: INITIAL`.
-        - Each action `code` must be unique within its state.
+        - Each action needs `code` and `nextState`; action `code` must be
+          unique within its state.
         - Every action `nextState` must reference a `code` present in the
           `states` array of this definition.
-        - The entire payload is validated and persisted atomically.
+        - State and action field lengths (state `code` ≤ 64, `name` ≤ 128,
+          `description` ≤ 512; action `code` ≤ 64, `label` ≤ 128) are enforced
+          by the database and surface as `400` (`ValidationError`).
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -216,8 +230,10 @@ paths:
                 $ref: '#/components/schemas/ProcessDefinitionDetail'
         '400':
           description: |
-            Validation error — metadata, state, or action fields failed;
-            or a nextState reference does not resolve within the states array.
+            Validation error (`ValidationError`) — metadata, state, or action
+            fields failed; a nextState reference does not resolve within the
+            states array; or a database constraint (length, foreign key) was
+            violated while inserting states/actions.
           content:
             application/json:
               schema:
@@ -225,25 +241,34 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: A process with this code already exists for this tenant.
+          description: A process with this `code` and `version` already exists for this tenant (`Conflict`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: List all process definitions
       operationId: listProcessDefinitions
       tags: [ProcessDefinition]
       description: |
-        Returns all complete process definitions for the calling tenant.
-        Each entry includes process metadata, states, and actions.
+        Returns complete process definitions for the calling tenant — every
+        version of every process code, unless filtered. Each entry includes
+        process metadata, states, and actions.
+
+        The response is **not paginated**: all matching definitions are
+        returned, `page` is always `0` and `size` always equals `totalCount`.
+        `page`/`size` query parameters are not read.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -257,25 +282,26 @@ paths:
         - name: processCode
           in: query
           required: false
-          description: Filter to a specific process by code (exact match).
+          description: Filter to a specific process by code (exact match). Without `version`, all versions of the code are returned.
           schema:
             type: string
-            maxLength: 64
-        - name: page
+            maxLength: 128
+        - name: version
           in: query
           required: false
+          description: |
+            Return only this version of `processCode`. Requires `processCode`
+            (`400` otherwise). When the `(processCode, version)` pair does not
+            exist the response is `404`.
           schema:
-            type: integer
-            minimum: 0
-            default: 0
-        - name: size
+            type: string
+            maxLength: 32
+        - name: isActive
           in: query
           required: false
+          description: Filter by the process `isActive` flag.
           schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+            type: boolean
       responses:
         '200':
           description: Process definitions returned.
@@ -293,7 +319,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProcessDefinitionListResponse'
         '400':
-          description: Bad request — invalid query parameters.
+          description: Bad request — `version` supplied without `processCode`, or `isActive` is not a boolean.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: No process matches the supplied `processCode` and `version` (`NotFound`).
           content:
             application/json:
               schema:
@@ -305,7 +339,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /process/definition/{processCode}:
 
@@ -316,7 +352,10 @@ paths:
       summary: Get a complete process definition by code
       operationId: getProcessDefinition
       tags: [ProcessDefinition]
-      description: Returns the full process definition for the given processCode — metadata, states, and actions.
+      description: |
+        Returns the full process definition for the given processCode —
+        metadata, states, and actions. Without `version`, the most recently
+        created version of the code is returned.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -349,31 +388,47 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
       summary: Replace a complete process definition
       operationId: updateProcessDefinition
       tags: [ProcessDefinition]
       description: |
-        Atomically replaces the entire process definition — metadata, states,
-        and actions — for the given processCode.
+        Replaces the entire process definition — metadata, states, and
+        actions — for the most recently created version of the given
+        processCode. The whole operation runs in one transaction and is rolled
+        back on any failure.
 
-        **Full replace semantics:** the submitted states array completely replaces
-        the existing states and actions. States or actions omitted from the
-        payload are deleted.
+        **Reconcile-by-code semantics:** the submitted states array is matched
+        against the existing states by `code` (and actions by `code` within
+        their state). Matching states/actions are updated in place and keep
+        their `id`; new ones are created; states or actions omitted from the
+        payload are deleted (deleting a state also deletes its actions).
 
         **Business Rules:**
-        - `code` is immutable — the path `processCode` is always authoritative.
-        - Same structural validation as POST applies.
-        - Returns `409` if active process instances reference states or actions
-          being removed — deactivate instances first.
+        - The body `code` must equal the path `processCode`, otherwise `400`.
+        - The same structural validation as POST applies (state/action codes,
+          exactly one `INITIAL`, `nextState` resolution). The metadata length
+          rules of POST are not applied here; database limits still surface
+          as `400`.
+        - `version` and `isActive` must be present in the body on PUT: the
+          process row is overwritten with the submitted values and both
+          columns are non-nullable (omitting them yields a `500`).
+        - Removing a state that process instances still reference fails the
+          foreign-key constraint and returns `400` (`ValidationError`,
+          "Record cannot be modified because it is referenced by other
+          resources"), not `409`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -408,7 +463,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProcessDefinitionDetail'
         '400':
-          description: Validation error.
+          description: |
+            Validation error — structural rules failed, body `code` differs
+            from the path, or a removed state is still referenced by process
+            instances (foreign-key violation).
           content:
             application/json:
               schema:
@@ -420,28 +478,35 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
-          description: Active process instances reference states or actions being removed.
+          description: The submitted `version` collides with another existing version of this process code (`Conflict`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       summary: Delete a complete process definition
       operationId: deleteProcessDefinition
       tags: [ProcessDefinition]
       description: |
-        Permanently and atomically deletes the entire process definition —
-        metadata, states, actions, and escalation configs — for the given
-        processCode. Returns `409` if active process instances exist.
+        Permanently deletes the most recently created version of the process
+        identified by processCode. States, actions, escalation configs and
+        parallel-execution records cascade with the process row. Returns `409`
+        if any process instances (active or historical) reference the process.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -477,19 +542,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
-          description: Active process instances exist — complete or terminate them first.
+          description: Process instances reference this process (`Conflict`, "Record cannot be modified because it is referenced by other resources").
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: Internal server error (`InternalServerError`, "failed to delete process").
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /process:
 
@@ -497,7 +568,14 @@ paths:
       summary: Create a workflow process
       operationId: createProcess
       tags: [Process]
-      description: Performs POST on /workflow/v3/process.
+      description: |
+        Creates process metadata only (no states or actions). The same field
+        validation as `POST /process/definition` applies: `name`/`code` 1–128
+        characters, `code` limited to `A-Z a-z 0-9 _ . : / @ + - space`,
+        `description` ≤ 512, `version` ≤ 32, `slotPercentage` 1–99; any
+        failure returns `400` with the message `Invalid input data`.
+        `version` defaults to `v1` and `isActive` to `true` when omitted.
+        `(code, version)` must be unique within the tenant.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -516,16 +594,20 @@ paths:
               type: object
               required: [name, code]
               properties:
-                name: { type: string, minLength: 1, maxLength: 200 }
-                code: { type: string, minLength: 1, maxLength: 64 }
-                description: { type: string, maxLength: 1000 }
-                version: { type: string, maxLength: 32 }
+                name: { type: string, minLength: 1, maxLength: 128 }
+                code: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9_.:/@+\- ]+$' }
+                description: { type: string, maxLength: 512 }
+                version: { type: string, maxLength: 32, default: v1 }
                 sla: { type: integer, format: int64 }
                 slotPercentage:
                   type: integer
                   minimum: 1
                   maximum: 99
                   description: Near-SLA threshold percentage for this process version.
+                isActive:
+                  type: boolean
+                  default: true
+                  description: Whether this process version accepts new work. Defaults to `true`.
                 additionalDetails:
                   type: object
                   additionalProperties: true
@@ -536,23 +618,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id: { type: string, format: uuid }
-                  name: { type: string }
-                  code: { type: string }
-                  description: { type: string }
-                  version: { type: string }
-                  sla: { type: integer, format: int64 }
-                  slotPercentage:
-                    type: integer
-                    minimum: 1
-                    maximum: 99
-                  additionalDetails:
-                    type: object
-                    additionalProperties: true
-                    description: Free-form process metadata for tenant or module-specific configuration.
-                  auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+                $ref: '#/components/schemas/Process'
         '400':
           description: Validation error
           content:
@@ -561,7 +627,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
         '409':
-          description: Process already exists
+          description: A process with this `code` and `version` already exists (`Conflict`)
           content:
             application/json:
               schema:
@@ -579,7 +645,11 @@ paths:
       summary: Search processes
       operationId: searchProcesses
       tags: [Process]
-      description: Performs GET on /workflow/v3/process.
+      description: |
+        Lists process metadata for the tenant (all versions). `id`, `name` and
+        `code` may be repeated to match any of several values; blank values
+        are ignored. Each `id` must be a UUID, otherwise `400`. The response is
+        an unpaginated array.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -593,15 +663,40 @@ paths:
         - name: id
           in: query
           required: false
-          schema: { type: string, format: uuid }
+          description: Process UUID(s). Repeat the parameter for several values.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, format: uuid }
         - name: name
           in: query
           required: false
-          schema: { type: string }
+          description: Process name(s), exact match. Repeat the parameter for several values.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string }
         - name: code
           in: query
           required: false
-          schema: { type: string, maxLength: 64 }
+          description: Process code(s), exact match. Repeat the parameter for several values.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, maxLength: 128 }
+        - name: version
+          in: query
+          required: false
+          description: Filter by process version label (exact match).
+          schema: { type: string, maxLength: 32 }
+        - name: isActive
+          in: query
+          required: false
+          description: Filter by the `isActive` flag.
+          schema: { type: boolean }
       responses:
         '200':
           description: List of processes
@@ -610,23 +705,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id: { type: string, format: uuid }
-                    name: { type: string }
-                    code: { type: string }
-                    description: { type: string }
-                    version: { type: string }
-                    sla: { type: integer, format: int64 }
-                    slotPercentage:
-                      type: integer
-                      minimum: 1
-                      maximum: 99
-                    additionalDetails:
-                      type: object
-                      additionalProperties: true
-                      description: Free-form process metadata for tenant or module-specific configuration.
-                    auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+                  $ref: '#/components/schemas/Process'
         '400':
           description: Validation error
           content:
@@ -654,7 +733,7 @@ paths:
       summary: Get process by code
       operationId: getProcessById
       tags: [Process]
-      description: Performs GET on /workflow/v3/process/code/{processCode}.
+      description: Returns process metadata for `processCode`. Without `version`, the most recently created version of the code is returned.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -672,23 +751,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id: { type: string, format: uuid }
-                  name: { type: string }
-                  code: { type: string }
-                  description: { type: string }
-                  version: { type: string }
-                  sla: { type: integer, format: int64 }
-                  slotPercentage:
-                    type: integer
-                    minimum: 1
-                    maximum: 99
-                  additionalDetails:
-                    type: object
-                    additionalProperties: true
-                    description: Free-form process metadata for tenant or module-specific configuration.
-                  auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+                $ref: '#/components/schemas/Process'
         '404':
           description: Process not found
           content:
@@ -708,7 +771,18 @@ paths:
       summary: Update process by code
       operationId: updateProcessById
       tags: [Process]
-      description: Performs PUT on /workflow/v3/process/code/{processCode}.
+      description: |
+        Partially updates the most recently created version of the process
+        identified by `processCode`. Only fields present in the body are
+        changed (`name` and `code` additionally must be non-empty to take
+        effect); omitted fields keep their stored values.
+
+        `code` is **not** immutable here — supplying a different `code`
+        renames the process. No field-level validation is performed; database
+        limits surface as `400`. A `(code, version)` collision returns `409`
+        (`Conflict`). Setting `isActive: false` on an active process that still
+        has latest-state process instances returns `409` with code
+        `ACTIVE_PROCESS_INSTANCES_EXIST`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -726,16 +800,19 @@ paths:
             schema:
               type: object
               properties:
-                name: { type: string }
-                code: { type: string }
-                description: { type: string }
-                version: { type: string }
+                name: { type: string, maxLength: 128 }
+                code: { type: string, maxLength: 128 }
+                description: { type: string, maxLength: 512 }
+                version: { type: string, maxLength: 32 }
                 sla: { type: integer, format: int64 }
                 slotPercentage:
                   type: integer
                   minimum: 1
                   maximum: 99
                   description: Near-SLA threshold percentage for this process version.
+                isActive:
+                  type: boolean
+                  description: Set to `false` to deactivate the process version; rejected with `409` while active process instances exist.
                 additionalDetails:
                   type: object
                   additionalProperties: true
@@ -746,23 +823,14 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id: { type: string, format: uuid }
-                  name: { type: string }
-                  code: { type: string }
-                  description: { type: string }
-                  version: { type: string }
-                  sla: { type: integer, format: int64 }
-                  slotPercentage:
-                    type: integer
-                    minimum: 1
-                    maximum: 99
-                  additionalDetails:
-                    type: object
-                    additionalProperties: true
-                    description: Free-form process metadata for tenant or module-specific configuration.
-                  auditDetail: { $ref: '#/components/schemas/AuditDetail' }
+                $ref: '#/components/schemas/Process'
+        '400':
+          description: Validation error — malformed body or a database constraint (length, format) was violated
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
         '404':
           description: Process not found
           content:
@@ -771,7 +839,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
         '409':
-          description: Conflict
+          description: "Conflict — `(code, version)` already exists, or `isActive: false` was requested while process instances exist (`ACTIVE_PROCESS_INSTANCES_EXIST`)"
           content:
             application/json:
               schema:
@@ -789,7 +857,11 @@ paths:
       summary: Delete process by code
       operationId: deleteProcessById
       tags: [Process]
-      description: Performs DELETE on /workflow/v3/process/code/{processCode}.
+      description: |
+        Deletes the most recently created version of the process identified by
+        `processCode`. States, actions, escalation configs and
+        parallel-execution records cascade. Returns `409` if any process
+        instances reference the process.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -817,7 +889,7 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
         '409':
-          description: Conflict
+          description: Process instances reference this process (`Conflict`, "Record cannot be modified because it is referenced by other resources")
           content:
             application/json:
               schema:
@@ -845,11 +917,22 @@ paths:
       operationId: createState
       tags: [State]
       description: |
-        Adds a new state to an existing process. Use for surgical additions
-        after the initial definition was created. For a new process, use
-        `POST /process/definition` instead.
-        `code` must be unique within the process.
-        Exactly one state per process must have `type: INITIAL`.
+        Adds a new state to the most recently created version of an existing
+        process. Use for surgical additions after the initial definition was
+        created. For a new process, use `POST /process/definition` instead.
+
+        - Only `code` and `name` are required. `type` is optional and defaults
+          to `INTERMEDIATE`; an unknown value returns `400`.
+        - Validation: `code` ≤ 64, `name` ≤ 128, `description` ≤ 512
+          characters; failures return `400` with the message
+          `Invalid input data`.
+        - `code` must be unique within the process; a duplicate returns `400`
+          (`ValidationError`, "This record already exists"), not `409`.
+        - The single-`INITIAL` rule is **not** enforced here: a second
+          `INITIAL` state is accepted.
+        - `isParallel`, `isJoin` and `branchStates` are accepted and stored
+          (they drive parallel/join transitions) but are not echoed in the
+          response.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -905,27 +988,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: |
-            A state with this `code` already exists, or an `INITIAL` state
-            already exists and a second one was attempted.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: List states in a process
       operationId: listStates
       tags: [State]
-      description: Returns all states defined under the process identified by `processCode`.
+      description: Returns the states of the most recently created version of the process identified by `processCode`, ordered by creation time.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -936,6 +1015,17 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - name: code
+          in: query
+          required: false
+          description: Restrict to the given state code(s). Repeat the parameter for several values.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 64
       responses:
         '200':
           description: States returned.
@@ -959,13 +1049,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /process/{processCode}/state/{stateCode}:
 
@@ -1009,21 +1103,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
       summary: Update a state
       operationId: updateState
       tags: [State]
       description: |
-        Fully replaces the mutable fields of the state identified by `stateCode`
-        within `processCode`. `code` and `processCode` are immutable.
+        Partially updates the state identified by `stateCode` within
+        `processCode`. Only `name`, `description`, `sla`, `additionalDetails`
+        and `type` are read from the body; a field is applied only when present
+        (and, for `name`, `description` and `type`, non-empty). Omitted fields
+        keep their stored values. `code` and `processCode` are immutable
+        (a `code` in the body is ignored). The merged state is validated with
+        the same rules as POST (`400` on failure). Changing `type` to
+        `INITIAL` is not checked against other `INITIAL` states.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1070,27 +1174,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict — `type` change would violate the single-INITIAL constraint.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       summary: Delete a state
       operationId: deleteState
       tags: [State]
       description: |
-        Permanently deletes the state. Returns `409` if actions are still
-        associated or active process instances are currently in this state.
+        Permanently deletes the state. Actions on the state (and actions of
+        other states that target it) are deleted with it, silently. If any
+        process instance row references the state the database rejects the
+        delete and the service returns `500` (`InternalServerError`,
+        "failed to delete state") — not `409`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1126,19 +1231,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: State has associated actions, or active instances are in this state.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: Delete failed — typically because process instances still reference this state (`InternalServerError`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # LAYER 3 — GRANULAR ACTION MANAGEMENT
@@ -1155,9 +1258,20 @@ paths:
       operationId: createAction
       tags: [Action]
       description: |
-        Adds a new action to the state identified by `stateCode` within `processCode`.
-        `code` must be unique within the state. `nextState` must reference a valid
-        `State.code` within the same process.
+        Adds a new action to the state identified by `stateCode` within
+        `processCode`.
+
+        - `nextState` is required and must reference a `State.code` in the
+          same process; a missing or unknown `nextState` returns `400`
+          (`ValidationError`), not `404`.
+        - `code` is required by the database (`NOT NULL`, ≤ 64 characters);
+          omitting it returns `400` with the raw database message. `label` is
+          limited to 128 characters.
+        - Uniqueness of `code` within the state is **not** enforced: a
+          duplicate action code is accepted and stored as a second row.
+        - `roles` (array of role codes) and `assigneeCheck` are accepted and
+          stored.
+        - Any failure while inserting the row is returned as `400`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1207,23 +1321,21 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Process or state not found, or `nextState` code does not exist in the process.
+          description: Process or state not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: An action with this `code` already exists on this state.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: List actions for a state
@@ -1240,6 +1352,17 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - name: code
+          in: query
+          required: false
+          description: Restrict to the given action code(s). Repeat the parameter for several values.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 64
       responses:
         '200':
           description: Actions returned.
@@ -1263,13 +1386,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /process/{processCode}/state/{stateCode}/action/{actionCode}:
 
@@ -1314,22 +1441,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
       summary: Update an action
       operationId: updateAction
       tags: [Action]
       description: |
-        Fully replaces the mutable fields of the action identified by `actionCode`
-        on `stateCode` within `processCode`. `code` and `stateCode` are immutable.
-        `nextState` must reference a valid `State.code` within the process.
+        Partially updates the action identified by `actionCode` on `stateCode`
+        within `processCode`. Only fields present in the body are applied
+        (`code` and `nextState` additionally must be non-empty); omitted
+        fields keep their stored values. `code` is **not** immutable — a
+        non-empty `code` renames the action. `stateCode` cannot be changed.
+        `nextState`, when given, must reference a `State.code` within the
+        process; an unknown code returns `400` (`ValidationError`). Any
+        failure while updating the row is returned as `400`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1372,17 +1508,21 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Process, state, or action not found, or `nextState` code does not exist.
+          description: Process, state, or action not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       summary: Delete an action
@@ -1424,13 +1564,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # LAYER 4 — ESCALATION CONFIG
@@ -1446,8 +1590,23 @@ paths:
       operationId: createEscalationConfig
       tags: [EscalationConfig]
       description: |
-        Creates a new escalation configuration for a state within `processCode`.
-        At most one escalation config per `stateCode` per process.
+        Creates a new escalation configuration for a state within
+        `processCode` (the path value may be the process code or the process
+        UUID; a code resolves to its most recently created version).
+
+        - `stateCode` must be an existing state of the process, otherwise
+          `400` (`ValidationError`), not `404`. An unknown process also
+          returns `400`.
+        - At least one of `stateSlaMinutes` / `processSlaMinutes` must be
+          given and each, when given, must be positive, otherwise `400`.
+        - `escalationAction` is stored as given; it is **not** checked against
+          the actions of the state. It is required by the database
+          (`NOT NULL`, ≤ 64 characters); omitting it returns `400` with the
+          raw database message.
+        - At most one config per `stateCode` per process: a duplicate returns
+          `400` (`ValidationError` with the raw unique-constraint message),
+          not `409`.
+        - The `processCode` in the response echoes the path value as sent.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1490,37 +1649,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/EscalationConfig'
         '400':
-          description: Validation error.
+          description: |
+            Validation error (`ValidationError`) — process or `stateCode` not
+            found, no/invalid SLA minutes, missing `escalationAction`, or a
+            config for this `stateCode` already exists.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Process not found, or `stateCode` does not exist within the process.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: An escalation config for this `stateCode` already exists.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: List escalation configurations for a process
       operationId: listEscalationConfigs
       tags: [EscalationConfig]
-      description: Returns all escalation configurations for the process identified by `processCode`.
+      description: Returns all escalation configurations for the process identified by `processCode` (code or UUID), ordered by `stateCode` then `escalationAction`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1531,6 +1683,13 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
+        - name: stateCode
+          in: query
+          required: false
+          description: Restrict to the configuration of a single state code.
+          schema:
+            type: string
+            maxLength: 64
       responses:
         '200':
           description: Escalation configurations returned.
@@ -1554,13 +1713,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /process/{processCode}/escalation/{stateCode}:
 
@@ -1572,7 +1735,10 @@ paths:
       summary: Get escalation configuration for a state
       operationId: getEscalationConfig
       tags: [EscalationConfig]
-      description: Returns the escalation configuration for `stateCode` within `processCode`.
+      description: |
+        Returns the escalation configuration for `stateCode` within
+        `processCode`. An unknown process returns `400` (`ValidationError`);
+        a process without a config for `stateCode` returns `404`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1599,26 +1765,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EscalationConfig'
-        '404':
-          description: Process, state, or escalation config not found.
+        '400':
+          description: Process not found (`ValidationError`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: No escalation config exists for `stateCode` (`NotFound`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
       summary: Update escalation configuration for a state
       operationId: updateEscalationConfig
       tags: [EscalationConfig]
       description: |
-        Fully replaces the escalation configuration for `stateCode` within `processCode`.
-        `processCode` and `stateCode` are immutable.
+        Partially updates the escalation configuration for `stateCode` within
+        `processCode`. Only `escalationAction` (when non-empty),
+        `stateSlaMinutes` and `processSlaMinutes` (when present) are applied;
+        omitted fields keep their stored values, so no body field is
+        effectively required. `processCode` and `stateCode` are immutable — a
+        `stateCode` in the body is ignored. SLA minutes, when given, must be
+        positive (`400`). An unknown process returns `400`
+        (`ValidationError`); a missing config returns `404`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1653,7 +1837,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/EscalationConfig'
         '400':
-          description: Validation error.
+          description: Validation error (`ValidationError`) — process not found, or a non-positive SLA minutes value.
           content:
             application/json:
               schema:
@@ -1661,23 +1845,31 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Process, state, or escalation config not found.
+          description: No escalation config exists for `stateCode` (`NotFound`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       summary: Delete escalation configuration for a state
       operationId: deleteEscalationConfig
       tags: [EscalationConfig]
-      description: Permanently deletes the escalation configuration for `stateCode` within `processCode`.
+      description: |
+        Permanently deletes the escalation configuration for `stateCode`
+        within `processCode`. An unknown process returns `400`
+        (`ValidationError`); a missing config — and any failure during the
+        delete itself — returns `404`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1708,18 +1900,30 @@ paths:
                   deleted:
                     type: boolean
                     example: true
-        '404':
-          description: Process, state, or escalation config not found.
+        '400':
+          description: Process not found (`ValidationError`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: No escalation config exists for `stateCode`, or the delete failed (`NotFound`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   # ══════════════════════════════════════════════════════════════════════════════
   # LAYER 5 — TRANSITION (RUNTIME)
@@ -1732,14 +1936,34 @@ paths:
       operationId: createTransition
       tags: [Transition]
       description: |
-        Executes a workflow transition for a business entity.
-        If no `processInstanceId` is supplied and the entity has no existing
-        process instance, a new instance is created at the initial state.
-        If a `processInstanceId` is supplied, the existing instance is advanced
-        by the named action.
+        Executes a workflow transition for a business entity, identified by
+        `processCode` + `entityId` (both required; `entityId` ≤ 256).
+
+        - **Process resolution:** when `version` is given, that exact
+          `(processCode, version)` is used. Otherwise, if the entity already
+          has a latest instance for the code, that instance's process version
+          is reused; else the most recently created version of the code.
+          An unknown process returns `400` (`ValidationError`), not `404`.
+        - **Without `action`:** returns the entity's latest instance if one
+          exists; otherwise creates and returns a new instance at the
+          `INITIAL` state (no action executed).
+        - **With `action`:** the entity's latest instance is loaded (or, if
+          none exists, an unpersisted instance at the `INITIAL` state is
+          assumed), the action must be defined on the current state, the
+          caller is authorised, and a new instance row is written at the
+          action's `nextState`. Parallel (`isParallel`) and join (`isJoin`)
+          target states fork/merge branch instances instead.
+        - `currentState` (optional, state code or UUID) is an optimistic
+          guard: an unknown code returns `400`; a mismatch with the
+          instance's actual state returns `409`.
+        - `init` is accepted for compatibility and ignored.
+        - A process without states, or without an `INITIAL` state, returns
+          `400`.
 
         Returns `403` if the caller's role does not permit the requested action.
-        Returns `409` if the action is not valid for the current state.
+        Returns `409` if the action is not valid for the current state, if
+        `currentState` does not match, or if a concurrent transition already
+        wrote a newer instance row.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1770,10 +1994,10 @@ paths:
               approveApplication:
                 summary: Officer approves an existing application
                 value:
-                  processInstanceId: pi-uuid-001
                   processCode: trade-license-approval
                   entityId: cert-uuid-001
                   action: APPROVE
+                  currentState: PENDING_REVIEW
                   comment: All documents verified. Approved.
       responses:
         '200':
@@ -1792,7 +2016,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TransitionResponse'
         '400':
-          description: Validation error.
+          description: Validation error (`ValidationError`) — missing `processCode`/`entityId`, `entityId` over 256 characters, unknown process/version or `currentState` code, no `INITIAL` state, or other transition failure.
           content:
             application/json:
               schema:
@@ -1805,38 +2029,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '404':
-          description: Process, process instance, or entity not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '409':
-          description: Action is not valid for the current state of the process instance.
+          description: |
+            `Conflict` — the action is not valid for the current state, the
+            supplied `currentState` does not match, or a concurrent transition
+            already advanced the instance. Message: "Process instance is no
+            longer in the expected state: <detail>".
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: Unexpected error while processing the transition (`InternalServerError`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       summary: Search process instances
       operationId: searchTransitions
       tags: [Transition]
       description: |
-        Returns a paginated list of process instances matching the filter criteria,
-        scoped to the calling tenant.
+        Returns a paginated list of latest (current-state) process instances
+        matching the filter criteria, scoped to the calling tenant.
 
-        **History mode:** when `history: true` is supplied, the response returns
-        the full ordered transition history for each matching instance — every
-        state change recorded from creation to the current state, oldest first.
-        When `history: false` (default), only the current state of each instance
-        is returned. History mode is useful for audit trails and timeline views.
+        **Filter rules**
+        - At most **one** of `entityId`, `currentState`, `assignee`,
+          `escalated` may be supplied per request; more than one returns `400`.
+        - `entityId` and `currentState` require `processCode` (`400`
+          otherwise). `version` requires `processCode`.
+        - With **none** of the four filters the search runs in **inbox mode**:
+          it returns the instances visible to the calling user — those where
+          the user is an assignee, or whose current state has an action
+          permitted for one of the user's roles — optionally scoped by
+          `processCode`. (A deployment configured with
+          `workflow.inbox-assigned-only=true` returns only instances assigned
+          to the user.)
+        - With `entityId`/`currentState`/`assignee`/`escalated` the matching
+          instances are additionally filtered to those whose current state
+          has at least one action the caller's roles may execute (instances
+          whose state has no actions are always visible).
+        - `escalated` is interpreted as `true` only for the literal `true`
+          (case-insensitive); any other value selects non-escalated instances.
+        - An unknown `processCode`/`version` or `currentState` code returns
+          `400` (`ValidationError`), not `404`.
+
+        **Enrichment:** each instance carries `roles`, `nextActions`,
+        `nextActionDetails` (restricted to the caller's roles),
+        `stateAdditionalDetails`, and `stateSla`/`processSla` as the
+        *remaining* milliseconds (negative once breached).
+
+        **History mode:** when `history=true` (literal, case-insensitive),
+        each instance carries `transitionHistory` — every row recorded from
+        creation to the current state, oldest first. With `entityId`, history
+        mode returns the single latest instance for the entity with its
+        history attached. When `history` is false (default), only the current
+        state of each instance is returned.
+
+        **Pagination:** `page` must be a non-negative integer and `size` an
+        integer between 1 and 100, otherwise `400`. Results are paged after
+        role filtering.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1879,7 +2136,10 @@ paths:
         - name: escalated
           in: query
           required: false
-          description: Filter to only escalated instances.
+          description: |
+            Filter by escalation flag. `true` selects escalated instances;
+            any other value selects non-escalated ones. Mutually exclusive
+            with `entityId`, `currentState` and `assignee`.
           schema:
             type: boolean
         - name: history
@@ -1927,7 +2187,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProcessInstanceListResponse'
         '400':
-          description: Bad request — invalid query parameters.
+          description: |
+            Bad request (`ValidationError`) — more than one filter, a filter
+            missing its required `processCode`, invalid `page`/`size`, a
+            parameter over its length limit, or an unknown process/version/
+            state code.
           content:
             application/json:
               schema:
@@ -1945,7 +2209,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /transition/count:
 
@@ -1978,6 +2244,18 @@ paths:
         instance state per entity/process, including terminal states. When
         `history: true`, historical transition rows are included. `actionTaken`
         always counts historical transition rows, irrespective of `history`.
+
+        **Validation (all `400`, `ValidationError`):** `countType` missing or
+        not one of the values above (`unsupported countType`); `slaBreached`/
+        `nearSla` without `processCode`; `slaType` not recognised
+        (`unsupported slaType`); `entityId` or `version` without
+        `processCode`; `fromDate`/`toDate` not integers; a parameter over
+        its length limit; an unknown `processCode`/`version` or
+        `currentState` code (reported as `400`, never `404`). Unlike
+        `GET /transition`, the filters may be combined.
+
+        `statusCounts` entries are keyed by state **code**. `statusCounts` and
+        `actionCounts` are omitted from the body when empty.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -1989,6 +2267,7 @@ paths:
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
         - $ref: '#/components/parameters/TransitionCountType'
+        - $ref: '#/components/parameters/TransitionCountSlaType'
         - $ref: '#/components/parameters/TransitionCountProcessCode'
         - $ref: '#/components/parameters/TransitionCountVersion'
         - $ref: '#/components/parameters/TransitionCountEntityId'
@@ -2005,8 +2284,6 @@ paths:
           $ref: '#/components/responses/TransitionCountBadRequest'
         '403':
           $ref: '#/components/responses/TransitionCountForbidden'
-        '404':
-          $ref: '#/components/responses/TransitionCountNotFound'
         '500':
           $ref: '#/components/responses/TransitionCountServerError'
 
@@ -2024,9 +2301,18 @@ paths:
       operationId: runAutoEscalation
       tags: [AutoEscalation]
       description: |
-        Triggers an auto-escalation run for all process instances under
-        `processCode` that have breached their configured SLA thresholds.
-        Typically called by a scheduled job.
+        Triggers an auto-escalation run for the most recently created version
+        of `processCode`. For every escalation config of the process, the
+        latest instances in that state whose `stateSlaMinutes` /
+        `processSlaMinutes` threshold has elapsed are found and the config's
+        `escalationAction` is executed on each (guard checks skipped, roles
+        taken from the action). Typically called by a scheduled job.
+
+        The request body is ignored. An unknown `processCode` returns `400`
+        (`ValidationError`), not `404`. A process with no escalation configs
+        returns `200` with zero counts. Per-instance failures are collected in
+        `errors`; `escalatedInstances` and `errors` are omitted from the body
+        when empty.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -2037,20 +2323,6 @@ paths:
         - $ref: '#/components/parameters/ClientId'
         - $ref: '#/components/parameters/ClientSecret'
         - $ref: '#/components/parameters/TimeStamp'
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                attributes:
-                  type: object
-                  additionalProperties:
-                    type: array
-                    items:
-                      type: string
-                  description: Optional attributes passed to the escalation action handler.
       responses:
         '200':
           description: Auto-escalation run completed.
@@ -2067,18 +2339,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EscalationResult'
-        '404':
-          description: Process not found.
+        '400':
+          description: Process not found, or the escalation configs could not be loaded (`ValidationError`).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /auto/_search:
 
@@ -2086,7 +2362,23 @@ paths:
       summary: Search escalated process instances
       operationId: searchAutoEscalationRuns
       tags: [AutoEscalation]
-      description: Returns all escalated process instances, filtered by `processCode` and `stateCode`.
+      description: |
+        Returns latest process instances flagged `escalated`, newest first,
+        optionally restricted to `processCode` (code or process UUID; a code
+        resolves to its most recently created version — unknown codes return
+        `400`). There is no state filter.
+
+        The response is a bare array of raw instance rows: `processCode` and
+        `currentState` are resolved to codes, but `roles`, `nextActions`,
+        `nextActionDetails`, `stateAdditionalDetails`, `isLatest` and
+        remaining-SLA computation are **not** populated (`stateSla`/
+        `processSla` are the stored values).
+
+        **Paging:** `limit` (default 100) and `offset` (default 0) are the
+        native parameters; non-numeric or out-of-range values are silently
+        ignored. `page`/`size` are accepted as aliases: `size` (1–100,
+        otherwise `400`) overrides `limit`, and `page` (≥ 0, otherwise `400`)
+        sets `offset = page × limit`.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -2100,32 +2392,41 @@ paths:
         - name: processCode
           in: query
           required: false
-          description: Filter by process code.
+          description: Filter by process code (or process UUID).
           schema:
             type: string
-            maxLength: 64
-        - name: stateCode
+            maxLength: 128
+        - name: limit
           in: query
           required: false
-          description: Filter by the state code at which escalation occurred.
+          description: Maximum rows to return. Values that are not positive integers are ignored.
           schema:
-            type: string
-            maxLength: 64
-        - name: page
+            type: integer
+            minimum: 1
+            default: 100
+        - name: offset
           in: query
           required: false
+          description: Rows to skip. Values that are not non-negative integers are ignored.
           schema:
             type: integer
             minimum: 0
             default: 0
+        - name: page
+          in: query
+          required: false
+          description: Page alias — sets `offset = page × limit`. Must be a non-negative integer (`400` otherwise).
+          schema:
+            type: integer
+            minimum: 0
         - name: size
           in: query
           required: false
+          description: Page-size alias — overrides `limit`. Must be an integer between 1 and 100 (`400` otherwise).
           schema:
             type: integer
             minimum: 1
             maximum: 100
-            default: 20
       responses:
         '200':
           description: Escalated process instances returned.
@@ -2145,7 +2446,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ProcessInstance'
         '400':
-          description: Bad request.
+          description: Bad request (`ValidationError`) — invalid `page`/`size`, or `processCode` not found.
           content:
             application/json:
               schema:
@@ -2157,7 +2458,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
@@ -2224,13 +2527,14 @@ components:
       in: path
       required: true
       description: |
-        Human-readable code of the process (`Process.code`). The sole identifier
-        used in all API paths — UUIDs are never used for addressing.
-        Immutable after creation. Example: `trade-license-approval`.
+        Human-readable code of the process (`Process.code`). The identifier
+        used in all API paths. Where no `version` query is accepted, the path
+        addresses the most recently created version of the code.
+        Example: `trade-license-approval`.
       schema:
         type: string
         minLength: 1
-        maxLength: 64
+        maxLength: 128
 
     ProcessVersionQuery:
       name: version
@@ -2238,7 +2542,8 @@ components:
       required: false
       description: |
         Optional process definition version. Must be supplied with
-        `processCode`. When omitted, the latest process version is used.
+        `processCode`. When omitted, the most recently created version of the
+        process code is used.
       schema:
         type: string
         maxLength: 32
@@ -2279,6 +2584,22 @@ components:
       schema:
         type: string
         enum: [total, status, inbox, escalated, slaBreached, nearSla, actionTaken]
+
+    TransitionCountSlaType:
+      name: slaType
+      in: query
+      required: false
+      description: |
+        Which SLA to evaluate for `slaBreached` / `nearSla` (ignored by the
+        other count types). `state` (aliases `stateSla`, `state_sla`),
+        `process` (aliases `processSla`, `process_sla`) or `both` (aliases
+        `state,process`, `process,state`; the default) — `both` matches when
+        either SLA qualifies. Case-insensitive. Any other value returns `400`
+        (`unsupported slaType`).
+      schema:
+        type: string
+        enum: [state, process, both]
+        default: both
 
     TransitionCountProcessCode:
       name: processCode
@@ -2443,19 +2764,14 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
-    TransitionCountNotFound:
-      description: Process or process version not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-
     TransitionCountServerError:
       description: Internal server error.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            type: array
+            items:
+              $ref: '#/components/schemas/Error'
 
   schemas:
 
@@ -2476,9 +2792,9 @@ components:
         `StateInput` (composite authoring) and as the standalone request body for
         granular action CRUD.
 
-        `code` is the unique action identifier within the state. It is used as the
+        `code` is the action identifier within the state. It is used as the
         `actionCode` path parameter and as `TransitionRequest.action` at runtime.
-        `code` is immutable after creation.
+        It can be renamed through `PUT .../action/{actionCode}`.
       required: [code, nextState]
       properties:
         code:
@@ -2486,13 +2802,14 @@ components:
           minLength: 1
           maxLength: 64
           description: |
-            Unique action code within the state. Immutable after creation.
-            Used as `actionCode` in all action-level paths and as the `action`
-            field in `TransitionRequest`.
+            Action code within the state. Used as `actionCode` in all
+            action-level paths and as the `action` field in `TransitionRequest`.
+            Uniqueness within the state is enforced by the composite definition
+            endpoints only; the granular POST accepts duplicates.
           example: APPROVE
         label:
           type: string
-          maxLength: 200
+          maxLength: 128
           description: Human-readable label shown on the action button in the UI.
           example: Approve Application
         nextState:
@@ -2503,6 +2820,16 @@ components:
             Code of the state to transition to when this action is executed.
             Must reference a valid `State.code` within the same process.
           example: APPROVED
+        roles:
+          type: array
+          description: |
+            Roles permitted to execute this action. At least one of the caller's
+            roles must match for the transition to be allowed. Empty or omitted
+            means the action is unrestricted by role.
+          items:
+            type: string
+            maxLength: 64
+            example: TRADE_LICENSE_APPROVER
         assigneeCheck:
           type: boolean
           default: false
@@ -2514,7 +2841,7 @@ components:
           additionalProperties: true
           description: Free-form action metadata for tenant, module, or UI-specific configuration.
       x-businessRules:
-        - code is immutable after creation; must be unique within the state.
+        - code must be unique within the state when authored through the composite definition endpoints; the granular POST does not enforce uniqueness.
         - nextState must reference a valid State.code within the same process.
 
     StateInput:
@@ -2536,7 +2863,11 @@ components:
           (e.g. APPROVED). No outbound actions required.
         - **TERMINAL_FAILURE** — a final state representing rejection or withdrawal
           (e.g. REJECTED, WITHDRAWN). No outbound actions required.
-      required: [code, name, type]
+
+        `type` is required inside `ProcessDefinitionInput` (`400` when
+        missing) but optional on the granular state endpoints, where it
+        defaults to `INTERMEDIATE`.
+      required: [code, name]
       properties:
         code:
           type: string
@@ -2550,15 +2881,16 @@ components:
         name:
           type: string
           minLength: 1
-          maxLength: 200
+          maxLength: 128
           description: Human-readable display name for this state.
           example: Pending Review
         type:
           type: string
           enum: [INITIAL, INTERMEDIATE, DECISION, TERMINAL_SUCCESS, TERMINAL_FAILURE]
+          default: INTERMEDIATE
           description: |
             Lifecycle role of the state within the process.
-            - **INITIAL**: entry point — exactly one per process.
+            - **INITIAL**: entry point — exactly one per process (enforced by the composite endpoints only).
             - **INTERMEDIATE**: in-progress stage.
             - **DECISION**: branching or routing state.
             - **TERMINAL_SUCCESS**: final state, successful outcome.
@@ -2566,7 +2898,7 @@ components:
           example: INITIAL
         description:
           type: string
-          maxLength: 1000
+          maxLength: 512
           description: Optional description of what this state represents.
         sla:
           type: integer
@@ -2579,25 +2911,49 @@ components:
           type: object
           additionalProperties: true
           description: Free-form state metadata for tenant, module, or UI-specific configuration.
+        isParallel:
+          type: boolean
+          default: false
+          description: |
+            Marks a fork state: a transition into it creates one branch
+            instance per entry of `branchStates`. Accepted only by the granular
+            `POST /process/{processCode}/state` (ignored by the composite
+            definition endpoints); not echoed in `State` responses.
+        isJoin:
+          type: boolean
+          default: false
+          description: |
+            Marks the join state that merges the parallel branches. Accepted
+            only by the granular `POST /process/{processCode}/state`; not
+            echoed in `State` responses.
+        branchStates:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          description: |
+            State codes of the branches started by an `isParallel` state.
+            Accepted only by the granular `POST /process/{processCode}/state`;
+            not echoed in `State` responses.
         actions:
           type: array
           description: |
             Actions available at this state. Include when authoring a complete
-            process definition via `POST /process/definition`. Omit when using
-            the standalone `POST /process/{processCode}/state` endpoint.
+            process definition via `POST /process/definition`. Ignored by the
+            standalone `POST /process/{processCode}/state` endpoint.
           items:
             $ref: '#/components/schemas/ActionInput'
       x-businessRules:
         - code is immutable after creation; must be unique within the process.
-        - Exactly one state per process must have type INITIAL.
+        - Exactly one state per process must have type INITIAL when authored through the composite definition endpoints; the granular endpoints do not check this.
         - TERMINAL_SUCCESS and TERMINAL_FAILURE states typically have no outbound actions.
 
     ProcessDefinitionInput:
       type: object
       description: |
-        Complete process definition submitted as a single atomic payload to
+        Complete process definition submitted as a single payload to
         `POST /process/definition` (create) or `PUT /process/definition/{processCode}`
-        (full replace).
+        (replace by code).
 
         The `states` array must include every state the process needs, each with
         its `actions` array inline. All `nextState` references must resolve to codes
@@ -2607,25 +2963,30 @@ components:
         code:
           type: string
           minLength: 1
-          maxLength: 64
+          maxLength: 128
+          pattern: '^[A-Za-z0-9_.:/@+\- ]+$'
           description: |
-            Unique human-readable slug. Immutable after creation. Used as the
-            path parameter in all process-scoped API calls.
+            Human-readable slug, unique per `version` within the tenant. Used
+            as the path parameter in all process-scoped API calls. On PUT it
+            must equal the path `processCode`.
           example: trade-license-approval
         name:
           type: string
           minLength: 1
-          maxLength: 200
+          maxLength: 128
           description: Human-readable display name.
           example: Trade License Approval
         description:
           type: string
-          maxLength: 1000
+          maxLength: 512
           description: Optional description of the process purpose and scope.
         version:
           type: string
           maxLength: 32
-          description: Business version label (e.g. "1.0", "2.1"). Human-assigned.
+          default: v1
+          description: |
+            Business version label (e.g. "1.0", "2.1"). Human-assigned.
+            Defaults to `v1` on POST; must be supplied on PUT.
           example: "1.0"
         sla:
           type: integer
@@ -2640,8 +3001,14 @@ components:
             Near-SLA threshold percentage for this process version. For example,
             `80` means an instance enters near-SLA when at least 80 percent and
             less than 100 percent of the applicable process or state SLA has
-            elapsed. If omitted, the service default applies.
+            elapsed. If omitted, the service default (80) applies.
           example: 80
+        isActive:
+          type: boolean
+          default: true
+          description: |
+            Whether this process version accepts new work. Defaults to `true`
+            on POST; must be supplied on PUT.
         additionalDetails:
           type: object
           additionalProperties: true
@@ -2651,17 +3018,18 @@ components:
           minItems: 1
           description: |
             All states in this process, each with their `actions` inline.
-            Exactly one state must have `type: INITIAL`.
+            Exactly one state must have `type: INITIAL`; every state needs
+            `code`, `name` and `type`.
           items:
             $ref: '#/components/schemas/StateInput'
       x-businessRules:
-        - code is immutable after creation and must be unique within the tenant.
+        - (code, version) must be unique within the tenant; the same code may be created in several versions.
         - Exactly one state must have type INITIAL.
         - Each state code must be unique within the states array.
         - Each action code must be unique within its state.
         - Every action nextState must reference a state code present in the states array.
-        - The entire payload is validated and persisted atomically.
-        - Runtime-impacting fields, including sla, slotPercentage, states, and actions, cannot be changed for a process version with active process instances. Create a new version instead.
+        - The payload is validated as a whole before persistence. POST persists the process row first and then each state and action in turn (not atomic); PUT runs in a single transaction.
+        - PUT replaces states/actions by code; removing a state still referenced by process instances fails with 400.
 
     # ── Response schemas ──────────────────────────────────────────────────────────
 
@@ -2700,19 +3068,20 @@ components:
           example: trade-license-approval
         nextState:
           type: string
-          description: Code of the state to transition to when this action executes.
+          description: Code of the state to transition to when this action executes (always present).
           example: APPROVED
         assigneeCheck:
           type: boolean
           description: |
             If `true`, the transition is rejected unless the caller is listed
             in `ProcessInstance.assignees` at the time of the action.
+            Omitted from the body when `false`.
         roles:
           type: array
           description: |
             Roles permitted to execute this action. At least one of the caller's
-            roles must match for the transition to be allowed. An empty array
-            means the action is unrestricted by role.
+            roles must match for the transition to be allowed. Omitted from the
+            body when empty, which means the action is unrestricted by role.
           items:
             type: string
             maxLength: 64
@@ -2724,7 +3093,7 @@ components:
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
       x-businessRules:
-        - code is immutable after creation; must be unique within the state.
+        - code can be renamed via PUT; uniqueness within the state is only enforced by the composite definition endpoints.
         - nextState must reference a valid State.code within the same process.
         - stateCode and processCode are server-managed; immutable after creation.
 
@@ -2776,19 +3145,115 @@ components:
           $ref: '#/components/schemas/AuditDetail'
       x-businessRules:
         - code is immutable after creation; must be unique within the process.
-        - Exactly one state per process must have type INITIAL.
+        - Exactly one state per process should have type INITIAL; only the composite definition endpoints enforce this.
+
+    Process:
+      type: object
+      description: |
+        Process metadata as returned by the `/process` endpoints and embedded
+        (unwrapped) in `ProcessDefinitionDetail`. `tenantId` is never
+        serialised. Null fields are omitted.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: System-generated UUID. Present for internal reference — never used in API paths.
+        name:
+          type: string
+          example: Trade License Approval
+        code:
+          type: string
+          description: Human-readable process slug used in API paths.
+          example: trade-license-approval
+        description:
+          type: string
+        version:
+          type: string
+          description: Version label; `v1` when not supplied at creation.
+          example: "1.0"
+        sla:
+          type: integer
+          format: int64
+          description: Overall process SLA in milliseconds.
+        slotPercentage:
+          type: integer
+          minimum: 1
+          maximum: 99
+          description: Near-SLA threshold percentage for this process version.
+        isActive:
+          type: boolean
+          description: Whether this process version accepts new work.
+          example: true
+        additionalDetails:
+          type: object
+          additionalProperties: true
+          description: Free-form process metadata for tenant or module-specific configuration.
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
+
+    DefinitionAction:
+      type: object
+      description: |
+        An action as embedded in `StateDetail` by the composite definition
+        endpoints. Unlike `Action`, `currentState` and `nextState` are the
+        **UUIDs** of the states (not codes) and there is no `stateCode` /
+        `processCode`. Null fields are omitted.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          description: Action code.
+          example: APPROVE
+        label:
+          type: string
+          example: Approve Application
+        currentState:
+          type: string
+          format: uuid
+          readOnly: true
+          description: UUID of the state this action belongs to.
+        nextState:
+          type: string
+          format: uuid
+          description: UUID of the target state.
+        roles:
+          type: array
+          description: Roles permitted to execute this action. Omitted when empty.
+          items:
+            type: string
+            maxLength: 64
+        assigneeCheck:
+          type: boolean
+          description: Omitted when `false`.
+        additionalDetails:
+          type: object
+          additionalProperties: true
+        auditDetail:
+          $ref: '#/components/schemas/AuditDetail'
 
     StateDetail:
       type: object
       description: |
-        A state as returned by the composite definition endpoint — includes
-        server-populated fields and the full list of actions at this state.
+        A state as returned by the composite definition endpoints, with the
+        full list of actions at this state. This is the raw state record:
+        it carries the parent's `processId` (UUID) rather than `processCode`,
+        and exposes the parallel-workflow flags. Null fields are omitted;
+        `actions` is omitted when the state has none.
       properties:
         id:
           type: string
           format: uuid
           readOnly: true
           description: System-generated UUID. Present for internal reference.
+        processId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: UUID of the parent process.
         code:
           type: string
           readOnly: true
@@ -2806,95 +3271,68 @@ components:
         sla:
           type: integer
           format: int64
-        processCode:
-          type: string
-          readOnly: true
-          description: Code of the parent process.
-          example: trade-license-approval
+        isInitial:
+          type: boolean
+          description: Present (as `true`) only for the `INITIAL` state.
+        isParallel:
+          type: boolean
+          description: Present (as `true`) only for fork states.
+        isJoin:
+          type: boolean
+          description: Present (as `true`) only for join states.
+        branchStates:
+          type: array
+          items:
+            type: string
+          description: Branch state codes of a fork state. Omitted when empty.
         additionalDetails:
           type: object
           additionalProperties: true
           description: Free-form state metadata for tenant, module, or UI-specific configuration.
         actions:
           type: array
-          description: Actions available at this state.
+          description: Actions available at this state. Omitted when empty.
           items:
-            $ref: '#/components/schemas/Action'
+            $ref: '#/components/schemas/DefinitionAction'
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
     ProcessDefinitionDetail:
       type: object
       description: |
-        Full process definition as returned by the service — process metadata,
-        states, and actions with all server-populated fields included.
-        `id` is present for internal reference — never used in API paths.
-        Use `processCode` (`Process.code`) in all process-level paths.
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: System-generated UUID. Present for internal reference — never used in API paths.
-        code:
-          type: string
-          readOnly: true
-          description: Human-readable process slug. The sole identifier used in API paths.
-          example: trade-license-approval
-        name:
-          type: string
-          description: Human-readable display name.
-          example: Trade License Approval
-        description:
-          type: string
-        version:
-          type: string
-          description: Business version label.
-          example: "1.0"
-        sla:
-          type: integer
-          format: int64
-          description: Overall process SLA in milliseconds.
-        slotPercentage:
-          type: integer
-          minimum: 1
-          maximum: 99
-          description: |
-            Near-SLA threshold percentage configured for this process version.
-            If omitted, the service default applies.
-          example: 80
-        tenantId:
-          type: string
-          readOnly: true
-          description: Tenant that owns this process. Resolved from the Bearer token.
-        additionalDetails:
-          type: object
-          additionalProperties: true
-          description: Free-form process metadata for tenant, module, or UI-specific configuration.
-        states:
-          type: array
-          description: All states in the process with their actions.
-          items:
-            $ref: '#/components/schemas/StateDetail'
-        auditDetail:
-          $ref: '#/components/schemas/AuditDetail'
+        Full process definition as returned by the service — the `Process`
+        fields unwrapped at the top level plus `states` (omitted when the
+        process has no states). `tenantId` is not included. `id` is present
+        for internal reference — never used in API paths; use `code` in all
+        process-level paths.
+      allOf:
+        - $ref: '#/components/schemas/Process'
+        - type: object
+          properties:
+            states:
+              type: array
+              description: All states in the process with their actions. Omitted when empty.
+              items:
+                $ref: '#/components/schemas/StateDetail'
 
     ProcessDefinitionListResponse:
       type: object
-      description: Paginated list of complete process definitions.
+      description: |
+        List of complete process definitions. Not paginated — `page` is
+        always `0` and `size` equals `totalCount`.
       properties:
         totalCount:
           type: integer
-          description: Total number of process definitions for this tenant.
+          description: Number of definitions returned (all matches).
           example: 5
         page:
           type: integer
-          description: Current page number (0-indexed).
+          description: Always `0`.
           example: 0
         size:
           type: integer
-          description: Number of records per page as requested.
-          example: 20
+          description: Equals `totalCount`.
+          example: 5
         definitions:
           type: array
           items:
@@ -2907,7 +3345,10 @@ components:
       description: |
         Request body for creating or updating an escalation configuration.
         `processCode` is resolved from the path parameter on all operations.
-        `stateCode` is resolved from the path parameter on PUT and DELETE.
+        On PUT the `stateCode` is taken from the path and any `stateCode` in
+        the body is ignored; all other PUT fields are optional (partial
+        update). On POST, `stateCode` and `escalationAction` are required and
+        at least one of `stateSlaMinutes` / `processSlaMinutes` must be given.
       required: [stateCode, escalationAction]
       properties:
         stateCode:
@@ -2916,7 +3357,8 @@ components:
           maxLength: 64
           description: |
             Code of the state this escalation config applies to.
-            Must reference a valid `State.code` within the parent process.
+            Must reference a valid `State.code` within the parent process
+            (`400` otherwise).
           example: PENDING_REVIEW
         escalationAction:
           type: string
@@ -2924,7 +3366,9 @@ components:
           maxLength: 64
           description: |
             Code of the action to execute when the SLA threshold is breached.
-            Must reference a valid `Action.code` at the `stateCode`.
+            Should be an `Action.code` at the `stateCode`, but this is **not**
+            validated on create/update — an unknown code only fails at
+            escalation run time.
           example: ESCALATE
         stateSlaMinutes:
           type: integer
@@ -2977,8 +3421,8 @@ components:
       x-businessRules:
         - processCode and stateCode are immutable after creation.
         - stateCode must reference a valid State.code within the parent process.
-        - escalationAction must reference a valid Action.code at the stateCode.
-        - At most one escalation config per stateCode per process.
+        - escalationAction should reference an Action.code at the stateCode; it is not validated when the config is written.
+        - At most one escalation config per stateCode per process (duplicate returns 400).
 
     # ── Transition (runtime) ──────────────────────────────────────────────────────
 
@@ -3000,31 +3444,36 @@ components:
           type: string
           maxLength: 64
           description: The document's own reference number. Nullable.
-        additionalDetails:
+        additionalAttributes:
           type: object
           additionalProperties: true
-          description: Open map for additional document metadata.
+          description: |
+            Open map for additional document metadata. Note the field name:
+            the service reads and writes this map as `additionalAttributes`
+            (not `additionalDetails`) everywhere a `Document` appears.
+            Empty/null document fields are omitted.
 
     TransitionRequest:
       type: object
       description: |
         Request body for executing a workflow transition. Either creates a new
         process instance (first transition) or advances an existing one.
-      required: [processCode, entityId, action]
+      required: [processCode, entityId]
       properties:
         processCode:
           type: string
           minLength: 1
-          maxLength: 64
-          description: Code of the workflow process (`Process.code`).
+          maxLength: 128
+          description: Code of the workflow process (`Process.code`); a process UUID is also accepted.
           example: trade-license-approval
         version:
           type: string
           maxLength: 32
           description: |
             Optional process definition version to use for this transition.
-            Must be supplied with `processCode`. When omitted, the latest
-            process version is used.
+            When omitted, the version of the entity's existing latest instance
+            is reused; for a new entity the most recently created version of
+            the code is used.
           example: v2
         entityId:
           type: string
@@ -3039,9 +3488,21 @@ components:
           maxLength: 64
           description: |
             Code of the action to execute (`Action.code`). Must be a valid action
-            available at the current state for the caller's roles. Omit when
-            creating the initial process instance.
+            available at the current state for the caller's roles. Omit to
+            fetch the entity's latest instance, or to create the initial
+            process instance without executing an action.
           example: APPROVE
+        currentState:
+          type: string
+          maxLength: 64
+          description: |
+            Optional optimistic-concurrency guard: the state code (or UUID)
+            the caller believes the instance is in. An unknown code returns
+            `400`; a mismatch with the actual state returns `409`.
+          example: PENDING_REVIEW
+        init:
+          type: boolean
+          description: Accepted for backward compatibility; has no effect.
         comment:
           type: string
           maxLength: 1000
@@ -3078,13 +3539,18 @@ components:
 
     TransitionResponse:
       type: object
-      description: The updated process instance state returned after a transition executes.
+      description: |
+        The process instance state returned after a transition executes.
+        Every property is always present: string fields are emitted as `""`
+        when unset, `stateSla`/`processSla` as `0`, and `documents`,
+        `assignees`, `additionalDetails` and `auditDetail` as `null` when
+        absent.
       properties:
         id:
           type: string
           format: uuid
           readOnly: true
-          description: System-generated UUID of the process instance.
+          description: System-generated UUID of the process instance row written (or returned).
         processCode:
           type: string
           readOnly: true
@@ -3093,7 +3559,7 @@ components:
         version:
           type: string
           readOnly: true
-          description: Process definition version used for the transition.
+          description: Version label of the process definition used.
           example: v2
         entityId:
           type: string
@@ -3103,20 +3569,22 @@ components:
         action:
           type: string
           readOnly: true
-          description: The action code that was executed.
+          description: The `action` from the request (`""` when none was sent).
           example: APPROVE
         comment:
           type: string
-          description: Comment recorded against this transition.
+          description: The `comment` from the request (`""` when none was sent).
         documents:
           type: array
+          nullable: true
           items:
             $ref: '#/components/schemas/Document'
         assigner:
           type: string
-          description: User ID of the assigner.
+          description: User ID of the assigner (`""` when unset).
         assignees:
           type: array
+          nullable: true
           items:
             type: string
           description: User IDs of the assigned officers.
@@ -3129,14 +3597,15 @@ components:
           type: integer
           format: int64
           readOnly: true
-          description: Remaining state-level SLA in milliseconds.
+          description: Remaining state-level SLA in milliseconds; `0` when no SLA applies.
         processSla:
           type: integer
           format: int64
           readOnly: true
-          description: Remaining process-level SLA in milliseconds.
+          description: Remaining process-level SLA in milliseconds; `0` when no SLA applies.
         additionalDetails:
           type: object
+          nullable: true
           additionalProperties: true
           description: Free-form metadata recorded against this transition.
         auditDetail:
@@ -3157,7 +3626,7 @@ components:
         fromState:
           type: string
           readOnly: true
-          description: State code the instance was in before this transition.
+          description: State code the instance was in before this transition. Omitted on the first (creation) entry.
           example: PENDING_REVIEW
         toState:
           type: string
@@ -3197,6 +3666,9 @@ components:
         `transitionHistory` array is populated with all past state changes
         ordered oldest first. When `history: false` (default), `transitionHistory`
         is omitted.
+
+        Null fields are omitted; array/map fields are omitted when empty;
+        boolean flags other than `escalated` are omitted when `false`.
       properties:
         id:
           type: string
@@ -3215,7 +3687,7 @@ components:
           example: cert-uuid-001
         action:
           type: string
-          description: The last action code executed on this instance.
+          description: The last action code executed on this instance. Omitted when empty.
           example: APPROVE
         comment:
           type: string
@@ -3249,12 +3721,23 @@ components:
           type: integer
           format: int64
           readOnly: true
-          description: Remaining state-level SLA in milliseconds.
+          description: |
+            Remaining state-level SLA in milliseconds on `GET /transition`
+            (negative once breached); the stored value on `GET /auto/_search`.
         processSla:
           type: integer
           format: int64
           readOnly: true
-          description: Remaining process-level SLA in milliseconds.
+          description: |
+            Remaining process-level SLA in milliseconds on `GET /transition`
+            (negative once breached); the stored value on `GET /auto/_search`.
+        attributes:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Attributes recorded with the last transition. Omitted when empty.
         additionalDetails:
           type: object
           additionalProperties: true
@@ -3263,14 +3746,17 @@ components:
           type: array
           items:
             type: string
-          description: Roles permitted to act on this instance in the current state.
+          description: |
+            Sorted union of the roles configured on the current state's
+            actions. Populated by `GET /transition` only.
         nextActions:
           type: array
           items:
             type: string
           description: |
             Action codes available to the caller in the current state.
-            Computed at read time based on caller roles.
+            Computed at read time based on caller roles (`GET /transition`);
+            unfiltered on `POST /transition`.
         nextActionDetails:
           type: array
           readOnly: true
@@ -3280,10 +3766,27 @@ components:
             on each action.
           items:
             $ref: '#/components/schemas/TransitionNextActionDetail'
+        parentInstanceId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: For a parallel branch instance, the instance that forked it.
+        branchId:
+          type: string
+          readOnly: true
+          description: For a parallel branch instance, the branch state code.
+        isParallelBranch:
+          type: boolean
+          readOnly: true
+          description: Present (as `true`) only for parallel branch instances.
+        isLatest:
+          type: boolean
+          readOnly: true
+          description: Present (as `true`) when this is the latest row for the entity/process (not populated by `GET /auto/_search`).
         escalated:
           type: boolean
           readOnly: true
-          description: Whether this instance has been escalated at least once.
+          description: Whether this instance has been escalated at least once. Always present.
           example: false
         transitionHistory:
           type: array
@@ -3305,6 +3808,11 @@ components:
           readOnly: true
           description: Action code available from the current state.
           example: APPROVE
+        label:
+          type: string
+          readOnly: true
+          description: Human-readable label configured on the action.
+          example: Approve Application
         nextState:
           type: string
           readOnly: true
@@ -3313,7 +3821,7 @@ components:
         roles:
           type: array
           readOnly: true
-          description: Roles permitted to execute this action.
+          description: Roles permitted to execute this action. Omitted when empty.
           items:
             type: string
             maxLength: 64
@@ -3393,15 +3901,15 @@ components:
         statusCounts:
           type: array
           description: |
-            Counts grouped by current state. Present only when
-            `countType=status`.
+            Counts grouped by current state code. Present only when
+            `countType=status` and at least one instance matched.
           items:
             $ref: '#/components/schemas/TransitionStatusCount'
         actionCounts:
           type: array
           description: |
             Counts grouped by action. Present only when
-            `countType=actionTaken`.
+            `countType=actionTaken` and at least one row matched.
           items:
             $ref: '#/components/schemas/TransitionActionCount'
 
@@ -3423,9 +3931,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProcessInstance'
-          description: The process instances escalated in this run.
+          description: The process instances escalated in this run (the new instance rows written by the escalation action). Omitted when empty.
         errors:
           type: array
           items:
             type: string
-          description: Error messages for instances that could not be escalated.
+          description: Error messages for states or instances that could not be escalated. Omitted when empty.

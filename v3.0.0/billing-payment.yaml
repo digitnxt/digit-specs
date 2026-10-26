@@ -7,6 +7,15 @@ info:
 
     A Business Service represents a billable service (e.g., Property Tax, Trade License, Water/Sewerage) and its collection behavior and defaults.
 
+    Wire conventions implemented by the service:
+    - Every error response body is a bare JSON array of `Error` objects (`code`, `message`, `description`, `params`); it is never wrapped in an envelope.
+    - Business errors carry the service codes named in each response description (e.g. `NOT_FOUND`, `DEMAND_CONFLICT`).
+    - Bean-validation failures on request bodies, and `@Pattern`/`@Min`/`@Max`/`@Size` violations or unparseable enum values on query/path parameters, are rendered as `400` with `code` set to the exception or constraint name (e.g. `ConstraintViolationException`, `MethodArgumentTypeMismatchException`, `HandlerMethodValidationException`, or a field-level code such as `NotBlank.update.name`) rather than a service code; for unhandled exceptions the message is `An unhandled exception occurred on the server`.
+    - Malformed JSON bodies are rendered as `400` with code `JsonParseException` or `JsonMappingException`.
+    - Decimal amounts are serialised as JSON strings with trailing zeros stripped (e.g. `"100.5"`, `"25"`) and are accepted on input as either a JSON number or a numeric string.
+    - List-valued query filters are a single comma-separated string (`?billIds=a,b`), not repeated parameters; blank tokens are ignored and malformed UUID tokens are silently dropped.
+    - Fields whose value is null are omitted from response objects (they are not emitted as `null`); empty `metadata`, `payer` and `arrearDemandIds` collections are omitted as well.
+
 servers:
   - url: https://api.example.com/billing/v3
     description: Production server
@@ -85,7 +94,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/BusinessService'
         '400':
-          description: Bad Request
+          description: Bad Request — bean-validation failure; INVALID_REQUEST (empty array); DUPLICATE_VALUES (the same code appears more than once in the request, `params` lists the duplicates)
           content:
             application/json:
               schema:
@@ -101,7 +110,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (duplicate code within tenant). Use PUT to update.
+          description: "Conflict — CONFLICT: one or more codes already exist in the tenant (or were created concurrently). Use PUT to update."
           content:
             application/json:
               schema:
@@ -126,7 +135,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -188,7 +196,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/BusinessService'
         '400':
-          description: Bad Request
+          description: Bad Request — constraint violation on a query parameter (`code` pattern, `effectiveOn`/`limit`/`offset` bounds) or an unparseable value; `code` is the exception class name
           content:
             application/json:
               schema:
@@ -222,7 +230,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -254,7 +261,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BusinessService'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -262,7 +269,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '400':
-          description: Bad Request
+          description: Bad Request — `code` path parameter violates the pattern (`code` is the exception class name)
           content:
             application/json:
               schema:
@@ -288,7 +295,7 @@ paths:
 
     put:
       summary: Replace a business service by code
-      description: Performs a full replacement of an existing business service configuration identified by its code.
+      description: Performs a full replacement of an existing business service configuration identified by its code. The code itself is taken from the path; unknown body fields (including `code`) are ignored. The version is incremented and the previous state is written to the audit table.
       operationId: updateBusinessService
       tags: [BusinessService]
       parameters:
@@ -333,7 +340,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BusinessService'
         '400':
-          description: Bad Request
+          description: Bad Request — bean-validation failure on the body
           content:
             application/json:
               schema:
@@ -349,15 +356,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict (e.g., trying to change immutable fields such as code)
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -375,7 +374,7 @@ paths:
 
     patch:
       summary: Partially update a business service by code
-      description: Updates specific fields of an existing business service without replacing the entire configuration.
+      description: Updates specific fields of an existing business service without replacing the entire configuration. Only non-null body fields are applied; `effectiveFrom`/`effectiveTo` are validated against the stored window (strict inequality).
       operationId: patchBusinessService
       tags: [BusinessService]
       parameters:
@@ -420,7 +419,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BusinessService'
         '400':
-          description: Bad Request
+          description: Bad Request — bean-validation failure; INVALID_EFFECTIVE_RANGE (effectiveTo <= effectiveFrom when both are sent); INVALID_EFFECTIVE_TO (effectiveTo <= stored effectiveFrom); INVALID_EFFECTIVE_FROM (effectiveFrom >= stored effectiveTo)
           content:
             application/json:
               schema:
@@ -436,7 +435,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -453,8 +452,8 @@ paths:
                   $ref: '#/components/schemas/Error'
 
     delete:
-      summary: Soft delete (deactivate) a business service by code
-      description: Deactivates a business service by setting its active status to false, preventing further use while preserving historical data.
+      summary: Delete a business service by code
+      description: Permanently deletes the business service row. An audit snapshot (marked inactive) is written first, so history is preserved in the audit table only; the deleted code can no longer be read or searched.
       operationId: deleteBusinessService
       tags: [BusinessService]
       parameters:
@@ -478,7 +477,7 @@ paths:
             pattern: '^[A-Z][A-Z0-9_]{1,31}$'
       responses:
         '200':
-          description: Deactivated successfully
+          description: Deleted successfully
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -497,7 +496,7 @@ paths:
                     type: boolean
                     example: true
         '400':
-          description: Bad Request.
+          description: Bad Request — `code` path parameter violates the pattern (`code` is the exception class name)
           content:
             application/json:
               schema:
@@ -513,7 +512,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -521,7 +520,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict
+          description: "Conflict — DEPENDENCY_EXISTS: dependent records (e.g. tax heads) still reference this business service"
           content:
             application/json:
               schema:
@@ -585,7 +584,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/TaxHead'
         '400':
-          description: Bad Request
+          description: Bad Request — bean-validation failure; INVALID_REQUEST (empty array); DUPLICATE_VALUES (the same code appears more than once in the request)
           content:
             application/json:
               schema:
@@ -601,7 +600,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (duplicate).
+          description: Conflict — CONFLICT (a code already exists in the tenant, or was created concurrently) or DUPLICATE_ORDER (an `order` is used twice for the same business service within the request, or already used by an existing tax head)
           content:
             application/json:
               schema:
@@ -609,7 +608,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: "Unprocessable — INVALID_BUSINESS_SERVICE: one or more `businessServiceCode` values do not resolve to an active business service (`params` lists them)"
           content:
             application/json:
               schema:
@@ -634,7 +633,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -701,7 +699,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/TaxHead'
         '400':
-          description: Bad Request
+          description: Bad Request — constraint violation on a query parameter (`code`/`businessServiceCode` pattern, `limit`/`offset` bounds) or an unparseable `category` value; `code` is the exception class name
           content:
             application/json:
               schema:
@@ -735,7 +733,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -767,7 +764,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaxHead'
         '400':
-          description: Bad Request
+          description: Bad Request — `code` path parameter violates the pattern (`code` is the exception class name)
           content:
             application/json:
               schema:
@@ -783,7 +780,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -801,7 +798,7 @@ paths:
 
     put:
       summary: Replace a tax head by code
-      description: Performs a full replacement of an existing tax head configuration identified by its code.
+      description: Performs a full replacement of an existing tax head configuration identified by its code. The code itself is taken from the path; unknown body fields (including `code`) are ignored. The business service is validated before the tax head is looked up, so an unknown/inactive business service yields 422 even when the tax head does not exist.
       operationId: updateTaxHead
       tags: [TaxHead]
       parameters:
@@ -846,7 +843,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaxHead'
         '400':
-          description: Bad Request
+          description: Bad Request — bean-validation failure on the body
           content:
             application/json:
               schema:
@@ -862,7 +859,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -870,7 +867,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (immutable field change attempted)
+          description: "Conflict — DUPLICATE_ORDER: another tax head of the requested business service already uses this `order`"
           content:
             application/json:
               schema:
@@ -878,7 +875,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: "Unprocessable — INVALID_BUSINESS_SERVICE: `businessServiceCode` does not resolve to an active business service"
           content:
             application/json:
               schema:
@@ -896,7 +893,7 @@ paths:
 
     patch:
       summary: Partially update a tax head by code
-      description: Updates specific fields of an existing tax head without replacing the entire configuration.
+      description: Updates specific fields of an existing tax head without replacing the entire configuration. Only non-null body fields are applied; `category` and `order` cannot be changed via PATCH. `effectiveFrom`/`effectiveTo` are validated against the stored window (strict inequality).
       operationId: patchTaxHead
       tags: [TaxHead]
       parameters:
@@ -940,7 +937,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaxHead'
         '400':
-          description: Bad Request
+          description: Bad Request — bean-validation failure; INVALID_EFFECTIVE_RANGE (effectiveTo <= effectiveFrom when both are sent); INVALID_EFFECTIVE_TO (effectiveTo <= stored effectiveFrom); INVALID_EFFECTIVE_FROM (effectiveFrom >= stored effectiveTo)
           content:
             application/json:
               schema:
@@ -956,7 +953,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -964,7 +961,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: "Unprocessable — INVALID_BUSINESS_SERVICE: `businessServiceCode` does not resolve to an active business service"
           content:
             application/json:
               schema:
@@ -981,8 +978,8 @@ paths:
                   $ref: '#/components/schemas/Error'
 
     delete:
-      summary: Soft delete (deactivate) a tax head
-      description: Deactivates a tax head by setting its active status to false, preventing further use while preserving historical data.
+      summary: Delete a tax head by code
+      description: Permanently deletes the tax head row. An audit snapshot (marked inactive) is written first, so history is preserved in the audit table only; the deleted code can no longer be read or searched.
       operationId: deleteTaxHead
       tags: [TaxHead]
       parameters:
@@ -1005,7 +1002,7 @@ paths:
             pattern: '^[A-Z][A-Z0-9_]{1,63}$'
       responses:
         '200':
-          description: Deactivated successfully
+          description: Deleted successfully
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1024,7 +1021,7 @@ paths:
                     type: boolean
                     example: true
         '400':
-          description: Bad Request.
+          description: Bad Request — `code` path parameter violates the pattern (`code` is the exception class name)
           content:
             application/json:
               schema:
@@ -1040,7 +1037,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -1048,7 +1045,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict
+          description: "Conflict — DEPENDENCY_EXISTS: dependent records (e.g. demand line items) still reference this tax head"
           content:
             application/json:
               schema:
@@ -1069,7 +1066,11 @@ paths:
   /demands:
     post:
       summary: Create demands (bulk)
-      description: Creates one or more demand records representing calculated liabilities for consumers, including line items mapped to tax heads.
+      description: |
+        Creates one or more demand records representing calculated liabilities for consumers, including line items mapped to tax heads.
+
+        Each item is validated independently (period, line items, business service, tax heads); validation failures are reported per item and do not stop the other items. Write failures (period overlap, arrear tax head missing) abort the whole request — nothing is persisted.
+        When arrear roll-forward is enabled, the consumer's latest open demand with an outstanding balance is marked ROLL_FORWARDED, its outstanding amount is prepended as a `<businessServiceCode>_ARREAR` line item, and `arrearDemandIds` is populated (newest first).
       operationId: createDemands
       tags: [Demand]
       parameters:
@@ -1095,7 +1096,7 @@ paths:
                 $ref: '#/components/schemas/DemandCreate'
       responses:
         '201':
-          description: Demands created
+          description: All items created — bare array of the created demands
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1112,7 +1113,7 @@ paths:
                 items: 
                   $ref: '#/components/schemas/Demand'
         '207':
-          description: Multi-Status — some items succeeded, some failed
+          description: Multi-Status — some items created, some failed per-item validation; `success` holds the created demands, `failures` the per-index errors
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1127,7 +1128,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BulkResponse'
         '400':
-          description: Validation error
+          description: "Bad Request — every item failed per-item validation and at least one error is non-referential (INVALID_PERIOD, INVALID_LINE_ITEMS, INVALID_AMOUNT, INVALID_COLLECTION, DUPLICATE_TAX_HEAD): flattened array of all item errors, `description` prefixed with `item <index>: `; or bean-validation failure on the body; or INVALID_REQUEST (empty array)"
           content:
             application/json:
               schema:
@@ -1143,7 +1144,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict
+          description: "Conflict — DEMAND_CONFLICT: an item overlaps an existing demand period for the same consumer and business service. The whole request is aborted and nothing is created, even for items that passed validation."
           content:
             application/json:
               schema:
@@ -1151,7 +1152,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: "Unprocessable — every item failed per-item validation and all errors are referential (UNKNOWN_BUSINESS_SERVICE, UNKNOWN_TAX_HEAD, INVALID_TAX_HEAD): flattened array as for 400; or CREATION_FAILED when arrear roll-forward is enabled and the `<businessServiceCode>_ARREAR` tax head is missing or inactive (aborts the whole request)"
           content:
             application/json:
               schema:
@@ -1169,7 +1170,7 @@ paths:
 
     put:
       summary: Update/replace demands (bulk)
-      description: Performs bulk full replacement of existing demands that are in editable states (DRAFT or ACTIVE), requiring the demand ID for each item.
+      description: Performs bulk full replacement of existing demands that are in editable states (DRAFT or ACTIVE), requiring the demand ID for each item. Line items are replaced (new line-item ids); the version is incremented and the previous state is audited. Per-item validation failures are reported per item; a missing id, a non-editable status or a period overlap aborts the whole request and nothing is updated.
       operationId: updateDemands
       tags: [Demand]
       parameters:
@@ -1193,7 +1194,7 @@ paths:
                 $ref: '#/components/schemas/DemandUpdate'
       responses:
         '200':
-          description: Demands updated
+          description: All items updated — bare array of the updated demands
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1210,7 +1211,7 @@ paths:
                 items: 
                   $ref: '#/components/schemas/Demand'
         '207':
-          description: Multi-Status — some items updated, some failed
+          description: Multi-Status — some items updated, some failed per-item validation; `success` holds the updated demands, `failures` the per-index errors
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1225,7 +1226,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BulkResponse'
         '400':
-          description: Validation error
+          description: "Bad Request — every item failed per-item validation and at least one error is non-referential (INVALID_PERIOD, INVALID_LINE_ITEMS, INVALID_AMOUNT, INVALID_COLLECTION, DUPLICATE_TAX_HEAD): flattened array of all item errors, `description` prefixed with `item <index>: `; or bean-validation failure on the body; or INVALID_REQUEST (empty array)"
           content:
             application/json:
               schema:
@@ -1240,8 +1241,16 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '404':
+          description: "Not found — NOT_FOUND: an item's `id` does not exist in the tenant (`description` names the item index). The whole request is aborted and nothing is updated."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (e.g., trying to change immutable fields such as code)
+          description: Conflict — UPDATE_FAILED (an item's demand is not in DRAFT/ACTIVE status) or DEMAND_CONFLICT (the new period overlaps another demand of the consumer). Either aborts the whole request; nothing is updated.
           content:
             application/json:
               schema:
@@ -1249,7 +1258,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: 'Unprocessable (items not editable: frozen/billed/cancelled)'
+          description: "Unprocessable — every item failed per-item validation and all errors are referential (UNKNOWN_BUSINESS_SERVICE, UNKNOWN_TAX_HEAD, INVALID_TAX_HEAD): flattened array as for 400"
           content:
             application/json:
               schema:
@@ -1274,7 +1283,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -1351,7 +1359,7 @@ paths:
                 items: 
                   $ref: '#/components/schemas/Demand'
         '400':
-          description: Bad Request
+          description: Bad Request — constraint violation on a query parameter (`businessServiceCode` pattern, `consumerCode` length, `createdFrom`/`createdTo`/`limit`/`offset` bounds) or an unparseable `status` value; `code` is the exception class name
           content:
             application/json:
               schema:
@@ -1385,7 +1393,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -1415,7 +1422,7 @@ paths:
               schema: 
                 $ref: '#/components/schemas/Demand'
         '400':
-          description: Bad Request
+          description: "Bad Request — INVALID_PATH_PARAM: `id` is not a valid UUID"
           content:
             application/json:
               schema:
@@ -1431,7 +1438,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -1449,7 +1456,7 @@ paths:
 
     patch:
       summary: Partially update a demand by ID
-      description: Updates specific fields of an editable demand (DRAFT or ACTIVE status) such as amounts, line items, or payer information before bill generation.
+      description: Updates specific fields of an editable demand (DRAFT or ACTIVE status) such as line items, payer information, consumer code or status before bill generation. When `lineItems` is sent the existing line items are replaced in full (new ids) and the totals are recomputed. The version is incremented and the previous state is audited; the response is re-read after commit.
       operationId: patchDemandByID
       tags: [Demand]
       parameters:
@@ -1498,7 +1505,7 @@ paths:
               schema: 
                 $ref: '#/components/schemas/Demand'
         '400':
-          description: Bad Request
+          description: Bad Request — INVALID_PATH_PARAM (`id` is not a UUID); INVALID_STATUS_TRANSITION (demand is not DRAFT/ACTIVE; `params` carries the current status); DEMAND_CONFLICT (the change moves the demand onto a period occupied by another demand); the first line-item validation error (INVALID_AMOUNT, INVALID_COLLECTION, DUPLICATE_TAX_HEAD, UNKNOWN_TAX_HEAD, INVALID_TAX_HEAD, UNKNOWN_BUSINESS_SERVICE); or bean-validation failure on the body
           content:
             application/json:
               schema:
@@ -1514,15 +1521,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '422':
-          description: Unprocessable (frozen/billed/cancelled; or rule violations)
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -1578,7 +1577,7 @@ paths:
               schema: 
                 $ref: '#/components/schemas/Demand'
         '400':
-          description: Bad Request
+          description: "Bad Request — INVALID_PATH_PARAM: `id` is not a valid UUID"
           content:
             application/json:
               schema:
@@ -1594,7 +1593,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -1602,7 +1601,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (invalid state transition)
+          description: "Conflict — FREEZE_FAILED: the demand is not ACTIVE (`description` names the current status)"
           content:
             application/json:
               schema:
@@ -1621,7 +1620,7 @@ paths:
   /demands/{id}/cancel:
     post:
       summary: Cancel a demand by ID
-      description: Cancels a demand due to incorrect assessment or other reasons, with validation to prevent cancellation of billed or partially collected demands.
+      description: Cancels a DRAFT or ACTIVE demand (status becomes CANCELLED, version incremented, previous state audited). Demands in any other status (FROZEN, PARTIALLY_PAID, PAID, ROLL_FORWARDED, CANCELLED) are rejected with 422. The optional body's `reasonCode` and `note` are stored in the demand's `metadata` as `cancellation_reason_code` and `cancellation_note`.
       operationId: cancelDemandByID
       tags: [Demand]
       parameters:
@@ -1663,7 +1662,7 @@ paths:
               schema: 
                 $ref: '#/components/schemas/Demand'
         '400':
-          description: Bad Request
+          description: "Bad Request — INVALID_PATH_PARAM: `id` is not a valid UUID"
           content:
             application/json:
               schema:
@@ -1679,15 +1678,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict (invalid state transition)
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -1695,7 +1686,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable (already billed/collected; needs adjustment route)
+          description: "Unprocessable — CANCEL_FAILED: the demand is not in DRAFT or ACTIVE status (`description` names the current status)"
           content:
             application/json:
               schema:
@@ -1716,7 +1707,11 @@ paths:
   /bills/generate:
     post:
       summary: Generate a bill
-      description: Generates a bill from eligible ACTIVE or FROZEN demands for a specific consumer and business service, including payer details and line items.
+      description: |
+        Generates a bill from the consumer's ACTIVE, FROZEN and PARTIALLY_PAID demands for the business service, including payer details and line items. Bill amounts are the outstanding balances (amount minus collected); ACTIVE demands included in the bill are moved to FROZEN.
+
+        If an ACTIVE bill that has not expired already exists for the consumer and business service, that bill is returned unchanged (still 201). An expired ACTIVE bill is marked EXPIRED first and a new bill is generated.
+        After the bill is stored a PDF is rendered and uploaded to filestore and its id is returned as `fileStoreId`; in resilient mode (default) a PDF failure is logged and the bill is returned without `fileStoreId`.
       operationId: generateBill
       tags: [Bill]
       parameters:
@@ -1738,7 +1733,7 @@ paths:
               $ref: '#/components/schemas/GenerateBillCriteria'
       responses:
         '201':
-          description: Bill generated
+          description: Bill generated (or the existing unexpired ACTIVE bill returned as-is)
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -1753,7 +1748,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bill'
         '400':
-          description: Validation error
+          description: Bad Request — bean-validation failure on the body; GENERATION_FAILED (bill-number generation via idgen failed, a line item references a tax head that no longer exists, or the eligible demands have no outstanding amount)
           content:
             application/json:
               schema:
@@ -1769,7 +1764,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (duplicate create without Idempotency-Key; overlapping/duplicate bills as per policy)
+          description: "Conflict — CONFLICT: another request created the active bill for this consumer and business service concurrently; retrying returns the existing bill"
           content:
             application/json:
               schema:
@@ -1777,7 +1772,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: Unprocessable — INVALID_BUSINESS_SERVICE (`businessServiceCode` unknown or inactive) or NO_ELIGIBLE_DEMANDS (the consumer has no ACTIVE/FROZEN/PARTIALLY_PAID demand for the business service)
           content:
             application/json:
               schema:
@@ -1785,7 +1780,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Internal server error — BILL_PDF_GENERATION_ERROR / BILL_PDF_UPLOAD_ERROR when PDF generation is configured as strict (`billing.pdf.fail-on-error=true`; the bill is rolled back)
           content:
             application/json:
               schema:
@@ -1803,7 +1798,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -1820,27 +1814,21 @@ paths:
         - in: query
           name: consumerCodes
           schema: 
-            type: array
-            items: 
-              type: string
-              minLength: 2
-              maxLength: 64
-          description: Filter by Consumer Codes
+            type: string
+          description: Filter by Consumer Codes — a single comma-separated string (e.g. `PB-1,PB-2`); tokens are trimmed, blank tokens ignored, no per-token validation
+          example: PB-JLD-P-000123,PB-JLD-P-000124
         - in: query
           name: billNumbers
           schema: 
-            type: array
-            items: 
-              type: string
-          description: Filter by Bill Numbers
+            type: string
+          description: Filter by Bill Numbers — a single comma-separated string; tokens are trimmed, blank tokens ignored
+          example: BILL-06151,BILL-06152
         - in: query
           name: billIds
           schema: 
-            type: array
-            items: 
-              type: string
-              format: uuid
-          description: Filter by Bill IDs
+            type: string
+          description: Filter by Bill IDs — a single comma-separated string of UUIDs; tokens that are not valid UUIDs are silently dropped (no error)
+          example: 550e8400-e29b-41d4-a716-446655440000,550e8400-e29b-41d4-a716-446655440001
         - in: query
           name: status
           description: Filter by Bill Status
@@ -1896,7 +1884,7 @@ paths:
                 items: 
                   $ref: '#/components/schemas/Bill'
         '400':
-          description: Bad Request
+          description: Bad Request — constraint violation on a query parameter (`businessServiceCode` pattern, `mobileNumber` E.164 pattern, `email` format, `limit`/`offset` bounds) or an unparseable `status` value; `code` is the exception class name
           content:
             application/json:
               schema:
@@ -1923,7 +1911,7 @@ paths:
   /bills/cancel:
     post:
       summary: Cancel a bill
-      description: Cancels an existing bill by updating its status, typically used when a bill needs to be voided or superseded.
+      description: Cancels the consumer's ACTIVE bill for the business service. `statusToBeUpdated` must be `CANCELLED` (no other status change is supported); the request `metadata` is merged into the bill's metadata and the previous state is audited. The response is the newest bill for the consumer and business service re-read after the update.
       operationId: cancelBill
       tags: [Bill]
       parameters:
@@ -1960,7 +1948,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bill'
         '400':
-          description: Validation error.
+          description: Bad Request — bean-validation failure on the body; INVALID_STATUS (`statusToBeUpdated` is not CANCELLED; `params` carries the value sent); CANCELLATION_FAILED (no bill found on re-read after the update)
           content:
             application/json:
               schema:
@@ -1976,23 +1964,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error' 
-        '422':
-          description: Unprocessable — references don't resolve
+          description: "Not found — NOT_FOUND: no ACTIVE bill exists for the consumer and business service"
           content:
             application/json:
               schema:
@@ -2011,7 +1983,7 @@ paths:
   /bills/bulk-generate:
     post:
       summary: Generate bills in bulk
-      description: Initiates bulk bill generation for all eligible demands under a business service, processing asynchronously and returning a request tracking ID.
+      description: Initiates bulk bill generation for every consumer that has ACTIVE, FROZEN or PARTIALLY_PAID demands under the business service. Consumer codes are scanned in batches and one job per batch is published to the event bus for asynchronous processing; the response reports the request id and the number of jobs and consumers. `status` is always ACCEPTED and `metadata.maxConsumerCode` is the highest consumer code scanned.
       operationId: bulkGenerateBill
       tags: [Bill]
       parameters:
@@ -2048,7 +2020,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BulkBillResponse'
         '400':
-          description: Validation error
+          description: Bad Request — bean-validation failure on the body; EVENT_BUS_FAILURE (publishing a job to the event bus failed; jobs already published are not withdrawn)
           content:
             application/json:
               schema:
@@ -2064,7 +2036,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: "Unprocessable — INVALID_BUSINESS_SERVICE: `businessServiceCode` unknown or inactive"
           content:
             application/json:
               schema:
@@ -2085,7 +2057,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Internal server error — BULK_GENERATION_FAILED (invalid batch-size configuration)
           content:
             application/json:
               schema:
@@ -2098,7 +2070,10 @@ paths:
   /payments:
     post:
       summary: Create a new payment
-      description: Records a new payment transaction against one or more bills, including payment mode, instrument details, and payer information.
+      description: |
+        Records a new payment transaction against one or more ACTIVE bills, including payment mode, instrument details, and payer information.
+
+        `paymentStatus`/`instrumentStatus` are derived from the mode (ONLINE, UPI, CARD, NETBANKING, WALLET, ONLINE_NEFT, ONLINE_RTGS → DEPOSITED/REMITTED; all other modes → NEW/APPROVED). `transactionDate` defaults to now; `instrumentDate` defaults to the transaction date for CASH and online modes. A CASH payment without `transactionNumber` gets a generated one; a receipt number is generated for every payment detail. Amounts are apportioned across the bill account details by the apportion service, each bill's status becomes PAID or PARTIALLY_PAID, and the underlying demands are updated. A receipt PDF is rendered and uploaded unless `fileStoreId` is supplied. A `PAYMENT_CREATE` event is published after commit.
       operationId: createPayment
       tags: [Payment]
       parameters:
@@ -2135,7 +2110,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Payment'
         '400':
-          description: Bad Request
+          description: "Bad Request — bean-validation failure on the body; instrument rules for the payment mode (INVALID_INST_NUMBER, INVALID_INST_DATE, INVALID_CHEQUE_DD_DATE, CHEQUE_DD_DATE_EXCEEDS_MANUAL_RECEIPT, CHEQUE_DD_DATE_EXCEEDS_RECEIPT, CHEQUE_DD_DATE_IN_FUTURE, INVALID_NEFT_RTGS_DATE, INVALID_TXN_NUMBER, INVALID_INSTRUMENT_NUMBER); INVALID_TOTAL_AMOUNT_PAID (`totalAmountPaid` differs from the sum of `paymentDetails[].totalAmountPaid`); DUPLICATE_BILL_ID; INVALID_PAYMENTDETAIL (negative, fractional or zero amount, below `minPayableAmount`, partial payment not allowed, payment mode not allowed for the bill's business service); OVERPAYMENT_NOT_ALLOWED; EVENT_BUS_FAILURE (payment persisted but the event could not be published). Rule failures are collected: one Error element per failing code."
           content:
             application/json:
               schema:
@@ -2150,16 +2125,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: Unprocessable — INVALID_BILL_ID (a `billId` does not exist in the tenant), BILL_NOT_ACTIVE, BILL_ALREADY_PAID (an APPROVED/APPROVAL_PENDING/REMITTED payment already exists for the bill), INVALID_BUSINESS_SERVICE. Used whenever any of these codes is present, alongside any other collected codes.
           content:
             application/json:
               schema:
@@ -2180,7 +2147,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Internal server error — TXN_NUMBER_GENERATION_ERROR / RECEIPT_NUMBER_GENERATION_ERROR (idgen), APPORTION_MISSING_BILL / APPORTION_MISSING_DETAIL / APPORTION_MISSING_ACCOUNT_DETAIL (apportion response mismatch), OVER_COLLECTION_DETECTED / OVER_COLLECTION_LINEITEM, INVOICE_PDF_ERROR (receipt-PDF generation in strict mode)
           content:
             application/json:
               schema:
@@ -2197,7 +2164,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -2206,73 +2172,54 @@ paths:
         - in: query
           name: paymentIds
           schema: 
-            type: array
-            items: 
-              type: string
-              format: uuid
-          description: Filter by Payment IDs
+            type: string
+          description: Filter by Payment IDs — a single comma-separated string of UUIDs; tokens that are not valid UUIDs are silently dropped
+          example: 550e8400-e29b-41d4-a716-446655440000,550e8400-e29b-41d4-a716-446655440001
         - in: query
           name: billIds
           schema: 
-            type: array
-            items: 
-              type: string
-              format: uuid
-          description: Filter by Bill IDs
+            type: string
+          description: Filter by Bill IDs — a single comma-separated string of UUIDs; tokens that are not valid UUIDs are silently dropped
+          example: 550e8400-e29b-41d4-a716-446655440000,550e8400-e29b-41d4-a716-446655440001
         - in: query
           name: receiptNumbers
           schema: 
-            type: array
-            items: 
-              type: string
-          description: Filter by Receipt Numbers
+            type: string
+          description: Filter by Receipt Numbers — a single comma-separated string; tokens are trimmed, blank tokens ignored
         - in: query
           name: consumerCodes
           schema: 
-            type: array
-            items: 
-              type: string
-              minLength: 2
-              maxLength: 64
-          description: Filter by Consumer Codes
+            type: string
+          description: Filter by Consumer Codes — a single comma-separated string; tokens are trimmed, blank tokens ignored, no per-token validation
+          example: PB-JLD-P-000123,PB-JLD-P-000124
         - in: query
           name: paymentStatuses
           schema: 
-            type: array
-            items: 
-              $ref: "#/components/schemas/PaymentStatus"
-          description: Filter by Payment Statuses
+            type: string
+          description: Filter by Payment Statuses — a single comma-separated string of `PaymentStatus` values (NEW, DEPOSITED, CANCELLED, DISHONOURED, RECONCILED); an unknown token yields 400 INVALID_REQUEST
+          example: NEW,DEPOSITED
         - in: query
           name: instrumentStatuses
           schema: 
-            type: array
-            items: 
-              $ref: "#/components/schemas/InstrumentStatus"
-          description: Filter by Instrument Statuses
+            type: string
+          description: Filter by Instrument Statuses — a single comma-separated string of `InstrumentStatus` values (APPROVED, APPROVAL_PENDING, TO_BE_SUBMITTED, CANCELLED, DISHONOURED, REMITTED, REJECTED); an unknown token yields 400 INVALID_REQUEST
+          example: APPROVED,REMITTED
         - in: query
           name: paymentModes
           schema: 
-            type: array
-            items: 
-              $ref: "#/components/schemas/PaymentMode"
-          description: Filter by Payment Modes
+            type: string
+          description: Filter by Payment Modes — a single comma-separated string of `PaymentMode` values; an unknown token yields 400 INVALID_REQUEST
+          example: CASH,UPI
         - in: query
           name: payerIds
           schema: 
-            type: array
-            items: 
-              type: string
-              minLength: 2
-              maxLength: 64
-          description: Filter by Payer IDs
+            type: string
+          description: Filter by Payer IDs — a single comma-separated string; tokens are trimmed, blank tokens ignored, no per-token validation
         - in: query
           name: businessServiceCode
           schema: 
             type: string
-            minLength: 2
-            maxLength: 32
-            pattern: '^[A-Z][A-Z0-9_]{1,31}$'
-          description: Filter by Business Service Code (exact match)
+          description: Filter by Business Service Code (exact match; not pattern-validated on this endpoint)
         - in: query
           name: transactionNumber
           schema: 
@@ -2282,9 +2229,7 @@ paths:
           name: payerMobileNumber
           schema: 
             type: string
-            pattern: '^\+[1-9]?[0-9]{7,14}$'
-            description: Mobile number of the payer in E.164 format (e.g., +919876543210). Must start with a '+' followed by the country code and subscriber number, with a total length of 2 to 15 digits.
-          description: Filter by Payer Mobile Number
+          description: Filter by Payer Mobile Number (exact match; not pattern-validated on this endpoint)
         - in: query
           name: fromDate
           schema: 
@@ -2336,7 +2281,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Payment'
         '400':
-          description: Bad Request
+          description: Bad Request — INVALID_REQUEST when a `paymentStatuses`/`instrumentStatuses`/`paymentModes` token is not a valid enum value (`params` carries the offending token); or a `fromDate`/`toDate`/`limit`/`offset` bounds violation (`code` is the exception class name)
           content:
             application/json:
               schema:
@@ -2370,7 +2315,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -2385,7 +2329,7 @@ paths:
           description: The unique identifier of the payment.
       responses:
         '200':
-          description: paymentModes found
+          description: Payment found
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -2400,7 +2344,7 @@ paths:
               schema: 
                 $ref: '#/components/schemas/Payment'
         '400':
-          description: Bad Request
+          description: "Bad Request — INVALID_PATH_PARAM: `id` is not a valid UUID"
           content:
             application/json:
               schema:
@@ -2416,7 +2360,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — NOT_FOUND
           content:
             application/json:
               schema:
@@ -2436,7 +2380,7 @@ paths:
     post:
       tags: [Payment]
       summary: Validate payment (dry run)
-      description: Performs a dry-run validation of a payment request without persisting data, checking bill status, amounts, duplicates, and instrument rules.
+      description: Performs a dry-run validation of a payment request without persisting data, checking bill status, amounts, duplicates, and instrument rules. Applies the same rules as POST /payments but takes no locks, calls neither idgen nor the apportion service and publishes no event — `transactionNumber` is echoed only if supplied and every `receiptNumber` is empty.
       operationId: validatePayment
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -2456,7 +2400,7 @@ paths:
               $ref: "#/components/schemas/PaymentCreate"
       responses:
         "200":
-          description: Payment is valid — returns calculated payment structure
+          description: Payment is valid — returns the payment structure as it would be created (a fresh `id`, derived statuses, each `paymentDetail` carrying its `bill` with `totalCollectedAmount` increased by the amount paid)
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -2471,7 +2415,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Payment"
         '400':
-          description: Bad Request
+          description: "Bad Request — same codes as POST /payments: bean-validation failure; instrument rules for the payment mode (INVALID_INST_NUMBER, INVALID_INST_DATE, INVALID_CHEQUE_DD_DATE, CHEQUE_DD_DATE_EXCEEDS_MANUAL_RECEIPT, CHEQUE_DD_DATE_EXCEEDS_RECEIPT, CHEQUE_DD_DATE_IN_FUTURE, INVALID_NEFT_RTGS_DATE, INVALID_TXN_NUMBER, INVALID_INSTRUMENT_NUMBER); INVALID_TOTAL_AMOUNT_PAID; DUPLICATE_BILL_ID; INVALID_PAYMENTDETAIL; OVERPAYMENT_NOT_ALLOWED. One Error element per failing code."
           content:
             application/json:
               schema:
@@ -2486,16 +2430,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — references don't resolve
+          description: Unprocessable — INVALID_BILL_ID (a `billId` does not exist in the tenant), BILL_NOT_ACTIVE, BILL_ALREADY_PAID, INVALID_BUSINESS_SERVICE. Used whenever any of these codes is present, alongside any other collected codes.
           content:
             application/json:
               schema:
@@ -2702,6 +2638,7 @@ components:
             Minimum payable threshold in the service's currency; payments below this
             are rounded or accumulated per rounding rules.
             Range: 0 to 9,999,999.99 (fits DECIMAL(18,2); practical ceiling for any minimum threshold).
+            Omitted from the response when not set.
           example: 10
         currency:
           type: string
@@ -2709,8 +2646,7 @@ components:
           example: INR
         roundingRuleCode:
           type: string
-          description: Optional reference to a rounding rule master
-          nullable: true
+          description: Optional reference to a rounding rule master. Omitted from the response when not set.
         effectiveFrom:
           type: integer
           format: int64
@@ -2723,10 +2659,9 @@ components:
           format: int64
           minimum: 0
           maximum: 9007199254740991
-          nullable: true
           description: |
             End of effectiveness window (exclusive) Timestamp (epoch milliseconds). Max safe value for JSON interop.
-            **Must be strictly greater than effectiveFrom when provided.**
+            **Must be strictly greater than effectiveFrom when provided.** Omitted from the response when not set.
           x-constraint: "effectiveTo > effectiveFrom (when not null)"
           example: 1767205800000
         isActive:
@@ -3011,10 +2946,9 @@ components:
           format: int64
           minimum: 0
           maximum: 9007199254740991
-          nullable: true
           description: |
             End of effectiveness window (exclusive) Timestamp (epoch milliseconds). Max safe value for JSON interop.
-            **Must be strictly greater than effectiveFrom when provided.**
+            **Must be strictly greater than effectiveFrom when provided.** Omitted from the response when not set.
           x-constraint: "effectiveTo > effectiveFrom (when not null)"
           example: 1767205800000
         isActive:
@@ -3090,7 +3024,7 @@ components:
 
     TaxHeadUpdateByCode:
       type: object
-      description: Payload to create a new tax head.
+      description: Payload to fully replace an existing tax head identified by the path code (the code itself cannot be changed).
       required: 
         - name
         - businessServiceCode
@@ -3217,7 +3151,7 @@ components:
         metadata:
           type: object
           additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits. Omitted from the response when empty.
       x-businessRules:
         - If amount < 0 then collectionAmount must be 0 or amount.
         - If amount >= 0 then collectionAmount ≤ amount.
@@ -3319,7 +3253,7 @@ components:
           type: integer
           minimum: 0
           maximum: 1095
-          description: Days after which an issued bill expires (0 = never). Maximum 1095 days (3 years)
+          description: Days after which an issued bill expires (0 = never). Maximum 1095 days (3 years). Omitted from the response when not set.
           example: 30
         payer:
           type: array
@@ -3328,7 +3262,7 @@ components:
           description: |
             Array of **Individual IDs** responsible for paying this demand.
             Each entry should reference an Individual record in the Identity/Individual service.
-            Can be empty if payer is inferred elsewhere (e.g., from consumer entity).
+            Can be empty if payer is inferred elsewhere (e.g., from consumer entity). Omitted from the response when empty.
           items:
             type: string
             minLength: 2
@@ -3339,7 +3273,7 @@ components:
             - "IND-51b7d3c1-5e2e-4f1a-92f3-2b3f9b0caa11"
         arrearDemandIds:
           type: array
-          description: Stores references to all previous aggregated demand IDs (ordered newest → oldest).
+          description: Stores references to all previous aggregated demand IDs (ordered newest → oldest). Populated by the service on arrear roll-forward. Omitted from the response when empty.
           items:
             type: string
             description: Demand ID (UUID)
@@ -3379,7 +3313,7 @@ components:
         metadata:
           type: object
           additionalProperties: true
-          description: Freeform key-value context for calculators/reporting (e.g., assessmentVersion, geo tags).
+          description: Freeform key-value context for calculators/reporting (e.g., assessmentVersion, geo tags). Cancellation stores `cancellation_reason_code` / `cancellation_note` here. Omitted from the response when empty.
         version:
           type: integer
           format: int32
@@ -3566,16 +3500,18 @@ components:
 
     CancelDemandRequest:
       type: object
-      description: Used to cancel a demand.
+      description: Optional body for cancelling a demand; both fields are copied into the demand's `metadata`.
       properties:
         reasonCode:
           type: string
+          description: Stored as `metadata.cancellation_reason_code`
         note:
           type: string
+          description: Stored as `metadata.cancellation_note`
 
     BulkResponse:
       type: object
-      description: Used for bulk API operations. Contains separate lists for successful and failed items to support partial processing.
+      description: Used for bulk API operations (207 Multi-Status). Contains separate lists for successful and failed items to support partial processing; either list is omitted when empty.
       properties:
         success:
           type: array
@@ -3593,6 +3529,7 @@ components:
           description: Zero-based index of the failed item in the request array
         errors:
           type: array
+          description: Per-item validation errors; `description` repeats the message
           items:
             $ref: "#/components/schemas/Error"
 
@@ -3640,7 +3577,7 @@ components:
         metadata:
           type: object
           additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits. Omitted from the response when empty.
 
     BillDetail:
       type: object
@@ -3693,11 +3630,11 @@ components:
         metadata:
           type: object
           additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits. Omitted from the response when empty.
 
     Bill:
       type: object
-      description: Represents an issued bill derived from a Demand. Tracks payer details, bill items, payable amount, and lifecycle status.
+      description: Represents an issued bill derived from a Demand. Tracks payer details, bill items, payable amount, and lifecycle status. Fields with no value (e.g. unset payer fields, `billExpiryAt` when the bill never expires, `fileStoreId` before the PDF exists) are omitted from the response rather than emitted as null.
       required:
         - businessServiceCode
         - consumerCode
@@ -3764,7 +3701,7 @@ components:
           format: int64
           minimum: 0
           maximum: 9007199254740991
-          description: Bill expiry timestamp (epoch milliseconds)
+          description: Bill expiry timestamp (epoch milliseconds). Derived from the demand's `billExpiryDays`, else the business service's; omitted when the bill never expires (0 days).
           example: 1767205800000
         status:
           $ref: "#/components/schemas/BillStatus"
@@ -3776,6 +3713,10 @@ components:
           type: string
           format: decimal
           example: 1000
+        fileStoreId:
+          type: string
+          readOnly: true
+          description: Filestore id of the generated bill PDF. Absent until the PDF has been rendered and uploaded (resilient-mode failures and bulk-generated bills may lack it).
         billDetails:
           type: array
           items: 
@@ -3784,13 +3725,13 @@ components:
         metadata:
           type: object
           additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+          description: Freeform context; cancellation merges the request metadata here. Omitted from the response when empty.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
 
     GenerateBillCriteria:
       type: object
-      description: Criteria for generating one or more bills from eligible FROZEN?ACTIVE demands under a BusinessService.
+      description: Criteria for generating a bill from the consumer's eligible ACTIVE, FROZEN or PARTIALLY_PAID demands under a BusinessService.
       required:
         - businessServiceCode
         - consumerCode
@@ -3837,7 +3778,7 @@ components:
 
     UpdateBillStatus:
       type: object
-      description: Represents a request to change the status of existing bill (e.g., cancel, expire, mark paid).
+      description: Request to cancel the consumer's ACTIVE bill for a business service. Only `CANCELLED` is accepted as the target status.
       required:
         - businessServiceCode
         - consumerCode
@@ -3862,16 +3803,16 @@ components:
           example: PB-JLD-P-000123
         statusToBeUpdated:
           type: string
-          enum: [ACTIVE, CANCELLED, EXPIRED, PAID, PARTIALLY_PAID, PAYMENT_CANCELLED]
-          description: Current status of the bill
+          enum: [CANCELLED]
+          description: Target status. Must be `CANCELLED`; any other `BillStatus` value is rejected with 400 INVALID_STATUS.
         metadata:
           type: object
           additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+          description: Required (may be `{}`); merged into the bill's existing metadata (e.g. cancellation reason).
 
     BulkBillGenerator:
       type: object
-      description: Represents a request for generating bills in bulk from eleigible FROZEN, ACTIVE & PARTIALLY_PAID demands under a BusinessService.
+      description: Represents a request for generating bills in bulk from eligible ACTIVE, FROZEN & PARTIALLY_PAID demands under a BusinessService.
       required:
         - businessServiceCode
       properties:
@@ -3887,14 +3828,16 @@ components:
         metadata:
           type: object
           additionalProperties: true
-          description: Additional context such as requestedBy, reason, traceId
+          description: Additional context such as requestedBy, reason, traceId; forwarded unchanged to every published job
 
     BulkBillResponse:
       type: object
-      description: Used for bulk API operations.
+      description: Acknowledgement of an asynchronous bulk bill generation request.
       properties:
         requestId:
           type: string
+          format: uuid
+          description: Tracking id shared by all jobs published for this request
         businessServiceCode:
           type: string
           minLength: 2
@@ -3917,7 +3860,7 @@ components:
         metadata:
           type: object
           additionalProperties: true
-          description: Additional context such as requestedBy, reason, traceId
+          description: Always contains `maxConsumerCode` — the highest consumer code scanned (null when no consumer had eligible demands)
 
     # ── Payment ────────────────────────────────────────────────────────────────
 
@@ -3932,6 +3875,7 @@ components:
           type: number
           format: double
           example: 1000
+          description: Whole-number amount (fractional amounts are rejected), not negative, not zero for a bill with a positive amount, not below the business service's `minPayableAmount`, equal to the bill total unless partial payment is allowed, and not above the bill total unless overpayment is enabled
         manualReceiptNumber:
           type: string
           maxLength: 64
@@ -3943,6 +3887,7 @@ components:
         billId:
           type: string
           format: uuid
+          description: Must reference an ACTIVE bill of the tenant; the same bill may appear only once per payment
         metadata:
           type: object
           additionalProperties: true
@@ -3960,9 +3905,11 @@ components:
           type: number
           format: double
           example: 1000
+          description: Must equal the sum of `paymentDetails[].totalAmountPaid` (INVALID_TOTAL_AMOUNT_PAID otherwise)
         transactionNumber:
           type: string
           maxLength: 128
+          description: Mandatory for online modes (INVALID_TXN_NUMBER otherwise); generated via idgen for CASH when omitted
         transactionDate:
           type: integer
           format: int64
@@ -3973,11 +3920,13 @@ components:
         instrumentNumber:
           type: string
           maxLength: 128
+          description: Mandatory for every mode except CASH (INVALID_INST_NUMBER / INVALID_INSTRUMENT_NUMBER otherwise)
         instrumentDate:
           type: integer
           format: int64
           minimum: 0
           maximum: 9007199254740991
+          description: Mandatory for CHEQUE, DD, OFFLINE_NEFT, OFFLINE_RTGS and POSTAL_ORDER (INVALID_INST_DATE otherwise); must not be in the future, and for CHEQUE/DD not after `transactionDate` nor older than the configured maximum age. Defaults to the transaction date for CASH and online modes.
         ifscCode:
           type: string
           maxLength: 64
@@ -4010,6 +3959,7 @@ components:
           description: Valid email address (e.g., user@example.com)
         fileStoreId:
           type: string
+          description: Optional pre-existing receipt document id (e.g. from a payment gateway); when supplied, receipt-PDF generation is skipped
         paymentDetails:
           type: array
           minItems: 1
@@ -4057,6 +4007,7 @@ components:
         receiptNumber:
           type: string
           maxLength: 64
+          description: Generated via idgen on create; empty string in POST /payments/validate responses
         receiptDate:
           type: integer
           format: int64
@@ -4077,15 +4028,17 @@ components:
           type: string
           format: uuid
         bill:
-          $ref: '#/components/schemas/Bill'
+          allOf:
+            - $ref: '#/components/schemas/Bill'
+          description: The bill as updated by this payment. Present only in POST /payments and POST /payments/validate responses; absent from search and get-by-id responses.
         metadata:
           type: object
           additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+          description: Freeform context supplied in the request. Omitted from the response when empty.
 
     Payment:
       type: object
-      description: Represents a payment transaction recorded in the system.
+      description: Represents a payment transaction recorded in the system. Fields with no value are omitted from the response rather than emitted as null.
       required:
         - totalAmountPaid
         - paymentMode
@@ -4162,9 +4115,10 @@ components:
             $ref: '#/components/schemas/PaymentDetail'
         fileStoreId:
           type: string
+          description: Filestore id of the receipt PDF — the caller-supplied value, else the id of the PDF rendered on create (absent if rendering failed in resilient mode)
         metadata:
           type: object
           additionalProperties: true
-          description: Optional calculator trace (e.g., `rate`, `basis`, `units`, `area`, `multiplier`, `slabId`) to support audits.
+          description: Freeform context supplied in the request. Omitted from the response when empty.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'

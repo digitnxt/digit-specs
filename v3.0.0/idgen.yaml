@@ -10,7 +10,24 @@ info:
 
     Template versions are immutable.
     All endpoints require X-Tenant-ID header for tenant scoping.
-    
+
+    **Error responses** are a bare JSON array of Error objects (`[{"code": ..., "message": ...}]`);
+    `description` and `params` are present only when set. Codes produced by the service:
+    - `MISSING_HEADER` (400) — required header absent (`params` names the header)
+    - `VALIDATION_ERROR` (400) — query parameter out of range (templateCode length, limit, offset)
+    - `INVALID_PARAM` (400) — unparseable value in `ids`
+    - `INVALID_REQUEST` (400) — semantic template-config error, malformed `version`, `version` without `templateCode`, or changing `sequence.start` on a GLOBAL template
+    - `CONFLICT` (409) — duplicate templateCode, or a concurrent PUT produced the same version
+    - `NOT_FOUND` (404) — template / version does not exist
+    - `UNPROCESSABLE` (422) — ID generation failed (missing variable, sequence allocation failure, incomplete stored config)
+
+    Request-body field violations are rendered with the constraint name as `code`
+    (e.g. `NotBlank.templateRequest.templateCode`, `Size.templateRequest.templateCode`); malformed or
+    unmappable JSON (including an unknown `sequence.scope` value) renders as `JsonParseException` /
+    `JsonMappingException`; a required query parameter that is missing renders with an empty `code`
+    and `params: [<parameter name>]`. A database error reached outside sequence allocation renders as
+    `QUERY_EXECUTION_ERROR` with status 400.
+
 servers:
   - url: https://api.example.com/idgen/v3
     description: Production server
@@ -38,7 +55,18 @@ paths:
   /template:
     post:
       summary: Create a new ID Gen template
-      description: Registers a new ID Gen template with configuration and initializes its sequence. Creates version v1 of the template.
+      description: |
+        Registers a new ID Gen template with configuration and initializes its sequence. Creates version v1 of the template.
+
+        The submitted config is normalized before it is stored and returned: every omitted
+        `sequence` / `random` field is filled with its default, while `sequence.padding` stays
+        `null` when the caller omitted it (no padding). The response therefore always carries the
+        full `sequence` and `random` blocks, with `padding: null` when disabled.
+
+        Semantic config errors (invalid or empty charset, cross-class or reversed charset range,
+        `padding.length` shorter than the number of digits in `sequence.start`, unknown `{DATE:...}`
+        keyword) return 400 `INVALID_REQUEST`. A templateCode that already exists in the tenant
+        returns 409 `CONFLICT`.
       operationId: createIDGenTemplate
       tags: [Template Management]
       parameters:
@@ -75,7 +103,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/IDGenTemplate'
         '400':
-          description: Bad request.
+          description: |
+            Bad request — missing required header (`MISSING_HEADER`), request-body field violation
+            (constraint-name code), malformed JSON, or semantic config error (`INVALID_REQUEST`).
           content:
             application/json:
               schema:
@@ -91,7 +121,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict (duplicate code within tenant). Use PUT to update
+          description: Conflict (`CONFLICT` — templateCode already exists within the tenant). Use PUT to update
           content:
             application/json:
               schema:
@@ -109,7 +139,18 @@ paths:
     
     put:
       summary: Update an existing template
-      description: Creates a new immutable version of an existing template's configuration. Increments the version number (e.g., v1 -> v2).
+      description: |
+        Creates a new immutable version of an existing template's configuration. Increments the version number (e.g., v1 -> v2).
+        The config is normalized and validated exactly as on POST; `createdBy`/`createdTime` are carried over from the
+        existing template, `modifiedBy`/`modifiedTime` reflect this update.
+
+        `sequence.start` cannot be changed for a GLOBAL-scoped template — the Postgres sequence was
+        initialised at creation and never resets, so a different start is rejected with 400 `INVALID_REQUEST`
+        (delete and recreate the template instead). Scoped (DAILY/MONTHLY/YEARLY) starts may be changed and
+        apply from the next window reset.
+
+        If two updates race and both try to insert the same version number, the loser gets 409 `CONFLICT`
+        and should retry.
       operationId: updateIDGenTemplate
       tags: [Template Management]
       parameters:
@@ -146,7 +187,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/IDGenTemplate'
         '400':
-          description: Bad request.
+          description: |
+            Bad request — missing required header (`MISSING_HEADER`), request-body field violation
+            (constraint-name code), malformed JSON, semantic config error, or an attempt to change
+            `sequence.start` on a GLOBAL-scoped template (`INVALID_REQUEST`).
           content:
             application/json:
               schema:
@@ -162,7 +206,15 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found
+          description: Not Found (`NOT_FOUND` — no template with this templateCode in the tenant)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict (`CONFLICT`) — a concurrent update already created the next version; retry the request.
           content:
             application/json:
               schema:
@@ -177,24 +229,31 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-    
+
     get:
       summary: Search templates
       description: |
         Search for templates by various criteria.
-        
-        **Search Behavior:**
-        - If nothing is provided: returns latest version of each template in that tenant
-        - If templateCode is provided without version: returns latest version of that template
-        - If ids are provided: returns those specific template rows
-        - If templateCode and version are provided: returns that specific version
+
+        **Search Behavior** (exactly one branch runs, in this priority order):
+        1. If ids are provided: returns those specific template rows (templateCode/version/limit/offset are ignored,
+           but a malformed version is still rejected)
+        2. If templateCode and version are provided: returns that specific version (0 or 1 rows)
+        3. If templateCode is provided without version: returns the latest version of that template (0 or 1 rows)
+        4. If nothing is provided: returns the latest version of each template in the tenant, paginated by limit/offset
+
+        `limit` and `offset` are only applied in branch 4. No match returns 200 with an empty array, never 404.
+        The `config` of each row is returned as stored (normalized at create/update time).
+
+        **Validation (400):** `version` without `templateCode` and a `version` not matching `^v[1-9][0-9]*$`
+        (or above 2147483647) → `INVALID_REQUEST`; `templateCode` shorter than 2 or longer than 64 characters,
+        `limit` outside 1..100, `offset` < 0 → `VALIDATION_ERROR`; any entry of `ids` that is not a UUID → `INVALID_PARAM`.
       operationId: searchIDGenTemplates
       tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -213,34 +272,38 @@ paths:
             example: "receipt-id"
         - name: ids
           in: query
-          description: Comma-separated list of template UUIDs
+          description: |
+            Comma-separated list of template UUIDs in a single parameter value
+            (`ids=<uuid1>,<uuid2>`), not a repeated parameter. Whitespace around entries is trimmed.
+            Any entry that is not a valid UUID → 400 `INVALID_PARAM`. Takes priority over all other filters.
           schema:
-            type: array
-            items: 
-              type: string
-              format: uuid
+            type: string
+            example: "550e8400-e29b-41d4-a716-446655440000,6ba7b810-9dad-11d1-80b4-00c04fd430c8"
         - name: version
           in: query
-          description: Template version (requires templateCode)
+          description: |
+            Template version (requires templateCode — otherwise 400 `INVALID_REQUEST`).
+            Must match `^v[1-9][0-9]*$`; anything else → 400 `INVALID_REQUEST`.
           schema:
             type: string
             pattern: '^v[1-9][0-9]*$'
+            example: "v1"
         - in: query
           name: limit
-          schema: 
+          schema:
             type: integer
             minimum: 1
             maximum: 100
             default: 25
-          description: Page size (max 100)
+          description: Page size (1..100, default 25). Only applied when no filter is given; out of range → 400 `VALIDATION_ERROR`.
         - in: query
           name: offset
-          schema: 
+          schema:
             type: integer
             minimum: 0
             maximum: 2147483647
             default: 0
-          description: Offset for pagination
+          description: Offset for pagination (default 0). Only applied when no filter is given; negative → 400 `VALIDATION_ERROR`.
       responses:
         '200':
           description: Templates found
@@ -260,7 +323,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/IDGenTemplate'
         '400':
-          description: Bad request.
+          description: |
+            Bad request — missing X-Tenant-ID (`MISSING_HEADER`), `version` without `templateCode` or malformed
+            `version` (`INVALID_REQUEST`), `templateCode`/`limit`/`offset` out of range (`VALIDATION_ERROR`),
+            or a non-UUID entry in `ids` (`INVALID_PARAM`).
           content:
             application/json:
               schema:
@@ -287,12 +353,17 @@ paths:
     delete:
       summary: Delete a template version
       description: |
-        Delete a specific version of a template.
-        
+        Delete a specific version of a template. Both `templateCode` and `version` are required.
+
         **Deletion Semantics:**
         - Deleting a non-latest version: only that versioned row is removed
         - Deleting the latest version when other versions exist: only the latest row is removed
         - Deleting the only version: template, scope resets, sequence lookup, and Postgres sequence are fully cleaned up
+
+        **Validation (400):** a missing `templateCode` or `version` is rendered with an empty `code`,
+        a framework message and `params: [<parameter name>]`; `templateCode` outside 2..64 characters →
+        `VALIDATION_ERROR`; `version` not matching `^v[1-9][0-9]*$` → `INVALID_REQUEST`.
+        A templateCode/version pair that does not exist in the tenant → 404 `NOT_FOUND`.
       operationId: deleteIDGenTemplate
       tags: [Template Management]
       parameters:
@@ -308,7 +379,7 @@ paths:
         - name: templateCode
           in: query
           required: true
-          description: Template code to delete
+          description: Template code to delete (case-sensitive, 2..64 characters)
           schema:
             type: string
             minLength: 2
@@ -318,10 +389,11 @@ paths:
         - name: version
           in: query
           required: true
-          description: Template version to delete
+          description: Template version to delete (must match `^v[1-9][0-9]*$`)
           schema:
             type: string
             pattern: '^v[1-9][0-9]*$'
+            example: "v1"
       responses:
         '200':
           description: Template deleted successfully
@@ -338,12 +410,18 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - deleted
                 properties:
                   deleted:
                     type: boolean
+                    description: Always true on success.
                     example: true
         '400':
-          description: Bad request.
+          description: |
+            Bad request — missing required header (`MISSING_HEADER`), missing `templateCode`/`version`
+            (empty code, `params` names the parameter), `templateCode` length (`VALIDATION_ERROR`),
+            or malformed `version` (`INVALID_REQUEST`).
           content:
             application/json:
               schema:
@@ -359,7 +437,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found
+          description: Not Found (`NOT_FOUND` — this templateCode/version does not exist in the tenant)
           content:
             application/json:
               schema:
@@ -380,14 +458,25 @@ paths:
   /generate:
     post:
       summary: Generate an ID from a template
-      description: Generates a unique ID from a registered template using optional variables. Uses the latest version of the template for the given tenant.
+      description: |
+        Generates a unique ID from a registered template using optional variables. Uses the latest version of the template for the given tenant.
+
+        **Rendering rules:**
+        - `{SEQ}`, `{RAND}` and `{DATE:...}` token names are case-insensitive; variable names are case-sensitive
+          and must match a key in `variables` exactly.
+        - A sequence value is consumed only when the template contains `{SEQ}`; `{RAND}` is drawn only when present.
+        - A variable supplied as JSON `null` renders as an empty string.
+        - A variable that is referenced by the template but absent from `variables` → 422 `UNPROCESSABLE`
+          (the sequence value, if any, was already consumed — gaps are expected).
+
+        **Errors:** unknown templateCode → 404 `NOT_FOUND`; missing variable, sequence allocation failure
+        in the database, or a stored config that lacks its `sequence`/`random` block → 422 `UNPROCESSABLE`.
       operationId: generateIDGenID
       tags: [ID Generation]      
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -417,7 +506,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/GenerateIDResponse'
         '400':
-          description: Bad request.
+          description: |
+            Bad request — missing X-Tenant-ID (`MISSING_HEADER`), request-body field violation
+            (constraint-name code, e.g. blank or out-of-length templateCode), or malformed JSON.
           content:
             application/json:
               schema:
@@ -433,7 +524,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found
+          description: Template not found (`NOT_FOUND`).
           content:
             application/json:
               schema:
@@ -441,7 +532,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: 'Unprocessable'
+          description: |
+            Unprocessable (`UNPROCESSABLE`) — template found but ID generation failed: a referenced
+            variable was not supplied, the sequence value could not be allocated from the database,
+            or the stored config is missing its `sequence`/`random` block.
           content:
             application/json:
               schema:
@@ -449,7 +543,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Generation failed
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -464,15 +558,18 @@ paths:
         Generates multiple unique IDs from a registered template in a single request.
         Uses the latest version of the template for the given tenant.
         All IDs are generated using the same template and variables.
-        Each ID consumes one sequence value — generation order matches response order.
-        Fails fast on the first error — no partial results are returned.
+        Each ID consumes one sequence value (only when the template contains `{SEQ}`) — the `count`
+        values are reserved as one contiguous block before rendering, and generation order matches response order.
+        Fails fast on the first error — no partial results are returned (reserved sequence values are not returned to the pool).
+
+        Rendering rules and error mapping are the same as for `POST /generate`: unknown templateCode → 404 `NOT_FOUND`;
+        missing variable, sequence allocation failure, or incomplete stored config → 422 `UNPROCESSABLE`.
       operationId: bulkGenerateIDGenIDs
       tags: [ID Generation]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -502,7 +599,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/BulkGenerateIDResponse'
         '400':
-          description: Bad request.
+          description: |
+            Bad request — missing X-Tenant-ID (`MISSING_HEADER`), request-body field violation
+            (constraint-name code, e.g. `count` missing or outside 1..1000, blank templateCode), or malformed JSON.
           content:
             application/json:
               schema:
@@ -518,7 +617,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Template not found.
+          description: Template not found (`NOT_FOUND`).
           content:
             application/json:
               schema:
@@ -526,7 +625,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: Unprocessable — template found but ID generation failed.
+          description: |
+            Unprocessable (`UNPROCESSABLE`) — template found but ID generation failed: a referenced
+            variable was not supplied, the sequence block could not be allocated from the database,
+            or the stored config is missing its `sequence`/`random` block.
           content:
             application/json:
               schema:
@@ -534,7 +636,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Generation failed.
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -638,8 +740,11 @@ components:
       nullable: true
       description: |
         Controls left-padding of the {SEQ} token.
-        This block is optional — omit it entirely to disable padding.
-        When provided, any omitted fields use their defaults.
+        This block is optional — omit it entirely (or send null) to disable padding.
+        When provided, any omitted fields use their defaults, and the stored/returned config
+        carries the filled-in values. When omitted, responses return `"padding": null`.
+        `length` must be at least the number of digits in `sequence.start`, otherwise the
+        template is rejected with 400 `INVALID_REQUEST`.
       properties:
         length:
           type: integer
@@ -677,7 +782,9 @@ components:
             Initial value when the sequence is first created or after each scope reset.
             For example, with scope DAILY and start 100, each day begins at 100.
             Should not exceed the number of digits representable by padding.length —
-            otherwise padding has no effect from the first value (enforced server-side).
+            otherwise padding has no effect from the first value (enforced server-side, 400 INVALID_REQUEST).
+            For GLOBAL scope the value is fixed at template creation: a PUT that changes it is
+            rejected with 400 INVALID_REQUEST.
           example: 1
         padding:
           $ref: '#/components/schemas/PaddingConfig'
@@ -725,11 +832,15 @@ components:
             All token configs are optional — defaults are applied when omitted.
             
             **Supported Tokens:**
-            - `{VARIABLE}`: Client-supplied variable (e.g., {ORG}, {tenant}, {dept})
-            - `{DATE:format}`: Current date with format keyword
+            - `{VARIABLE}`: Client-supplied variable (e.g., {ORG}, {tenant}, {dept}) — name is case-sensitive
+            - `{DATE:format}`: Current date (in the service's configured timezone) with format keyword
             - `{SEQ}`: Sequence counter (scoped and padded via config)
             - `{RAND}`: Random string (from configured charset)
-            
+
+            The token names SEQ, RAND and DATE are matched case-insensitively ({seq} works);
+            any other token is treated as a variable. An unknown date format keyword is rejected
+            at create/update time with 400 INVALID_REQUEST.
+
             **Date Format Keywords (case-insensitive):**
             - yyyymmdd, ddmmyyyy, mmddyyyy, yyyy-mm-dd, dd-mm-yyyy, mm-dd-yyyy
             - yymmdd, ddmmyy, mmddyy, yy-mm-dd, dd-mm-yy
@@ -764,6 +875,15 @@ components:
     
     IDGenTemplate:
       type: object
+      description: |
+        A stored template version. `config` is the normalized form (defaults filled in;
+        `sequence.padding` is null when padding is disabled). All fields are always present.
+      required:
+        - id
+        - templateCode
+        - version
+        - config
+        - auditDetail
       properties:
         id:
           type: string
@@ -805,7 +925,11 @@ components:
           type: object
           additionalProperties:
             type: string
-          description: Map of variable names to values for token substitution
+            nullable: true
+          description: |
+            Map of variable names to values for token substitution. Keys are case-sensitive and must
+            match the template's `{VARIABLE}` tokens exactly; a null value renders as an empty string.
+            Extra keys not used by the template are ignored. A template variable with no entry → 422.
           example:
             tenant: "pb"
             dept: "REV"
@@ -853,9 +977,12 @@ components:
           type: object
           additionalProperties:
             type: string
+            nullable: true
           description: |
             Variable values applied identically to all generated IDs.
             Omit or pass empty object if the template has no variables.
+            Keys are case-sensitive; a null value renders as an empty string; a template
+            variable with no entry → 422.
           example:
             BSCODE: "FIRE-TAX"
 
