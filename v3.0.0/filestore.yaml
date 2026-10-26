@@ -18,7 +18,7 @@ info:
 
     '
 servers:
-- url: /filestore/v3/files
+- url: /filestore/v3
   description: FileStore API
 security:
 - BearerAuth: []
@@ -28,7 +28,7 @@ tags:
     \ or direct endpoints. \nIncludes upload confirmation and download URL generation.\n"
 - name: DocumentCategory
   description: "Operations for managing metadata of document types used across various\
-    \ services. \nIncludes creation, update, retrieval, and soft deletion.\n"
+    \ services. \nIncludes creation, update, retrieval, and deletion (rows are hard-deleted).\n"
 paths:
   /document-categories:
     post:
@@ -47,6 +47,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -84,7 +85,8 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict — document category with this type already exists
+          description: Conflict — document category with this type and code combination
+            already exists
           content:
             application/json:
               schema:
@@ -149,7 +151,22 @@ paths:
         name: isSensitive
         schema:
           type: boolean
-        description: Filter by sensitivity
+        description: Filter by sensitivity. Only the exact values `true` or `false`
+          are accepted; anything else is a 400.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          minimum: 1
+        description: Maximum number of categories to return. Omitted, non-numeric or
+          non-positive values mean no limit.
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+        description: Number of categories to skip. Omitted, non-numeric or negative
+          values mean 0.
       responses:
         '200':
           description: List of document types
@@ -217,7 +234,7 @@ paths:
     parameters: []
   /document-categories/{docCode}:
     get:
-      summary: Get a document type by docCode
+      summary: Get a document category by type and docCode
       operationId: getDocumentCategoryByCode
       tags:
       - DocumentCategory
@@ -230,13 +247,22 @@ paths:
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: type
+        in: query
+        required: true
+        description: Document category type; with `docCode` identifies the category (unique pair per tenant)
+        schema:
+          type: string
+          minLength: 2
+          maxLength: 64
       - name: docCode
         in: path
         required: true
-        description: Unique document code
+        description: Document category code; with `type` identifies the category
         schema:
           type: string
-          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          minLength: 2
+          maxLength: 64
       responses:
         '200':
           description: Document type found
@@ -308,7 +334,11 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs GET on /document-categories/{docCode}.
     put:
-      summary: Update a document type
+      summary: Update a document category (identified by type + docCode)
+      description: Full replace. The body's `type` and `code` must equal the addressed
+        `type` and `docCode` (they are immutable; a mismatch is a 400). Omitted
+        `description`, `minSize` and `maxSize` are cleared to an empty string and an
+        omitted `isActive` becomes `false`.
       operationId: updateDocumentCategory
       tags:
       - DocumentCategory
@@ -317,17 +347,27 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: type
+        in: query
+        required: true
+        description: Document category type; with `docCode` identifies the category (unique pair per tenant)
+        schema:
+          type: string
+          minLength: 2
+          maxLength: 64
       - name: docCode
         in: path
         required: true
-        description: Unique document code
+        description: Document category code; with `type` identifies the category
         schema:
           type: string
-          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          minLength: 2
+          maxLength: 64
       requestBody:
         required: true
         content:
@@ -374,6 +414,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict — the category was modified by another request (optimistic-lock version mismatch); fetch the latest and retry
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -405,7 +453,8 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs PUT on /document-categories/{docCode}.
     delete:
-      summary: Delete or deactivate a document type
+      summary: Delete a document category (identified by type + docCode)
+      description: Hard-deletes the category row; there is no deactivate-on-delete.
       operationId: deleteDocumentCategory
       tags:
       - DocumentCategory
@@ -414,17 +463,27 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
+      - name: type
+        in: query
+        required: true
+        description: Document category type; with `docCode` identifies the category (unique pair per tenant)
+        schema:
+          type: string
+          minLength: 2
+          maxLength: 64
       - name: docCode
         in: path
         required: true
-        description: Unique document code to delete or deactivate
+        description: Document category code; with `type` identifies the category to delete
         schema:
           type: string
-          pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+          minLength: 2
+          maxLength: 64
       responses:
         '200':
           description: Deleted successfully
@@ -505,8 +564,9 @@ paths:
       required: true
       schema:
         type: string
-        pattern: "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-  /upload:
+        minLength: 2
+        maxLength: 64
+  /files/upload:
     post:
       summary: Upload file directly
       operationId: directUpload
@@ -517,6 +577,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -560,7 +621,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — no document category exists for the given module (error code INVALID_REQUEST)
           content:
             application/json:
               schema:
@@ -598,10 +659,10 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: "Performs POST on /upload. This endpoint uses a verb-based path (/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
     parameters: []
-  /metadata:
-    get:
-      summary: Get file metadata by fileStoreId
-      operationId: getMetadata
+  /files/upload/v1:
+    post:
+      summary: Upload file directly, addressing the document category by documentType + documentCode
+      operationId: directUploadNew
       tags:
       - FileStore
       parameters:
@@ -609,20 +670,20 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
       - $ref: '#/components/parameters/TimeStamp'
-      - name: fileStoreId
-        in: query
+      requestBody:
         required: true
-        description: File store identifier
-        schema:
-          type: string
-          minLength: 1
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadNewFormRequest'
       responses:
-        '200':
-          description: File metadata retrieved successfully
+        '201':
+          description: Files uploaded successfully
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -643,7 +704,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FileMetadata'
+                $ref: '#/components/schemas/StorageResponse'
         '400':
           description: Bad request
           content:
@@ -653,7 +714,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — no document category exists for the given documentType + documentCode (error code INVALID_REQUEST)
           content:
             application/json:
               schema:
@@ -689,12 +750,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs GET on /metadata.
+      description: "Performs POST on /upload/v1. Same flow as /upload, but the document category is selected by the (documentType, documentCode) pair — unique per tenant — instead of by module; both fields are mandatory. This endpoint uses a verb-based path (/upload) for direct file upload functionality, which is a common pattern for file handling operations where the action is more important than the resource representation."
     parameters: []
-  /tag:
+  /files:
     get:
-      summary: Get files by tag
-      operationId: getFilesByTag
+      summary: Search files by tag, ownerIds, and/or fileStoreIds
+      description: Filters are ANDed. When nothing matches the response is 200 with an
+        empty `files` array; unknown fileStoreIds are simply absent from the result.
+      operationId: searchFiles
       tags:
       - FileStore
       parameters:
@@ -708,14 +771,32 @@ paths:
       - $ref: '#/components/parameters/TimeStamp'
       - name: tag
         in: query
-        required: true
-        description: Tag to filter files
+        required: false
+        description: Filter by tag
+        schema:
+          type: string
+          minLength: 1
+      - name: ownerIds
+        in: query
+        required: false
+        description: Comma-separated list of owner UUIDs. Matches files owned by any of these users (OR semantics within this param).
+        schema:
+          type: string
+          minLength: 1
+      - name: fileStoreIds
+        in: query
+        required: false
+        description: Comma-separated list of fileStoreIds to look up directly. When provided, returns signed download URLs for exactly these files.
         schema:
           type: string
           minLength: 1
       responses:
         '200':
-          description: Files retrieved by tag successfully
+          description: Files matching the given filters, including signed download URLs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileSearchResponse'
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -733,20 +814,8 @@ paths:
               $ref: '#/components/headers/X-Rate-Limit-Remaining'
             X-Rate-Limit-Reset:
               $ref: '#/components/headers/X-Rate-Limit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FilesByTagResponse'
         '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
+          description: Bad request — at least one of tag, ownerIds, or fileStoreIds must be provided
           content:
             application/json:
               schema:
@@ -782,9 +851,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-      description: Performs GET on /tag.
+      description: "Performs GET on /files. Supports filtering by tag and/or ownerIds (combined with AND semantics across filters), or direct lookup by a known set of fileStoreIds. At least one of tag, ownerIds, or fileStoreIds must be supplied."
     parameters: []
-  /upload-url:
+  /files/upload-url:
     post:
       summary: Generate signed URL for file upload
       operationId: generateUploadUrl
@@ -795,6 +864,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -838,7 +908,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found — no document category exists for the given module (error code INVALID_REQUEST)
           content:
             application/json:
               schema:
@@ -876,9 +946,13 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs POST on /upload-url.
     parameters: []
-  /confirm-upload:
+  /files/confirm-upload:
     post:
       summary: Confirm file upload using fileStoreId
+      description: Checks that the object was actually uploaded to storage. If it was,
+        the stored content type is refreshed and `status` is `VALID`. If it was not
+        (or the id is unknown), the pending metadata row is deleted and `status` is
+        `INVALID`; this is still a 200, never a 404.
       operationId: confirmUpload
       tags:
       - FileStore
@@ -887,6 +961,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -929,14 +1004,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -968,9 +1035,11 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: "Performs POST on /confirm-upload. This endpoint uses a verb-based path (/confirm-upload) to explicitly indicate the confirmation action after a file has been uploaded via signed URL, making the API more intuitive for this specific workflow step."
     parameters: []
-  /download-urls:
+  /files/download-urls:
     get:
       summary: Generate signed download URLs for given fileStoreIds
+      description: Ids that do not exist for the tenant are skipped silently; the
+        response only contains the ids that resolved. An empty `fileStoreIds` is a 400.
       operationId: getDownloadUrls
       tags:
       - FileStore
@@ -1022,14 +1091,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1061,7 +1122,7 @@ paths:
                   $ref: '#/components/schemas/Error'
       description: Performs GET on /download-urls.
     parameters: []
-  /{fileStoreId}:
+  /files/{fileStoreId}:
     get:
       summary: Download file by fileStoreId (for direct download only)
       operationId: downloadFile
@@ -1180,6 +1241,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -1251,14 +1313,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden — insufficient permissions to delete this file
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -1293,6 +1347,8 @@ components:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+    UserIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader
     ForwardedForHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
     ClientId:
@@ -1337,6 +1393,12 @@ components:
           minLength: 2
           maxLength: 64
           readOnly: true
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
     StorageResponse:
       type: object
       properties:
@@ -1366,6 +1428,50 @@ components:
           description: Tag to associate with uploaded files
           minLength: 1
           maxLength: 128
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
+        auditDetail:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/AuditDetail'
+    UploadNewFormRequest:
+      type: object
+      required:
+      - file
+      - documentType
+      - documentCode
+      properties:
+        file:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: One or more files to upload
+        documentType:
+          type: string
+          description: Document category type; with documentCode selects the category the files are validated against
+          minLength: 2
+          maxLength: 64
+        documentCode:
+          type: string
+          description: Document category code; with documentType selects the category the files are validated against
+          minLength: 2
+          maxLength: 64
+        tag:
+          type: string
+          description: Tag to associate with uploaded files
+          minLength: 1
+          maxLength: 128
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
         auditDetail:
           readOnly: true
           allOf:
@@ -1398,6 +1504,12 @@ components:
           description: Tag to associate with the file
           minLength: 1
           maxLength: 128
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
         auditDetail:
           readOnly: true
           allOf:
@@ -1461,45 +1573,7 @@ components:
           type: string
           format: uri
           description: Signed download URL
-    FileMetadata:
-      type: object
-      properties:
-        fileStoreId:
-          type: string
-          description: Unique identifier of the file
-          minLength: 2
-          maxLength: 128
-        fileName:
-          type: string
-          description: Name of the file
-          minLength: 1
-          maxLength: 255
-        contentType:
-          type: string
-          description: MIME type of the file
-          maxLength: 100
-        fileSize:
-          type: integer
-          format: int64
-          description: Size of the file in bytes
-          minimum: 0
-        module:
-          type: string
-          description: Module associated with the file
-          minLength: 2
-          maxLength: 64
-        tag:
-          type: string
-          description: Tag associated with the file
-          minLength: 1
-          maxLength: 128
-        tenantId:
-          type: string
-          description: Tenant identifier
-          minLength: 2
-          maxLength: 64
-          readOnly: true
-    FilesByTagResponse:
+    FileSearchResponse:
       type: object
       properties:
         files:
@@ -1527,11 +1601,22 @@ components:
           type: string
           format: uri-reference
           description: Download URL for the file
+        documentCode:
+          type: string
+          description: Document category code the file was validated against (set by /files/upload/v1; absent for legacy uploads)
+          minLength: 2
+          maxLength: 64
         tag:
           type: string
           description: Tag associated with the file
           minLength: 1
           maxLength: 128
+        ownerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users who own this file
     DocumentCategory:
       type: object
       required:
@@ -1540,11 +1625,21 @@ components:
       - allowedFormats
       - isSensitive
       properties:
-        id:
+        ID:
+          type: integer
+          format: int64
+          description: System generated numeric identifier of the category for internal
+            reference (note the upper-case property name)
+          readOnly: true
+        TenantId:
           type: string
-          format: uuid
-          description: System generated unique identifier of the category for internal
-            referance
+          description: Tenant the category belongs to; taken from X-Tenant-ID, any
+            value sent in the body is ignored (note the capitalised property name)
+          readOnly: true
+        version:
+          type: integer
+          format: int64
+          description: Optimistic-lock version, incremented on every update
           readOnly: true
         type:
           type: string
@@ -1563,12 +1658,12 @@ components:
           description: Allowed file extensions like ["pdf", "jpg", "png"]
         minSize:
           type: string
-          description: Minimum allowed size (e.g., "1MB")
+          description: Minimum allowed size (e.g., "1MB"). Returned as an empty string when not set.
           pattern: ^([0-9]+(\.[0-9]+)?(KB|MB|GB))?$
           example: 1MB
         maxSize:
           type: string
-          description: Maximum allowed size (e.g., "5MB")
+          description: Maximum allowed size (e.g., "5MB"). Returned as an empty string when not set.
           pattern: ^([0-9]+(\.[0-9]+)?(KB|MB|GB))?$
           example: 5MB
         isSensitive:
@@ -1576,13 +1671,16 @@ components:
           description: Marks if document contains PII or sensitive info
         description:
           type: string
-          description: Optional description
+          description: Optional description. Returned as an empty string when not set.
           minLength: 0
           maxLength: 256
         isActive:
           type: boolean
-          default: true
+          default: false
+          description: Defaults to false when omitted on create or update.
         auditDetail:
           readOnly: true
+          description: In this service createdTime and modifiedTime are epoch SECONDS,
+            not milliseconds.
           allOf:
             - $ref: '#/components/schemas/AuditDetail'

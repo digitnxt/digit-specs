@@ -20,6 +20,19 @@ info:
     `{"ResponseMetadata": {…}, "data": <body>}`. Auth rules are matched with the
     prefix stripped, so the envelope is not a bypass.
 
+    **Errors.** Every error body is a bare JSON **array** of `Error`, never a single
+    object. Field validation yields one entry per failure coded
+    `Account.ValidationFailed`; a missing or unparseable body is a single
+    `BAD_REQUEST` entry; every other failure is a single entry with the code named on
+    the operation. Infrastructure failures are coded uniformly: the service's own
+    database → `500 DATABASE_ERROR` (a constraint the request's data broke and no
+    repository translated → `400 QUERY_EXECUTION_ERROR`); Keycloak →
+    `502 DOWNSTREAM_ERROR`; the registration store (Redis) → `500 CACHE_ERROR`; the
+    OTP service → `503 OTP_SERVICE_ERROR`. Any other unhandled server-side exception
+    is rendered by the shared tracer advice as **`400`** — not `500` — with the
+    exception's class name as `code` and
+    `An unhandled exception occurred on the server` as `message`.
+
 servers:
   - url: https://test.lts-digit.org/accounts/v3
     description: Production
@@ -69,9 +82,12 @@ paths:
         Creates a tenant directly, without OTP.
 
         - `id` is server-generated; `code` is derived from `name` and must be
-          non-empty and match `^[A-Z0-9_-]+$`. Duplicate `code` → `409`.
-        - Created active (`isActive: true`); a Keycloak realm named after `code` is
-          provisioned, with an admin user under `email`.
+          non-empty and match `^[A-Z0-9_-]+$`. Duplicate `code` → `409`. A `name`
+          that derives an empty or invalid code is checked after field validation,
+          so it fails as a single `400 VALIDATION_ERROR` entry rather than an
+          `Account.ValidationFailed` one.
+        - Created active (`isActive: true`) at `version: 1`; a Keycloak realm named
+          after `code` is provisioned, with an admin user under `email`.
         - `X-Tenant-Id` is not used and is ignored if sent.
 
         **`password` decides how the admin user gets their credential.**
@@ -96,10 +112,13 @@ paths:
         admin can only be let in by a Keycloak admin resetting their password in the
         tenant's realm.
 
-        Ordering: DB insert (duplicate `code` fails here, `409`) → Keycloak realm
-        (failure rolls the row back, `500`) → OTP bootstrap config, temp-password
-        email and create/migration events, all best-effort and unable to fail the
-        request.
+        Ordering: DB insert (duplicate `code` fails here, `409`; a database failure
+        is `500 DATABASE_ERROR`) → Keycloak realm (failure rolls the row back and is
+        `502 DOWNSTREAM_ERROR`; if removing the row also fails the response is still
+        `502` and the message says manual cleanup is required) → temp-password email
+        and create/migration events, all best-effort and unable to fail the request.
+        OTP purpose configs are seeded by the OTP service itself off the migration
+        event, not by this call.
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/ClientIdHeader'
@@ -171,6 +190,7 @@ paths:
                       employee: https://test-lts.digit.org/license/employee/PUNECITY
                       citizen: https://test-lts.digit.org/license/citizen/PUNECITY
                     additionalAttributes: {}
+                    version: 1
                     auditDetail:
                       createdBy: platform-admin
                       createdTime: 1789454459918
@@ -194,16 +214,48 @@ paths:
                     additionalAttributes:
                       region: west
                       tier: government
+                    version: 1
                     auditDetail:
                       createdBy: platform-admin
                       createdTime: 1789454415367
                       modifiedBy: platform-admin
                       modifiedTime: 1789454415367
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '400':
+          description: |
+            Validation error — one `Account.ValidationFailed` entry per failed field;
+            a missing or unparseable body is a single `BAD_REQUEST` entry; a `name`
+            that derives an empty or invalid `code` is a single `VALIDATION_ERROR`
+            entry.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+              examples:
+                fieldErrors:
+                  summary: Several field failures at once
+                  value:
+                    - code: Account.ValidationFailed
+                      message: password must be at least 8 characters (got 1)
+                    - code: Account.ValidationFailed
+                      message: name is required
+                    - code: Account.ValidationFailed
+                      message: email is not a valid address
+                emptyBody:
+                  summary: Missing body
+                  value:
+                    - code: BAD_REQUEST
+                      message: 'Invalid request body: EOF'
+                unusableCode:
+                  summary: Name derives no usable code
+                  value:
+                    - code: VALIDATION_ERROR
+                      message: 'name "@@@" derives an empty tenant code; the name must contain at least one letter or digit'
         '401': { $ref: '#/components/responses/PlatformUnauthenticated' }
         '403': { $ref: '#/components/responses/PlatformForbidden' }
         '409': { $ref: '#/components/responses/DuplicateTenantCode' }
         '500': { $ref: '#/components/responses/InternalError' }
+        '502': { $ref: '#/components/responses/DownstreamError' }
 
     get:
       summary: Search / list tenant accounts
@@ -307,6 +359,7 @@ paths:
                     passwordGenerated: false
                     additionalAttributes:
                       industry: utilities
+                    version: 1
                     auditDetail:
                       createdBy: postman-client
                       createdTime: 1788846638927
@@ -350,19 +403,27 @@ paths:
         | Mutable | Immutable |
         |---|---|
         | `phone`, `address`, `city`, `state`, `pincode`, `country` | `id`, `code`, `name`, `email` |
-        | `isActive` | `firstLoginUrls`, `passwordGenerated`, `version`, `auditDetail` |
+        | `isActive` | `firstLoginUrls`, `passwordGenerated`, `auditDetail` |
         | `additionalAttributes` | |
 
         - `name` and `email` are not updatable; sending them is ignored, not an
           error. `name` is immutable because `code`, the Keycloak realm name and the
           DB schema name derive from it.
         - `isActive: false` deactivates and **disables the tenant's Keycloak realm**;
-          `true` reactivates and re-enables it. The realm flip precedes the DB write,
-          and is rolled back if the write fails (`500`). This is the reversible
-          alternative to `DELETE`.
+          `true` reactivates and re-enables it. A failed realm flip is
+          `502 DOWNSTREAM_ERROR`. The realm flip precedes the DB write, and is
+          rolled back if the write fails (`500 DATABASE_ERROR`; if that rollback
+          also fails the message says manual cleanup is required). This is the
+          reversible alternative to `DELETE`.
         - `additionalAttributes` **replaces** the whole map; `{}` clears it, omitting
           retains it.
-        - `version` increments on every successful update.
+        - **Optimistic concurrency.** `version` in the body is optional and is a
+          precondition, not a mutation: when sent it must equal the row's current
+          `version`, checked before the realm is touched, else
+          `409 ROW_VERSION_MISMATCH`. Sent or not, the write is a compare-and-swap
+          on the version read at the start of the request, so a concurrent update
+          landing in between is also `409 ROW_VERSION_MISMATCH`. The response
+          carries the incremented `version`.
         - `X-Tenant-Id` is optional; when present it must equal the addressed
           tenant's `code`, else `403`.
         - No `password` field — this endpoint cannot change a password.
@@ -408,6 +469,11 @@ paths:
                 summary: Clear every attribute
                 value:
                   additionalAttributes: {}
+              guarded:
+                summary: Guarded by the last-read version
+                value:
+                  city: Nagpur
+                  version: 1
       responses:
         '200':
           description: Updated.
@@ -458,15 +524,36 @@ paths:
         '401': { $ref: '#/components/responses/PlatformUnauthenticated' }
         '403': { $ref: '#/components/responses/TenantForbidden' }
         '404': { $ref: '#/components/responses/TenantNotFound' }
+        '409': { $ref: '#/components/responses/TenantVersionMismatch' }
         '500':
           description: |
-            Internal error — including a failed realm enable/disable, or a DB write
-            that failed after the realm was flipped (realm is rolled back first).
+            The DB write failed after the realm was flipped; the realm is rolled
+            back first. If that rollback also fails the message says manual cleanup
+            is required.
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
+              examples:
+                databaseError:
+                  value:
+                    - code: DATABASE_ERROR
+                      message: Database operation failed
+                rollbackFailed:
+                  value:
+                    - code: DATABASE_ERROR
+                      message: failed to update tenant (rolling the Keycloak realm back to enabled=true also failed - manual cleanup required)
+        '502':
+          description: Keycloak could not enable / disable the realm; nothing was written.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+              example:
+                - code: DOWNSTREAM_ERROR
+                  message: failed to disable Keycloak realm
 
     delete:
       summary: Delete tenant account
@@ -481,11 +568,12 @@ paths:
         `isActive: false` if recovery may be needed.
 
         Deleted in order, each step gated on the previous, with no rollback — a
-        part-way failure leaves the tenant partially deleted and returns `500`:
-        1. every config entry scoped to the tenant's `code`;
+        part-way failure leaves the tenant partially deleted:
+        1. every config entry scoped to the tenant's `code` (failure →
+           `500 DATABASE_ERROR`);
         2. the tenant's **Keycloak realm**, and with it every user, client, role and
-           session in it;
-        3. the tenant row.
+           session in it (failure → `502 DOWNSTREAM_ERROR`, configs already gone);
+        3. the tenant row (failure → `500 DATABASE_ERROR`, realm already gone).
 
         A delete event is published afterwards. `X-Tenant-Id` is optional and must
         match the addressed tenant's `code`, else `403`.
@@ -515,12 +603,25 @@ paths:
         '403': { $ref: '#/components/responses/TenantForbidden' }
         '404': { $ref: '#/components/responses/TenantNotFound' }
         '500':
-          description: Internal error, including a partially completed delete.
+          description: A database step failed (step 1 or 3) — the delete may be partially complete.
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
+              example:
+                - code: DATABASE_ERROR
+                  message: Database operation failed
+        '502':
+          description: Keycloak could not delete the realm (step 2); the tenant's configs are already gone.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+              example:
+                - code: DOWNSTREAM_ERROR
+                  message: failed to delete Keycloak realm
 
   # ── Self-service registration ───────────────────────────────────────────────
 
@@ -593,7 +694,7 @@ paths:
         '403': { $ref: '#/components/responses/SignupDisabled' }
         '409': { $ref: '#/components/responses/DuplicateTenantCode' }
         '429': { $ref: '#/components/responses/OtpRateLimited' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '500': { $ref: '#/components/responses/CacheError' }
         '503': { $ref: '#/components/responses/OtpServiceUnavailable' }
 
   /tenants/registrations/verify:
@@ -608,9 +709,12 @@ paths:
         Verifies the OTP and creates the tenant from the cached payload.
 
         - The tenant is created exactly as `POST /tenants` would create it: active,
-          realm provisioned, same password behaviour, same best-effort OTP
-          bootstrap / email / events. `201`.
+          `version: 1`, realm provisioned, same password behaviour, same best-effort
+          email / events, same failure codes (`409` duplicate code,
+          `500 DATABASE_ERROR`, `502 DOWNSTREAM_ERROR`). `201`.
         - The OTP is single-use; the cache entry is deleted on success.
+        - The cached payload is read before the OTP is checked, so a dead
+          registration store is `500 CACHE_ERROR` even for a wrong OTP.
         - Not covered by `PLATFORM_AUTH_ENABLED` — with signup on, tenant creation is
           reachable without a platform token.
         - `purpose` must be exactly `registration`, else `400`.
@@ -651,6 +755,7 @@ paths:
                   employee: https://test-lts.digit.org/license/employee/PUNECITY
                   citizen: https://test-lts.digit.org/license/citizen/PUNECITY
                 additionalAttributes: {}
+                version: 1
                 auditDetail:
                   createdBy: admin
                   createdTime: 1789454459918
@@ -697,7 +802,25 @@ paths:
                     - code: REQUEST_EXPIRED
                       message: 'OTP request expired or not found: request ID not found or expired'
         '423': { $ref: '#/components/responses/OtpLocked' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '500':
+          description: |
+            The registration store (Redis) failed before the OTP was checked
+            (`CACHE_ERROR`), or the tenant insert failed after it (`DATABASE_ERROR`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+              examples:
+                cacheError:
+                  value:
+                    - code: CACHE_ERROR
+                      message: failed to read the registration request
+                databaseError:
+                  value:
+                    - code: DATABASE_ERROR
+                      message: Database operation failed
+        '502': { $ref: '#/components/responses/DownstreamError' }
         '503': { $ref: '#/components/responses/OtpServiceUnavailable' }
 
   /tenants/registrations/resend:
@@ -755,7 +878,7 @@ paths:
                   message: 'Request ID not found or expired: The signup request has expired or does not exist'
         '423': { $ref: '#/components/responses/OtpLocked' }
         '429': { $ref: '#/components/responses/OtpRateLimited' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '500': { $ref: '#/components/responses/CacheError' }
         '503': { $ref: '#/components/responses/OtpServiceUnavailable' }
 
   # ── Layer 2 — Account configuration ─────────────────────────────────────────
@@ -822,6 +945,7 @@ paths:
                 configValue: "50"
                 description: Maximum number of users that can be assigned to any single role.
                 isActive: true
+                version: 1
                 auditDetail:
                   createdBy: platform-admin
                   createdTime: 1789454533147
@@ -955,17 +1079,28 @@ paths:
       description: |
         Partial update; every field is **omit-to-retain**.
 
-        - `X-Tenant-Id` is not used here and is ignored if sent — `id` already
-          determines the owning tenant.
+        - The lookup is **scoped to the tenant named by `X-Tenant-Id`**, which is
+          required here exactly as on `POST /config` (a tenant code; missing or
+          malformed → `400`). An `id` that belongs to another tenant is
+          `404 NOT_FOUND`, not `403`.
         - `id` and `tenantId` are immutable.
         - `configKey` **is** updatable; uniqueness within the tenant is re-validated
-          → `409`.
+          → `409 DUPLICATE_RECORD`.
         - `description` is the only nullable column: an explicit `null` **clears** it,
           omitting retains it. For `configKey` / `configValue` (NOT NULL) a `null`
           only ever means absent.
         - `isActive` activates/deactivates the entry. Unlike a tenant's `isActive`
           this has **no Keycloak effect** — it is a flag for consumers to honour.
-        - `version` increments on every successful update.
+        - Field validation runs on the **merged** row after the `404` / version
+          checks, and reports as a single `400 VALIDATION_ERROR` entry with the
+          messages joined by `; ` — not as per-field `Account.ValidationFailed`
+          entries. Only the malformed `id` / `X-Tenant-Id` cases use that code.
+        - **Optimistic concurrency.** `version` in the body is optional: when sent
+          it must equal the row's current `version`, else
+          `409 ROW_VERSION_MISMATCH`. Sent or not, the write is a compare-and-swap
+          on the version read at the start of the request, so a concurrent update
+          landing in between is also `409 ROW_VERSION_MISMATCH`. The response
+          carries the incremented `version`.
       parameters:
         - $ref: '#/components/parameters/ConfigIdPath'
         - $ref: '#/components/parameters/RequestIdHeader'
@@ -1001,6 +1136,11 @@ paths:
                 summary: Rename the key
                 value:
                   configKey: MAX_USERS_PER_ROLE_V2
+              guarded:
+                summary: Guarded by the last-read version
+                value:
+                  configValue: "100"
+                  version: 1
       responses:
         '200':
           description: Updated.
@@ -1031,17 +1171,30 @@ paths:
                   modifiedBy: admin
                   modifiedTime: 1789454646710
         '400':
-          description: Validation error, or malformed `id`.
+          description: |
+            Malformed `id` or missing / malformed `X-Tenant-Id`
+            (`Account.ValidationFailed`), unparseable body (`BAD_REQUEST`), or a
+            merged row that fails field validation (`VALIDATION_ERROR`).
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Error' }
-              example:
-                - code: Account.ValidationFailed
-                  message: 'config id must be a valid UUID (got "not-a-uuid")'
+              examples:
+                badId:
+                  value:
+                    - code: Account.ValidationFailed
+                      message: 'config id must be a valid UUID (got "not-a-uuid")'
+                missingHeader:
+                  value:
+                    - code: Account.ValidationFailed
+                      message: X-Tenant-Id header is required to scope the request
+                fieldValidation:
+                  value:
+                    - code: VALIDATION_ERROR
+                      message: 'configKey is required; configValue must be at most 2048 characters (got 2100)'
         '404':
-          description: Configuration entry not found.
+          description: No configuration entry with this `id` in the tenant named by `X-Tenant-Id`.
           content:
             application/json:
               schema:
@@ -1050,7 +1203,24 @@ paths:
               example:
                 - code: NOT_FOUND
                   message: TenantConfig not found
-        '409': { $ref: '#/components/responses/DuplicateConfigKey' }
+        '409':
+          description: |
+            The new `configKey` collides within the tenant (`DUPLICATE_RECORD`), or the
+            row's `version` no longer matches (`ROW_VERSION_MISMATCH`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Error' }
+              examples:
+                duplicateKey:
+                  value:
+                    - code: DUPLICATE_RECORD
+                      message: A configuration with this configKey already exists for the tenant
+                versionMismatch:
+                  value:
+                    - code: ROW_VERSION_MISMATCH
+                      message: TenantConfig was modified concurrently
         '500': { $ref: '#/components/responses/InternalError' }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1324,12 +1494,59 @@ components:
               message: Failed to generate OTP
 
     InternalError:
-      description: Internal server error.
+      description: The service's own database was unreachable, timed out or failed a statement.
       content:
         application/json:
           schema:
             type: array
             items: { $ref: '#/components/schemas/Error' }
+          example:
+            - code: DATABASE_ERROR
+              message: Database operation failed
+
+    DownstreamError:
+      description: |
+        Keycloak could not be reached or rejected the realm operation. On create the
+        tenant row has been removed again; if that removal also failed the response
+        is still `502` and the message says manual cleanup is required.
+      content:
+        application/json:
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/Error' }
+          examples:
+            realmFailed:
+              value:
+                - code: DOWNSTREAM_ERROR
+                  message: failed to create Keycloak realm
+            rollbackFailed:
+              value:
+                - code: DOWNSTREAM_ERROR
+                  message: failed to create Keycloak realm (removing the tenant row also failed - manual cleanup required)
+
+    CacheError:
+      description: The registration store (Redis) failed. No OTP state is changed by this service.
+      content:
+        application/json:
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/Error' }
+          example:
+            - code: CACHE_ERROR
+              message: failed to store the registration request
+
+    TenantVersionMismatch:
+      description: |
+        The `version` sent does not match the row, or a concurrent update landed
+        between this request's read and its write. Re-read and retry.
+      content:
+        application/json:
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/Error' }
+          example:
+            - code: ROW_VERSION_MISMATCH
+              message: Tenant was modified concurrently
 
   schemas:
 
@@ -1508,9 +1725,20 @@ components:
       type: object
       description: |
         `PUT /tenants/{id}` body. Every field is **omit-to-retain**. `id`, `code`,
-        `name`, `email`, `firstLoginUrls`, `passwordGenerated`, `version` and
-        `auditDetail` are immutable and ignored if sent. No `password` field.
+        `name`, `email`, `firstLoginUrls`, `passwordGenerated` and `auditDetail` are
+        immutable and ignored if sent. `version` is accepted as an optimistic-
+        concurrency precondition, not as a value to set. No `password` field.
       properties:
+        version:
+          type: integer
+          format: int32
+          description: |
+            Optional. The `version` last read. When sent it must equal the row's
+            current value, else `409 ROW_VERSION_MISMATCH`; omitted, the update is
+            still a compare-and-swap against the version read at the start of the
+            request. Must be a JSON integer — a string such as `"3"` is rejected as
+            `400 BAD_REQUEST`.
+          example: 1
         phone:
           type: string
           maxLength: 20
@@ -1563,9 +1791,9 @@ components:
       description: |
         A tenant account. `readOnly` fields are server-managed. The password is never
         included. Optional fields are **omitted, not null**, so absence is
-        meaningful — `version` is absent while `0`, and `firstLoginUrls` /
-        `temporaryPasswordEmailed` appear only in the generated-password case.
-      required: [id, code, name, email, isActive, passwordGenerated]
+        meaningful — `firstLoginUrls` / `temporaryPasswordEmailed` appear only in
+        the generated-password case. `version` is always present.
+      required: [id, code, name, email, isActive, passwordGenerated, version]
       properties:
         id:
           type: string
@@ -1675,7 +1903,11 @@ components:
           type: integer
           format: int32
           readOnly: true
-          description: Optimistic concurrency version. **Omitted while `0`.**
+          minimum: 1
+          description: |
+            Optimistic concurrency version. Always present: `1` at creation,
+            incremented on every successful `PUT /tenants/{id}`. Send it back in
+            `TenantUpdateRequest.version` to guard an update.
           example: 2
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
@@ -1852,8 +2084,19 @@ components:
       type: object
       description: |
         `PUT /config/{id}` body. Every field is **omit-to-retain**. `id` and
-        `tenantId` are immutable and ignored if sent.
+        `tenantId` are immutable and ignored if sent. `version` is accepted as an
+        optimistic-concurrency precondition, not as a value to set.
       properties:
+        version:
+          type: integer
+          format: int32
+          description: |
+            Optional. The `version` last read. When sent it must equal the row's
+            current value, else `409 ROW_VERSION_MISMATCH`; omitted, the update is
+            still a compare-and-swap against the version read at the start of the
+            request. Must be a JSON integer — a string such as `"3"` is rejected as
+            `400 BAD_REQUEST`.
+          example: 1
         configKey:
           type: string
           minLength: 1
@@ -1887,9 +2130,9 @@ components:
     TenantConfigResponse:
       type: object
       description: |
-        A configuration entry. Optional fields are omitted, not null — `version` is
-        absent while `0`, `description` absent when empty.
-      required: [id, tenantId, configKey, configValue, isActive]
+        A configuration entry. Optional fields are omitted, not null — `description`
+        is absent when empty. `version` is always present.
+      required: [id, tenantId, configKey, configValue, isActive, version]
       properties:
         id:
           type: string
@@ -1924,7 +2167,11 @@ components:
           type: integer
           format: int32
           readOnly: true
-          description: Optimistic concurrency version. **Omitted while `0`.**
+          minimum: 1
+          description: |
+            Optimistic concurrency version. Always present: `1` at creation,
+            incremented on every successful `PUT /config/{id}`. Send it back in
+            `TenantConfigUpdateRequest.version` to guard an update.
           example: 2
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'

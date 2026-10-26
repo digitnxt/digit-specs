@@ -1,11 +1,29 @@
 openapi: 3.0.3
 info:
-  title: Notification Config API
+  title: Notify API
   version: 1.0.0
-  description: API for managing notification configurations across channels
+  description: |
+    Sends notifications and manages the notification configs, provider mappings and
+    provider registry they depend on.
+
+    All endpoints are mounted under `/v3` with no servlet context path (a deployment may
+    add its own prefix, e.g. `/notify/v3/...`).
+
+    Error bodies are ALWAYS a bare JSON array of Error objects, for every status
+    (400, 404, 409, 500): `[{"code": "...", "message": "..."}]`. Codes the service emits:
+    `NOT_FOUND` (404, also for an unmapped URL), `CONFLICT` (409), `BAD_REQUEST` (400),
+    `INTERNAL_ERROR` (500, database unreachable). Bean-validation failures answer 400 with
+    one entry per violation whose code is the constraint path (e.g.
+    `NotBlank.notifyRequestDto.templateCode`). A path id that is not a UUID answers 400 with
+    code `MethodArgumentTypeMismatchException`; an unparsable JSON body answers 400 with
+    code `JsonParseException`, `JsonMappingException` or `MissingJsonException`.
+
+    Channel names and dispatch statuses are emitted in UPPERCASE (`SMS`, `EMAIL`,
+    `WHATSAPP`, `PUSH`; `DISPATCHED`, `SKIPPED`, `FAILED`).
 
 servers:
-  - url: https://api.platform.com/v1
+  - url: /v3
+    description: Relative base path; every endpoint below is served under /v3
 
 security:
   - BearerAuth: []
@@ -18,16 +36,24 @@ tags:
 
 paths:
 
-  /notify:
+  /notifications:
     post:
       tags: [Notify]
       summary: Send a notification
       description: |
-        Triggers a notification for a given recipient based on an existing
-        notification-config identified by templateCode. The service resolves
-        the active config, renders templates with the supplied payload variables,
-        resolves providers via provider-mappings, and dispatches to all enabled
-        channels asynchronously.
+        Triggers a notification for a given recipient based on the active
+        notification-config identified by templateCode (scoped to X-Tenant-ID).
+        The service renders each enabled channel's templates with the supplied
+        payload, resolves providers via provider-mappings and tries them in order.
+
+        Dispatch runs for all four channels in parallel and the request returns 202
+        once every channel has an outcome; the response always carries one
+        ChannelDispatchStatus per channel (SMS, EMAIL, WHATSAPP, PUSH).
+        A channel that is disabled or absent in the config, or whose address is
+        missing from `recipient`, is SKIPPED. A template-rendering failure
+        (missing variable, bad JSONPath, no `default` locale), a missing provider
+        mapping, deactivated/unloaded providers or an exhausted fallback chain are
+        reported as FAILED inside the 202 — never as 422.
       operationId: sendNotification
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -46,7 +72,7 @@ paths:
               $ref: '#/components/schemas/NotifyRequest'
       responses:
         '202':
-          description: Accepted — notification dispatched asynchronously
+          description: Accepted — per-channel outcome in `channels[]`
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -61,7 +87,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotifyResponse'
         '400':
-          description: Validation error
+          description: |
+            Validation error — templateCode blank, recipient missing, payload missing,
+            or an unparsable JSON body.
           content:
             application/json:
               schema:
@@ -69,28 +97,33 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: No active notification config found for the given templateCode
+          description: |
+            No active notification config for the given templateCode in this tenant
+            (code NOT_FOUND, message "NotificationConfig not found with id: {templateCode}").
+            A config switched off with isActive=false answers the same.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '422':
-          description: Template rendering failed — required variables missing
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /notification-configs:
     post:
       tags: [NotificationConfigs]
       summary: Create notification config
+      description: |
+        Creates the config for a templateCode in this tenant. The config is always
+        created active — `isActive` in the body is ignored on create. `tag` is an
+        optional grouping label. A duplicate templateCode in the same tenant answers 409.
       operationId: createNotificationConfig
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -124,7 +157,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationConfig'
         '400':
-          description: Validation error
+          description: |
+            Validation error — templateCode blank, channels missing, or
+            channels.email.format not "text"/"html".
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: A config with this templateCode already exists for the tenant (code CONFLICT)
           content:
             application/json:
               schema:
@@ -136,11 +179,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     get:
       tags: [NotificationConfigs]
       summary: List notification configs
+      description: |
+        Lists the tenant's configs. Filters are exact matches, combinable, and a
+        filter left out is not applied.
       operationId: listNotificationConfigs
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -153,6 +201,11 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - name: templateCode
           in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          description: Exact match on the config's grouping tag.
           schema:
             type: string
         - name: isActive
@@ -182,7 +235,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /notification-configs/{config_id}:
     get:
@@ -201,8 +256,10 @@ paths:
         - name: config_id
           in: path
           required: true
+          description: Config UUID. A value that is not a UUID answers 400.
           schema:
             type: string
+            format: uuid
       responses:
         '200':
           description: Config
@@ -219,22 +276,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotificationConfig'
-        '404':
-          description: Not found
+        '400':
+          description: config_id is not a UUID
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found, or the config belongs to another tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     put:
       tags: [NotificationConfigs]
       summary: Update notification config
+      description: |
+        Full replace of `channels` and `tag` (tag is cleared when omitted).
+        `templateCode` must equal the stored one — a different value answers 400.
+        `isActive` is optional here: false switches the template off, true switches
+        it back on, absent leaves it as stored.
       operationId: updateNotificationConfig
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -248,8 +322,10 @@ paths:
         - name: config_id
           in: path
           required: true
+          description: Config UUID. A value that is not a UUID answers 400.
           schema:
             type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -273,7 +349,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationConfig'
         '400':
-          description: Validation error
+          description: |
+            Validation error — templateCode blank or different from the stored one,
+            channels missing, channels.email.format invalid, or config_id not a UUID.
           content:
             application/json:
               schema:
@@ -281,21 +359,26 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found, or the config belongs to another tenant
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       tags: [NotificationConfigs]
       summary: Delete notification config
+      description: Removes the config permanently (use isActive=false on PUT to keep it).
       operationId: deleteNotificationConfig
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -309,28 +392,43 @@ paths:
         - name: config_id
           in: path
           required: true
+          description: Config UUID. A value that is not a UUID answers 400.
           schema:
             type: string
+            format: uuid
       responses:
         '204':
           description: Deleted
-        '404':
-          description: Not found
+        '400':
+          description: Path id is not a UUID
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found, or the resource belongs to another tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /provider-mappings:
     get:
       tags: [ProviderMappings]
       summary: List provider mappings
+      description: Lists the tenant's mappings, optionally for one channel.
       operationId: listProviderMappings
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -343,9 +441,10 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - name: channel
           in: query
+          description: Accepted in any case; trimmed and upper-cased before matching.
           schema:
             type: string
-            enum: [sms, email, whatsapp, push]
+            enum: [SMS, EMAIL, WHATSAPP, PUSH]
       responses:
         '200':
           description: List of provider mappings
@@ -369,11 +468,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     post:
       tags: [ProviderMappings]
       summary: Create provider mapping
+      description: |
+        `channel` is accepted in any case and stored UPPERCASE; `country` is trimmed
+        and upper-cased, and omitted for the tenant-wide (global) mapping. Every
+        provider name must be loaded (see GET /providers) and support the channel.
       operationId: createProviderMapping
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -407,7 +512,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProviderMapping'
         '400':
-          description: Validation error
+          description: |
+            Validation error — channel blank or not one of [SMS, EMAIL, WHATSAPP, PUSH],
+            country blank, providers empty, a provider not found in the registry, or a
+            provider that does not support the channel.
           content:
             application/json:
               schema:
@@ -415,22 +523,30 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Mapping already exists for this tenant + channel + country scope
+          description: Mapping already exists for this tenant + channel + country scope (code CONFLICT)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /provider-mappings/{mapping_id}:
     put:
       tags: [ProviderMappings]
       summary: Update provider mapping
+      description: |
+        Replaces `providers` only. `channel` and `country` must match the stored
+        mapping (compared case-insensitively) — a different value answers 400; delete
+        and re-create to move a mapping.
       operationId: updateProviderMapping
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -444,8 +560,10 @@ paths:
         - name: mapping_id
           in: path
           required: true
+          description: Mapping UUID. A value that is not a UUID answers 400.
           schema:
             type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -469,7 +587,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProviderMapping'
         '400':
-          description: Validation error
+          description: |
+            Validation error — same rules as create, plus channel/country differing
+            from the stored mapping, or mapping_id not a UUID.
           content:
             application/json:
               schema:
@@ -477,17 +597,21 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not found
+          description: Not found, or the mapping belongs to another tenant
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
     delete:
       tags: [ProviderMappings]
@@ -505,28 +629,45 @@ paths:
         - name: mapping_id
           in: path
           required: true
+          description: Mapping UUID. A value that is not a UUID answers 400.
           schema:
             type: string
+            format: uuid
       responses:
         '204':
           description: Deleted
-        '404':
-          description: Not found
+        '400':
+          description: Path id is not a UUID
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found, or the resource belongs to another tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /providers:
     get:
       tags: [Providers]
       summary: List providers
+      description: |
+        The provider registry: one entry per provider jar loaded by this deployment.
+        It is shared by all tenants, not tenant data.
       operationId: listProviders
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -541,8 +682,10 @@ paths:
           in: query
           schema:
             type: string
-            enum: [sms, email, whatsapp, push]
-          description: Filter providers by supported channel.
+            enum: [SMS, EMAIL, WHATSAPP, PUSH]
+          description: |
+            Filter providers by supported channel. Matched case-sensitively against
+            the stored UPPERCASE values — `channel=sms` matches nothing; use `SMS`.
         - name: isActive
           in: query
           schema:
@@ -571,12 +714,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
   /providers/{provider_id}/status:
     patch:
       tags: [Providers]
       summary: Enable or disable a provider
+      description: |
+        Switches the provider on or off for every tenant from the next send.
+        Sends that resolve only deactivated providers for a channel report that
+        channel as FAILED.
       operationId: updateProviderStatus
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
@@ -590,8 +739,10 @@ paths:
         - name: provider_id
           in: path
           required: true
+          description: Provider UUID. A value that is not a UUID answers 400.
           schema:
             type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -614,18 +765,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Provider'
+        '400':
+          description: provider_id is not a UUID, or the body is not valid JSON
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '404':
           description: Not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
 
 components:
 
@@ -681,18 +844,31 @@ components:
       type: object
       required:
         - templateCode
+        - channels
       properties:
         id:
           type: string
+          format: uuid
           readOnly: true
+        tenantId:
+          type: string
+          readOnly: true
+          description: Taken from X-Tenant-ID; never read from the body.
         templateCode:
           type: string
+          description: Unique per tenant. Immutable after create.
         isActive:
           type: boolean
+          description: |
+            Ignored on create (a new config is always active). On update: false
+            switches the template off (sends answer 404), true switches it back on,
+            absent leaves the stored value. Always present in responses.
+        tag:
+          type: string
+          nullable: true
+          description: Optional free-form grouping label, filterable on the list endpoint.
         channels:
           $ref: '#/components/schemas/Channels'
-        auditDetail:
-          $ref: '#/components/schemas/AuditDetail'
 
     Channels:
       type: object
@@ -717,14 +893,14 @@ components:
 
     BaseChannelConfig:
       type: object
-      required:
-        - enabled
       properties:
         enabled:
           type: boolean
+          default: false
+          description: Absent is read as false — the channel is SKIPPED on every send.
         priority:
           type: string
-          enum: [low, medium, high, critical]
+          description: Stored as given; not validated and not used by dispatch.
         body:
           $ref: '#/components/schemas/LocalizedString'
         payloadBindings:
@@ -755,6 +931,13 @@ components:
                 default: "Your OTP for login"
                 hi: "लॉगिन के लिए आपका OTP"
                 ta: "உங்கள் உள்நுழைவு OTP"
+            format:
+              type: string
+              enum: [text, html]
+              default: text
+              description: |
+                Compared case-insensitively. "html" sends the body as HTML with
+                variable values escaped. Any other value answers 400.
 
     WhatsappChannelConfig:
       allOf:
@@ -802,31 +985,41 @@ components:
       properties:
         id:
           type: string
+          format: uuid
           readOnly: true
+        tenantId:
+          type: string
+          readOnly: true
+          description: Taken from X-Tenant-ID; never read from the body.
         channel:
           type: string
-          enum: [sms, email, whatsapp, push]
+          enum: [SMS, EMAIL, WHATSAPP, PUSH]
+          description: Accepted in any case on input; stored and returned UPPERCASE.
         country:
           type: string
-          description: Optional. If not provided, acts as global/default mapping.
+          nullable: true
+          maxLength: 10
+          description: |
+            Optional ISO country code. Trimmed and upper-cased on save; a blank value
+            answers 400. Omit it (null in responses) for the tenant-wide default
+            mapping.
         providers:
           type: array
           description: |
             Ordered list of provider names. First entry is the primary provider,
-            subsequent entries are fallbacks in order. Validated against the
-            provider catalog at save time.
+            subsequent entries are fallbacks in order. Every name must be loaded in
+            the provider registry and support the channel, else 400.
           items:
             type: string
           minItems: 1
           example: ["twilio", "kaleyra", "exotel"]
-        auditDetail:
-          $ref: '#/components/schemas/AuditDetail'
 
     NotifyRequest:
       type: object
       required:
         - templateCode
         - recipient
+        - payload
       properties:
         templateCode:
           type: string
@@ -840,8 +1033,9 @@ components:
         payload:
           type: object
           description: |
-            Event payload. Each channel config's payloadBindings JSONPath expressions
-            are evaluated against this object at runtime to extract template variable values.
+            Event payload (required; may be an empty object). Each channel config's
+            payloadBindings JSONPath expressions are evaluated against this object at
+            runtime to extract template variable values.
           additionalProperties: true
           example:
             data:
@@ -856,26 +1050,27 @@ components:
           example: hi
         metadata:
           type: object
-          description: Dispatch-level context forwarded to providers (e.g. campaign tags, correlation ids).
-          additionalProperties:
-            type: string
+          description: Dispatch-level context forwarded to providers (e.g. campaign tags, correlation ids). Values may be any JSON type.
+          additionalProperties: true
 
     Recipient:
       type: object
-      description: Delivery addresses for each channel. Only fields relevant to enabled channels are required.
+      description: |
+        Delivery addresses for each channel. None is required: an enabled channel
+        whose address is absent or blank is reported as SKIPPED
+        ("No phone number on recipient", etc.). Formats are not validated.
       properties:
         phone:
           type: string
-          description: E.164 format. Required for sms and whatsapp channels.
+          description: Used by the SMS and WHATSAPP channels. Not validated.
           example: "+919876543210"
         email:
           type: string
-          format: email
-          description: Required for email channel.
+          description: Used by the EMAIL channel. Not validated.
           example: user@example.com
         deviceTokens:
           type: array
-          description: FCM / APNs device tokens. Required for push channel.
+          description: FCM / APNs device tokens, used by the PUSH channel. Absent is treated as empty.
           items:
             type: string
         countryCode:
@@ -889,8 +1084,8 @@ components:
           description: |
             Recipient-scoped context (e.g. userId, name). Distinct from top-level
             request metadata which carries dispatch/campaign-level context.
-          additionalProperties:
-            type: string
+            Values may be any JSON type.
+          additionalProperties: true
           example:
             userId: "usr_12345"
             name: "Ravi Kumar"
@@ -900,12 +1095,13 @@ components:
       properties:
         notificationId:
           type: string
-          description: Unique ID for this dispatch event. Use for status tracking.
+          description: Unique ID for this dispatch event ("ntf_" followed by a ULID).
           example: "ntf_01J2K9X8ZQPMBVFW3DTYS4R6NE"
         templateCode:
           type: string
         channels:
           type: array
+          description: Always four entries, one per channel (SMS, EMAIL, WHATSAPP, PUSH), in no fixed order.
           items:
             $ref: '#/components/schemas/ChannelDispatchStatus'
 
@@ -914,44 +1110,48 @@ components:
       properties:
         channel:
           type: string
-          enum: [sms, email, whatsapp, push]
+          enum: [SMS, EMAIL, WHATSAPP, PUSH]
         status:
           type: string
-          enum: [dispatched, skipped, failed]
+          enum: [DISPATCHED, SKIPPED, FAILED]
           description: |
-            dispatched — handed off to provider successfully.
-            skipped — channel disabled in config.
-            failed — provider returned an error; see reason.
+            DISPATCHED — a provider accepted the message.
+            SKIPPED — channel disabled or absent in the config, or no address for it on the recipient.
+            FAILED — template rendering failed, no provider mapping, all mapped providers
+            deactivated or not loaded, or every provider in the chain failed; see reason.
         provider:
           type: string
-          description: Name of the provider that accepted the message.
+          description: |
+            Name of the provider that accepted the message (or, on FAILED, the last one
+            tried). The literal "none" when SKIPPED or when the failure happened before
+            any provider was tried.
         reason:
           type: string
-          description: Present only when status is skipped or failed.
+          nullable: true
+          description: null when DISPATCHED; the skip or failure reason otherwise.
 
     Provider:
       type: object
       properties:
         id:
           type: string
+          format: uuid
           readOnly: true
         providerName:
           type: string
         channels:
           type: array
-          description: Channels this provider supports.
+          description: Channels this provider supports (UPPERCASE).
           items:
             type: string
-            enum: [sms, email, whatsapp, push]
+            enum: [SMS, EMAIL, WHATSAPP, PUSH]
         isActive:
           type: boolean
-        auditDetail:
-          $ref: '#/components/schemas/AuditDetail'
 
     ProviderStatusUpdate:
       type: object
-      required:
-        - isActive
       properties:
         isActive:
           type: boolean
+          default: false
+          description: Not validated — an absent field is read as false and deactivates the provider.

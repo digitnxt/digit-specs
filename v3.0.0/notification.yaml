@@ -9,6 +9,25 @@ info:
     Supports template management (CRUD + preview) and direct send operations.
     All endpoints require X-Tenant-ID header for tenant scoping.
 
+    **Error handling.** Every failure raised by the service itself — request validation,
+    malformed body, template not found, duplicate template, render/enrichment failure,
+    template-type mismatch, database failure, downstream filestore/provider failure — is
+    returned as HTTP 400 with a bare JSON array of `Error` objects. The service never emits
+    404, 409, 422 or 500 for these conditions. Error codes used:
+    - `<json field path>` (e.g. `templateId`, `emailIds[0]`) with message
+      `field '<path>' failed '<tag>' validation` — one array element per failing field
+      (tags: required, min, max, oneof, email, mobile_number).
+    - `BAD_REQUEST` — empty body (message `EOF`), unparseable JSON (message is the parser
+      error), or an invalid `version` value (message `invalid version: <value>`).
+    - `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE` — business errors, see each operation.
+    - `QUERY_EXECUTION_ERROR` — database failure (message `Database operation failed`).
+    - `<exception class name>` (e.g. `RuntimeException`) with message
+      `An unhandled exception occurred on the server` and the cause in `description` —
+      downstream filestore / SMTP / SMS-gateway failures.
+
+    `version` values in requests accept an optional, case-insensitive `v` prefix
+    (`v2`, `V2` and `2` are equivalent); responses always use the `v<n>` form.
+
 servers:
   - url: https://api.example.com/notification/v3
     description: Production server
@@ -73,7 +92,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Template'
         '400':
-          description: Validation error.
+          description: |
+            Bad Request — the only client-error status this operation emits besides 401:
+            - field validation errors (codes are json field paths: `templateId`, `type`, `subject`, `content`);
+            - `BAD_REQUEST` — empty or malformed body;
+            - `CONFLICT` — a template with this `templateId` already exists in the tenant
+              (message `template already exists: templateId=… tenantId=…`). Use PUT to add a version;
+            - `QUERY_EXECUTION_ERROR` — database failure.
           content:
             application/json:
               schema:
@@ -88,16 +113,11 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict (duplicate template within tenant). Use PUT to update.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. Not produced by the service's own error handling, which maps
+            every handler failure (database, filestore, provider) to 400; only reachable for
+            failures outside the request handler (e.g. in a servlet filter).
           content:
             application/json:
               schema:
@@ -107,7 +127,11 @@ paths:
 
     put:
       summary: Update a notification template
-      description: Creates a new immutable version of an existing template's configuration. Increments the version number (e.g., v1 -> v2).
+      description: |
+        Appends a new immutable version of an existing template (latest version + 1, e.g. v1 -> v2).
+        Every field in the body — type, subject, content, isHTML — is stored as given on the new
+        version; there are no immutable fields and no conflict check. createdBy/createdTime are
+        carried over from the previous version; modifiedBy/modifiedTime are set for the new one.
       operationId: updateNotificationTemplate
       tags: [Template Management]
       parameters:
@@ -144,7 +168,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Template'
         '400':
-          description: Validation error.
+          description: |
+            Bad Request — the only client-error status this operation emits besides 401:
+            - field validation errors (codes are json field paths: `templateId`, `type`, `subject`, `content`);
+            - `BAD_REQUEST` — empty or malformed body;
+            - `NOT_FOUND` — no template with this `templateId` exists in the tenant
+              (message `template not found: templateId=… tenantId=…`). Use POST to create;
+            - `QUERY_EXECUTION_ERROR` — database failure.
           content:
             application/json:
               schema:
@@ -159,24 +189,11 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found. Use POST to create.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict — immutable field change attempted.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. Not produced by the service's own error handling, which maps
+            every handler failure (database, filestore, provider) to 400; only reachable for
+            failures outside the request handler (e.g. in a servlet filter).
           content:
             application/json:
               schema:
@@ -192,15 +209,16 @@ paths:
         **Search Behavior:**
         - If nothing is provided: returns latest version of each template in that tenant
         - If templateId is provided without version: returns latest version of that template
-        - If ids are provided: returns those specific template rows
-        - If templateId and version are provided: returns that specific version
+        - If ids are provided: returns those specific template rows (optionally narrowed by templateId)
+        - If version is provided: returns that specific version; templateId is then required
+          (400 BAD_REQUEST `version filter requires templateId` otherwise)
+        - type and isHTML narrow the result in every mode
       operationId: searchNotificationTemplates
       tags: [Template Management]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -208,12 +226,12 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
         - name: ids
           in: query
-          description: List of template UUIDs
+          description: |
+            Comma-separated list of template row UUIDs in a single string
+            (e.g. `ids=uuid1,uuid2`). Values are not validated as UUIDs; unknown ids match nothing.
           schema:
-            type: array
-            items:
-              type: string
-              format: uuid
+            type: string
+            example: "f47ac10b-58cc-4372-a567-0e02b2c3d479,0b8c5a3e-2f44-4f0f-9c1e-2a7d5c6b1e22"
         - name: templateId
           in: query
           description: Unique code or identifier for the template
@@ -223,16 +241,21 @@ paths:
             maxLength: 128
         - name: version
           in: query
-          description: Specific version (e.g. v1). Requires templateId.
+          description: |
+            Specific version to return. Requires templateId. Optional case-insensitive `v` prefix
+            (`v1`, `V1` and `1` are equivalent). A value that does not parse to a positive integer
+            is rejected with 400 BAD_REQUEST `invalid version: <value>`.
           schema:
             type: string
-            pattern: '^v[1-9][0-9]*$'
+            pattern: '^[vV]?[1-9][0-9]*$'
         - name: type
           in: query
+          description: Filter by template type. Any other value fails validation (code `type`, tag `oneof`).
           schema:
             $ref: "#/components/schemas/TemplateType"
         - name: isHTML
           in: query
+          description: When true, only HTML templates are returned. false or omitted applies no filter.
           schema:
             type: boolean
         - in: query
@@ -242,7 +265,7 @@ paths:
             minimum: 1
             maximum: 100
             default: 25
-          description: Page size (max 100)
+          description: Page size (1..100, default 25). Out-of-range values fail validation (code `limit`).
         - in: query
           name: offset
           schema:
@@ -250,7 +273,9 @@ paths:
             minimum: 0
             maximum: 2147483647
             default: 0
-          description: Offset for pagination
+          description: |
+            Offset for pagination (default 0). Not validated by the service; a negative value
+            fails at the database and is reported as 400 QUERY_EXECUTION_ERROR.
       responses:
         '200':
           description: List of templates
@@ -270,7 +295,13 @@ paths:
                 items:
                   $ref: '#/components/schemas/Template'
         '400':
-          description: Bad Request.
+          description: |
+            Bad Request — the only client-error status this operation emits besides 401:
+            - query validation errors (codes `templateId` [max], `type` [oneof], `limit` [min/max]);
+            - `BAD_REQUEST` — invalid `version`, or `version` given without `templateId`;
+            - `MethodArgumentTypeMismatchException` — non-integer limit/offset or non-boolean isHTML
+              (message `An unhandled exception occurred on the server`);
+            - `QUERY_EXECUTION_ERROR` — database failure (e.g. negative offset).
           content:
             application/json:
               schema:
@@ -286,7 +317,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. Not produced by the service's own error handling, which maps
+            every handler failure (database, filestore, provider) to 400; only reachable for
+            failures outside the request handler (e.g. in a servlet filter).
           content:
             application/json:
               schema:
@@ -297,12 +331,12 @@ paths:
     delete:
       summary: Delete a notification template version
       description: |
-        Deletes a specific version of a template.
+        Deletes exactly one version of a template, identified by templateId and version.
 
         **Deletion Semantics:**
-        - Deleting a non-latest version: only that versioned row is removed
-        - Deleting the latest version when other versions exist: only the latest row is removed
-        - Deleting the only version: template and all associated data are fully cleaned up
+        - Only the (templateId, version) row is removed; other versions are untouched
+        - Deleting the only version leaves no rows for that templateId (a later POST may re-create it as v1)
+        - Both query parameters are mandatory and the version must exist, otherwise 400
       operationId: deleteNotificationTemplate
       tags: [Template Management]
       parameters:
@@ -326,10 +360,12 @@ paths:
         - name: version
           in: query
           required: true
-          description: Version to delete (e.g. v1)
+          description: |
+            Version to delete. Optional case-insensitive `v` prefix (`v1`, `V1` and `1` are
+            equivalent). Missing -> 400 with code `version`; unparseable -> 400 BAD_REQUEST.
           schema:
             type: string
-            pattern: '^v[1-9][0-9]*$'
+            pattern: '^[vV]?[1-9][0-9]*$'
       responses:
         '200':
           description: Template deleted
@@ -351,7 +387,13 @@ paths:
                     type: boolean
                     example: true
         '400':
-          description: Bad Request.
+          description: |
+            Bad Request — the only client-error status this operation emits besides 401:
+            - query validation errors (codes `templateId` [required/max], `version` [required]);
+            - `BAD_REQUEST` — invalid `version` (message `invalid version: <value>`);
+            - `NOT_FOUND` — no such templateId/version in the tenant
+              (message `template not found: templateId=… version=…`);
+            - `QUERY_EXECUTION_ERROR` — database failure.
           content:
             application/json:
               schema:
@@ -366,16 +408,11 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. Not produced by the service's own error handling, which maps
+            every handler failure (database, filestore, provider) to 400; only reachable for
+            failures outside the request handler (e.g. in a servlet filter).
           content:
             application/json:
               schema:
@@ -393,7 +430,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -422,7 +458,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/TemplatePreviewResponse'
         '400':
-          description: Bad Request.
+          description: |
+            Bad Request — the only client-error status this operation emits besides 401:
+            - field validation errors (code `templateId`);
+            - `BAD_REQUEST` — empty or malformed body, or an invalid `version`;
+            - `NOT_FOUND` — template (or the requested version) does not exist in the tenant
+              (message `template not found: templateId=…`);
+            - `UNPROCESSABLE` — `enrichment failed: …` (enrich=true and the template-config call
+              failed) or `template render failed: subject|content: …` (malformed `{{ }}` actions);
+            - `QUERY_EXECUTION_ERROR` — database failure.
           content:
             application/json:
               schema:
@@ -437,24 +481,11 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '422':
-          description: Unprocessable — template found but rendering failed.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. Not produced by the service's own error handling, which maps
+            every handler failure (database, filestore, provider) to 400; only reachable for
+            failures outside the request handler (e.g. in a servlet filter).
           content:
             application/json:
               schema:
@@ -474,7 +505,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -489,7 +519,7 @@ paths:
               $ref: '#/components/schemas/EmailRequest'
       responses:
         '200':
-          description: Email accepted for delivery
+          description: Email sent — the SMTP provider accepted the message for all recipients; status is always SENT.
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -504,7 +534,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationResponse'
         '400':
-          description: Bad Request.
+          description: |
+            Bad Request — the only client-error status this operation emits besides 401/429:
+            - field validation errors (codes are json field paths, e.g. `templateId`, `emailIds[0]`,
+              `mobileNumbers[1]`, `attachments[0]`, `category`);
+            - `BAD_REQUEST` — empty or malformed body, or an invalid `version`;
+            - `NOT_FOUND` — template (or the requested version) does not exist in the tenant;
+            - `UNPROCESSABLE` — enrichment failed, template rendering failed, or the template's
+              type does not match this channel (message `invalid template type: got <type>, want EMAIL|SMS`);
+            - `QUERY_EXECUTION_ERROR` — database failure;
+            - `RuntimeException` — attachment fetch from filestore or provider delivery failed
+              (message `An unhandled exception occurred on the server`, cause in `description`).
           content:
             application/json:
               schema:
@@ -513,22 +553,6 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized — missing or invalid bearer token.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '422':
-          description: Unprocessable — template found but rendering failed.
           content:
             application/json:
               schema:
@@ -549,7 +573,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. Not produced by the service's own error handling, which maps
+            every handler failure (database, filestore, provider) to 400; only reachable for
+            failures outside the request handler (e.g. in a servlet filter).
           content:
             application/json:
               schema:
@@ -567,7 +594,6 @@ paths:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -582,7 +608,7 @@ paths:
               $ref: '#/components/schemas/SMSRequest'
       responses:
         '200':
-          description: SMS accepted for delivery
+          description: SMS sent — the gateway accepted the message for every number (sent sequentially; the first rejection aborts with 400); status is always SENT.
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -597,7 +623,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationResponse'
         '400':
-          description: Bad Request.
+          description: |
+            Bad Request — the only client-error status this operation emits besides 401/429:
+            - field validation errors (codes are json field paths, e.g. `templateId`, `emailIds[0]`,
+              `mobileNumbers[1]`, `attachments[0]`, `category`);
+            - `BAD_REQUEST` — empty or malformed body, or an invalid `version`;
+            - `NOT_FOUND` — template (or the requested version) does not exist in the tenant;
+            - `UNPROCESSABLE` — enrichment failed, template rendering failed, or the template's
+              type does not match this channel (message `invalid template type: got <type>, want EMAIL|SMS`);
+            - `QUERY_EXECUTION_ERROR` — database failure;
+            - `RuntimeException` — attachment fetch from filestore or provider delivery failed
+              (message `An unhandled exception occurred on the server`, cause in `description`).
           content:
             application/json:
               schema:
@@ -606,22 +642,6 @@ paths:
                   $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized — missing or invalid bearer token.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '422':
-          description: Unprocessable — template found but rendering failed.
           content:
             application/json:
               schema:
@@ -642,7 +662,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error. Not produced by the service's own error handling, which maps
+            every handler failure (database, filestore, provider) to 400; only reachable for
+            failures outside the request handler (e.g. in a servlet filter).
           content:
             application/json:
               schema:
@@ -735,19 +758,21 @@ components:
 
     SMSCategory:
       type: string
-      description: Classification of the SMS notification
+      description: |
+        Classification of the SMS notification. Validated (oneof) when present but not used for
+        dispatch, and no default is applied — an omitted category stays absent (it is only echoed
+        in the published send event).
       enum: [OTP, TRANSACTION, PROMOTION, NOTIFICATION, OTHERS]
-      default: OTHERS
       example: OTHERS
 
     NotificationStatus:
       type: string
       description: |
-        Delivery status at the time of the synchronous provider call.
-        QUEUED — provider accepted and queued for dispatch.
-        SENT — provider accepted and dispatched to carrier/mail server.
+        Delivery status at the time of the synchronous provider call. The service only ever
+        returns SENT — provider accepted and dispatched to carrier/mail server; a provider
+        failure is reported as a 400 error rather than as a status value.
         Note: SENT does not confirm inbox/handset delivery; that requires provider webhooks.
-      enum: [QUEUED, SENT]
+      enum: [SENT]
       example: SENT
 
     # ── Template Schemas ──────────────────────────────────────────────────────────
@@ -771,7 +796,7 @@ components:
           type: string
           minLength: 1
           maxLength: 998
-          description: Subject line of the email. Applicable only if type is EMAIL.
+          description: Subject line of the email. Applicable only if type is EMAIL. An empty string is accepted and treated as absent.
           example: "Welcome to DIGIT"
         content:
           type: string
@@ -814,7 +839,7 @@ components:
           type: string
           minLength: 1
           maxLength: 998
-          description: Subject line of the email. Applicable only if type is EMAIL.
+          description: Subject line of the email. Applicable only if type is EMAIL. Omitted from the response when empty.
           example: "Welcome to DIGIT"
         content:
           type: string
@@ -843,8 +868,10 @@ components:
           example: "user-notify"
         version:
           type: string
-          pattern: '^v[1-9][0-9]*$'
-          description: Specific version to preview. Defaults to latest if omitted.
+          pattern: '^[vV]?[1-9][0-9]*$'
+          description: |
+            Specific version to preview. Defaults to latest if omitted. Optional case-insensitive
+            `v` prefix (`v1`, `V1` and `1` are equivalent); unparseable -> 400 BAD_REQUEST.
           example: "v1"
         enrich:
           type: boolean
@@ -877,7 +904,7 @@ components:
           default: false
         renderedSubject:
           type: string
-          description: Rendered subject line after variable substitution. Present only for EMAIL type.
+          description: Rendered subject line after variable substitution. Omitted when empty (SMS templates, or EMAIL templates without a subject).
         renderedContent:
           type: string
           description: Rendered content body after variable substitution.
@@ -914,8 +941,10 @@ components:
           example: "user-notify"
         version:
           type: string
-          pattern: '^v[1-9][0-9]*$'
-          description: Specific template version to use. Defaults to latest if omitted.
+          pattern: '^[vV]?[1-9][0-9]*$'
+          description: |
+            Specific template version to use. Defaults to latest if omitted. Optional
+            case-insensitive `v` prefix (`v1`, `V1` and `1` are equivalent); unparseable -> 400 BAD_REQUEST.
           example: "v1"
         emailIds:
           type: array
@@ -958,8 +987,10 @@ components:
           example: "user-notify"
         version:
           type: string
-          pattern: '^v[1-9][0-9]*$'
-          description: Specific template version to use. Defaults to latest if omitted.
+          pattern: '^[vV]?[1-9][0-9]*$'
+          description: |
+            Specific template version to use. Defaults to latest if omitted. Optional
+            case-insensitive `v` prefix (`v1`, `V1` and `1` are equivalent); unparseable -> 400 BAD_REQUEST.
           example: "v1"
         mobileNumbers:
           type: array

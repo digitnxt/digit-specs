@@ -34,6 +34,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -139,7 +140,8 @@ paths:
         schema:
           $ref: '#/components/schemas/OtpPurpose'
         description: The purpose to retrieve config for. If omitted, returns all configs
-          for the tenant.
+          for the tenant. The value is not checked against the enum; an unknown
+          purpose simply yields `404 CONFIG_NOT_FOUND`.
       responses:
         '200':
           description: OTP config(s) returned.
@@ -205,16 +207,21 @@ paths:
       operationId: updateOtpConfig
       tags:
       - Config
-      description: "Replaces an existing OTP config for a specific purpose under the\
-        \ calling tenant.\nOnly include fields you want to change \u2014 omitted fields\
-        \ retain their current values.\nReturns `404` if no config exists for this\
-        \ purpose \u2014 use POST to create.\nOn success, the Redis config cache for\
-        \ this tenant+purpose is immediately invalidated.\n"
+      description: "Replaces an existing OTP config (full replace, not a merge).\n\
+        Send the complete config: every omitted numeric field is reset to its default\
+        \ (otpLength 6, ttlSeconds 300, cooldownSeconds 120, maxAttempts 3, lockoutSeconds\
+        \ 3600, maxGeneratesPerHour 5, maxResendsPerHour 5), an omitted `isActive` becomes\
+        \ `true` and an omitted `contextBindingRequired` becomes `false`.\n`purpose`\
+        \ is required in the body and must equal the stored purpose; a different value\
+        \ is a `409 IMMUTABLE_FIELD`.\nReturns `404` if no config exists for this id \u2014\
+        \ use POST to create.\nOn success, the Redis config cache for this tenant+purpose\
+        \ is immediately invalidated.\n"
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -235,8 +242,14 @@ paths:
               $ref: '#/components/schemas/OtpConfig'
             example:
               purpose: login
+              otpLength: 6
+              ttlSeconds: 600
+              cooldownSeconds: 60
               maxAttempts: 3
               lockoutSeconds: 1800
+              maxGeneratesPerHour: 5
+              maxResendsPerHour: 3
+              isActive: true
       responses:
         '200':
           description: OTP config updated.
@@ -308,9 +321,9 @@ paths:
       - Config
       description: "Deletes the OTP configuration for a specific purpose under the\
         \ calling tenant.\nAfter deletion, any `/generate` call for this purpose returns\
-        \ `403 PURPOSE_NOT_CONFIGURED`.\nIdempotent \u2014 returns `200` even if no\
-        \ config existed.\nOn success, the Redis config cache for this tenant+purpose\
-        \ is immediately invalidated.\n"
+        \ `400 Config.NotFound`.\nNot idempotent \u2014 returns `404 CONFIG_NOT_FOUND`\
+        \ when no config exists for the purpose.\nOn success, the Redis config cache\
+        \ for this tenant+purpose is immediately invalidated.\n"
       parameters:
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
@@ -328,7 +341,7 @@ paths:
         description: The purpose to delete config for.
       responses:
         '200':
-          description: Config deleted or did not exist.
+          description: Config deleted.
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -354,8 +367,16 @@ paths:
                   deleted:
                     type: boolean
                     example: true
+        '404':
+          description: No config found for this tenant and purpose (`CONFIG_NOT_FOUND`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '400':
-          description: Bad Request.
+          description: Bad Request (`MISSING_PARAMETER` when `purpose` is absent).
           content:
             application/json:
               schema:
@@ -468,8 +489,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/OtpGenerateResponse'
         '400':
-          description: "Bad Request \u2014 missing or malformed fields, config not\
-            \ found for this purpose, or purpose is disabled for this tenant."
+          description: "Bad Request \u2014 missing or malformed fields (`BadRequest`),\
+            \ identifier type other than `mobile`/`email`, config not found for this\
+            \ purpose (`Config.NotFound`), or purpose is disabled for this tenant (`Config.Disabled`)."
           content:
             application/json:
               schema:
@@ -485,21 +507,29 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '429':
-          description: "Too Many Requests \u2014 rate limit exceeded or identifier\
-            \ is in a lockout period."
-          headers:
-            Retry-After:
+          description: "Too Many Requests \u2014 differentiated by the `code` field:\n\
+            - `Rate.LimitExceeded`: `maxGeneratesPerHour` reached for this identifier.\n\
+            - `OTP.Locked`: identifier is in a lockout period.\n- `OTP.ResendTooSoon`:\
+            \ an active OTP exists and its cooldown has not elapsed; the body carries\
+            \ `retryAfter` seconds.\nNo `Retry-After` response header is sent."
+          content:
+            application/json:
               schema:
-                type: integer
-              description: Seconds to wait before retrying.
+                type: array
+                items:
+                  $ref: '#/components/schemas/OtpError'
+        '500':
+          description: Internal server error.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error.
+        '503':
+          description: "Service Unavailable \u2014 `Notification.Unavailable` (OTP could\
+            \ not be dispatched), `Encryption.Unavailable` (Vault/encryption down) or\
+            \ `Service.Unavailable`."
           content:
             application/json:
               schema:
@@ -590,7 +620,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/OtpVerifyResponse'
         '400':
-          description: "Bad Request \u2014 missing or malformed fields."
+          description: "Bad Request \u2014 missing or malformed fields (`BadRequest`,\
+            \ including a non-UUID `referenceId`), or `purpose` does not match the OTP\
+            \ record (`OTP.PurposeMismatch`)."
           content:
             application/json:
               schema:
@@ -598,8 +630,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '401':
-          description: "Unauthorized \u2014 missing/invalid bearer token, or referenceId\
-            \ signature invalid/tampered."
+          description: "Unauthorized \u2014 missing or invalid bearer token."
           content:
             application/json:
               schema:
@@ -607,7 +638,16 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: "Not Found \u2014 referenceId does not exist."
+          description: "Not Found \u2014 referenceId does not exist (`OTP.NotFound`)."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: "Conflict \u2014 this OTP was already verified (`OTP.AlreadyVerified`);\
+            \ a code cannot be replayed."
           content:
             application/json:
               schema:
@@ -615,8 +655,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '410':
-          description: "Gone \u2014 OTP has expired (TTL elapsed, Redis key no longer\
-            \ exists)."
+          description: "Gone \u2014 OTP has expired (`OTP.Expired`)."
           content:
             application/json:
               schema:
@@ -624,8 +663,8 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '422':
-          description: "Unprocessable \u2014 OTP does not match or context binding\
-            \ (sessionId) failed."
+          description: "Unprocessable \u2014 OTP does not match, or the OTP was invalidated\
+            \ (`OTP.Invalid`)."
           content:
             application/json:
               schema:
@@ -703,7 +742,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OtpInvalidateResponse'
         '400':
-          description: "Bad Request \u2014 missing or malformed fields."
+          description: "Bad Request \u2014 missing or malformed fields, including a\
+            \ non-UUID `referenceId` (`BadRequest`)."
           content:
             application/json:
               schema:
@@ -711,8 +751,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '401':
-          description: "Unauthorized \u2014 missing/invalid bearer token, or referenceId\
-            \ signature invalid."
+          description: "Unauthorized \u2014 missing or invalid bearer token."
           content:
             application/json:
               schema:
@@ -816,7 +855,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/OtpResendResponse'
         '400':
-          description: "Bad Request \u2014 missing or malformed fields."
+          description: "Bad Request \u2014 missing or malformed fields, a non-UUID\
+            \ `referenceId` (`BadRequest`), or the OTP was already verified and cannot\
+            \ be resent (`OTP.AlreadyVerified`)."
           content:
             application/json:
               schema:
@@ -824,8 +865,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '401':
-          description: "Unauthorized \u2014 missing/invalid bearer token, or referenceId\
-            \ signature invalid or expired."
+          description: "Unauthorized \u2014 missing or invalid bearer token."
           content:
             application/json:
               schema:
@@ -833,7 +873,16 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: "Not Found \u2014 referenceId does not exist."
+          description: "Not Found \u2014 referenceId does not exist (`OTP.NotFound`)."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '410':
+          description: "Gone \u2014 OTP has expired (`OTP.Expired`) or was invalidated\
+            \ (`OTP.Invalid`)."
           content:
             application/json:
               schema:
@@ -841,7 +890,8 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '423':
-          description: "Locked \u2014 identifier is in an active lockout period."
+          description: "Locked \u2014 identifier is in an active lockout period or the\
+            \ OTP is locked (`OTP.Locked`)."
           content:
             application/json:
               schema:
@@ -851,19 +901,15 @@ paths:
         '429':
           description: "Too Many Requests.\nTwo distinct conditions \u2014 differentiated\
             \ by the `code` field:\n- `OTP.ResendTooSoon`: Cooldown window has not\
-            \ elapsed since the last generate or resend.\n- `OTP.MaxResendExceeded`:\
-            \ `maxResendsPerHour` limit reached for this identifier.\n"
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Seconds to wait before retrying.
+            \ elapsed since the last generate or resend; the body carries `retryAfter`\
+            \ seconds.\n- `OTP.MaxResendExceeded`: `maxResendsPerHour` limit reached\
+            \ for this identifier.\nNo `Retry-After` response header is sent.\n"
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Error'
+                  $ref: '#/components/schemas/OtpError'
               examples:
                 cooldown_active:
                   summary: Cooldown window not elapsed
@@ -897,6 +943,8 @@ components:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+    UserIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader
     ForwardedForHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
     ClientId:
@@ -940,6 +988,20 @@ components:
   schemas:
     Error:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
+    OtpError:
+      description: Error element used on 429 responses; extends the common Error with
+        the OTP service's own retry fields.
+      allOf:
+      - $ref: '#/components/schemas/Error'
+      - type: object
+        properties:
+          retryAfter:
+            type: integer
+            description: Seconds until the action may be retried. Present on `OTP.ResendTooSoon`.
+            example: 45
+          remainingAttempts:
+            type: integer
+            description: Remaining verify attempts, when applicable.
     AuditDetail:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/AuditDetail
     OtpPurpose:
@@ -1063,9 +1125,9 @@ components:
           default: true
         contextBindingRequired:
           type: boolean
-          description: 'Whether session binding is configured for this purpose.
-
-            When `true`, the `sessionId` key in metadata is recorded with the OTP.
+          description: 'Stored with the config but currently has no effect: the service
+            does not require or check `sessionId` on `/generate` or `/verify`.
+            Omitted from responses when `false`.
 
             '
           example: false
@@ -1075,7 +1137,8 @@ components:
           format: int32
           minimum: 1
           readOnly: true
-          description: Server-managed version for optimistic concurrency and audit.
+          description: Server-managed version, incremented on every update. Omitted
+            from responses while `0`.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'
       x-businessRules:
@@ -1097,24 +1160,20 @@ components:
           maxLength: 512
           description: "Identifier of the subject requesting the OTP.\n\nTwo accepted\
             \ formats:\n- **Bare value** (auto-detected): pass a plain email address\
-            \ or phone number.\n  `user@example.com` \u2192 treated as email type.\n\
-            \  `+919876543210` \u2192 treated as mobile type.\n- **Prefixed** `{type}:{value}`:\
-            \ explicit type declaration.\n  Supported types: `individual`, `user`,\
-            \ `mobile`, `email`.\n  Examples: `mobile:+919876543210`, `email:user@example.com`,\n\
-            \  `individual:IND-8a2c4a74`, `user:USR-a1b2c3d4`\n"
+            \ or phone number.\n  `user@example.com` \u2192 treated as email type (contains\
+            \ `@`).\n  `+919876543210` \u2192 treated as mobile type.\n- **Prefixed**\
+            \ `{type}:{value}`: explicit type declaration.\n  Supported types: `mobile`\
+            \ and `email` only; any other prefix is a `400 BadRequest`.\n  Examples:\
+            \ `mobile:+919876543210`, `email:user@example.com`\n"
         purpose:
           $ref: '#/components/schemas/OtpPurpose'
         metadata:
           type: object
           description: 'Optional caller-supplied context for the OTP.
 
-            Max 5 key-value string pairs. Passed to the audit log and `otp.generated`
-            event.
-
-            If `contextBindingRequired = true` for this purpose, the `sessionId` key
-            is mandatory
-
-            and will be bound to the OTP for verification.
+            Max 5 key-value string pairs (a non-string value is a `400`). Passed to
+            the audit log and `otp.generated` event. Not interpreted by the service;
+            `sessionId` is not bound to the OTP.
 
             '
           additionalProperties:
@@ -1181,8 +1240,8 @@ components:
           type: string
           minLength: 1
           maxLength: 128
-          description: 'Passed when `contextBindingRequired = true` for this
-            tenant+purpose. Stored with the OTP for context binding.
+          description: 'Accepted for forward compatibility but currently ignored:
+            the service performs no session binding check.
 
             '
           example: sess-abc123
@@ -1223,15 +1282,18 @@ components:
       properties:
         invalidated:
           type: boolean
-          description: '`true` if an active OTP was found and deleted.
+          description: '`true` if the referenceId was found and its OTP marked invalid
+            (whatever its previous status).
 
-            `false` if no active OTP existed (already expired, already verified, or
-            never generated).
+            `false` if no OTP record exists for the referenceId.
 
             '
           example: true
         purpose:
-          $ref: '#/components/schemas/OtpPurpose'
+          type: string
+          description: Purpose of the invalidated OTP; an empty string when `invalidated`
+            is `false`.
+          example: login
     OtpResendRequest:
       type: object
       description: 'Request payload to resend an OTP.

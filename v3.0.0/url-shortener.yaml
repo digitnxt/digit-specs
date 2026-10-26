@@ -6,7 +6,8 @@ info:
   description: |
     Shortens long URLs into compact short keys and redirects users to the original URL.
     Supports optional validity windows (validFrom / validTill) and an optional Redis or
-    in-memory cache layer for fast redirects.
+    in-memory cache layer for fast redirects of permanent (window-free) short URLs.
+    Every error response is a bare JSON array of Error objects.
     Shorten endpoint requires X-Tenant-ID and X-Client-ID headers.
 
 servers:
@@ -37,9 +38,10 @@ paths:
     post:
       summary: Create URL config
       description: |
-        Creates a new URL configuration under the calling tenant.
-        
-        Returns `409` if a config already exists — use PUT to update.
+        Creates the URL configuration for the calling tenant (one config per tenant).
+        `maxShortKeyRetries` defaults to 10 when omitted.
+
+        Returns `409` (`CONFLICT`) if a config already exists — use PUT to update.
       operationId: createURLConfig
       tags: [Config]
       parameters:
@@ -79,7 +81,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/UrlConfig'
         '400':
-          description: Validation error.
+          description: |
+            Validation error — `shortKeyLength` missing or outside 4–12, `maxShortKeyRetries`
+            outside 1–20, or an unreadable JSON body. Bean-validation failures carry Spring
+            binding codes (e.g. `NotNull.urlConfigRequest.shortKeyLength`,
+            `Max.urlConfigRequest.shortKeyLength`).
           content:
             application/json:
               schema:
@@ -95,7 +101,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '409':
-          description: Conflict. Use PUT to update
+          description: Conflict (`CONFLICT`) — a config already exists for this tenant. Use PUT to update.
           content:
             application/json:
               schema:
@@ -114,10 +120,10 @@ paths:
     put:
       summary: Update URL config
       description: |
-        Replaces an existing URL config under the calling tenant.
-        Only include fields you want to change — omitted fields retain their current values.
-        Returns `404` if no config exists — use POST to create.
-        On success, the Redis config cache for this tenant is immediately invalidated.
+        Updates the existing URL config of the calling tenant.
+        `shortKeyLength` is required on every update; `maxShortKeyRetries` retains its
+        current value when omitted. `id` and the creation audit fields never change.
+        Returns `404` (`NOT_FOUND`) if no config exists — use POST to create.
       operationId: updateURLConfig
       tags: [Config]
       parameters:
@@ -157,7 +163,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/UrlConfig'
         '400':
-          description: Validation error.
+          description: |
+            Validation error — `shortKeyLength` missing or outside 4–12, `maxShortKeyRetries`
+            outside 1–20, or an unreadable JSON body. Bean-validation failures carry Spring
+            binding codes (e.g. `NotNull.urlConfigRequest.shortKeyLength`).
           content:
             application/json:
               schema:
@@ -173,15 +182,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found, Use POST to create.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
-        '409':
-          description: Conflict — immutable field change attempted.
+          description: Not Found (`NOT_FOUND`) — no config exists for this tenant. Use POST to create.
           content:
             application/json:
               schema:
@@ -198,16 +199,16 @@ paths:
                   $ref: '#/components/schemas/Error'
     
     get:
-      summary: Get URL configs
+      summary: Get URL config
       description: |
         Returns the URL Shortener configuration for the calling tenant.
+        Returns `404` (`NOT_FOUND`) if no config exists.
       operationId: getURLConfigs
       tags: [Config]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -215,7 +216,7 @@ paths:
         - $ref: '#/components/parameters/TimeStamp'
       responses:
         '200':
-          description: URL config(s) returned
+          description: URL config returned
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -246,7 +247,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found.
+          description: Not Found (`NOT_FOUND`) — no config exists for this tenant.
           content:
             application/json:
               schema:
@@ -261,13 +262,15 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
-    
+
     delete:
       summary: Delete URL config
       description: |
-        Deletes the URL configuration under the calling tenant.
+        Deletes the URL configuration of the calling tenant.
+        Returns `404` (`NOT_FOUND`) if no config exists.
 
-        On success, the Redis config cache for this tenant is immediately invalidated.
+        Existing short URLs are not removed and keep redirecting; only new shorten
+        requests fail with `404` until a config is created again.
       operationId: deleteURLConfig
       tags: [Config]
       parameters:
@@ -317,7 +320,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found
+          description: Not Found (`NOT_FOUND`) — no config exists for this tenant.
           content:
             application/json:
               schema:
@@ -339,8 +342,14 @@ paths:
     post:
       summary: Shorten URL
       description: |
-        Creates a short key for the given URL. Returns the full short URL using the
-        configured HOST_NAME. Optionally accepts a validity window.
+        Creates a short key for the given URL and returns the full short URL
+        (configured host name + service mount path + key). The key is a random
+        `[A-Za-z0-9]` string of the tenant config's `shortKeyLength`; up to
+        `maxShortKeyRetries` candidates are tried before giving up with `500`.
+        Optionally accepts a validity window.
+
+        Checks run in this order: URL shape → validity window → tenant config lookup.
+        Requires a URL config for the calling tenant, otherwise `404`.
       operationId: shortenURL
       tags: [URL Shortener]
       parameters:
@@ -377,7 +386,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/UrlShortenResponse"
         '400':
-          description: Bad request.
+          description: |
+            Bad request. Codes:
+            - `VALIDATION_ERROR` — `url` is not a parseable URL (no scheme, bad host/port,
+              control characters or malformed %-escapes).
+            - `BAD_REQUEST` — `validTill` is not in the future, or `validFrom` is not less
+              than `validTill`.
+            - Spring binding codes (e.g. `NotBlank.urlShortenRequest.url`,
+              `Size.urlShortenRequest.url`, `Min.urlShortenRequest.validFrom`) — bean-validation
+              failures; `JsonParseException` / `JsonMappingException` — unreadable JSON body.
           content:
             application/json:
               schema:
@@ -393,7 +410,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found
+          description: Not Found (`NOT_FOUND`) — no URL config exists for this tenant.
           content:
             application/json:
               schema:
@@ -414,7 +431,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error.
+          description: |
+            Internal server error (`INTERNAL_SERVER_ERROR`) — no unique short key found
+            within `maxShortKeyRetries` attempts, or a concurrent request claimed the key.
           content:
             application/json:
               schema:
@@ -429,15 +448,19 @@ paths:
       security: []
       summary: Redirect to original URL
       description: |
-        Resolves the short key and issues a 307 Temporary Redirect to the original URL.
-        Returns 404 if the key does not exist.
+        Resolves the short key and issues a 307 Temporary Redirect to the original URL
+        (empty body; the `Location` header is the contract and carries the stored URL
+        verbatim). Returns 404 if the key does not exist.
+
+        Validity window is checked at redirect time: `400 URL_NOT_YET_ACTIVE` before
+        `validFrom`, `400 URL_EXPIRED` after `validTill` (both boundaries inclusive-valid).
+        Permanent URLs (no window) may be served from the cache.
       operationId: redirectURL
       tags: [URL Shortener]
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
         - $ref: '#/components/parameters/CorrelationIdHeader'
         - $ref: '#/components/parameters/UserAgentHeader'
-        - $ref: '#/components/parameters/UserIdHeader'
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ForwardedForHeader'
         - $ref: '#/components/parameters/ClientId'
@@ -446,13 +469,13 @@ paths:
         - name: key
           in: path
           required: true
-          description: The short key generated by the shorten endpoint
+          description: The short key generated by the shorten endpoint (`[A-Za-z0-9]`, 4–12 chars)
           schema:
             type: string
             example: aB3x
       responses:
         "307":
-          description: Temporary redirect to the original URL
+          description: Temporary redirect to the original URL (no response body)
           headers:
             X-Response-Time: { $ref: '#/components/headers/X-Response-Time' }
             X-Response-Timestamp: { $ref: '#/components/headers/X-Response-Timestamp' }
@@ -468,7 +491,9 @@ paths:
                 type: string
                 format: uri
         '400':
-          description: Bad request.
+          description: |
+            Bad request. Codes: `URL_NOT_YET_ACTIVE` — current time is before `validFrom`;
+            `URL_EXPIRED` — current time is after `validTill`.
           content:
             application/json:
               schema:
@@ -484,11 +509,13 @@ paths:
                 items:
                   $ref: '#/components/schemas/Error'
         '404':
-          description: Not Found
+          description: Not Found (`NOT_FOUND`) — no short URL with this key exists for the tenant.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too Many Requests — generation rate limit exceeded.
           headers:
@@ -590,7 +617,7 @@ components:
 
     UrlConfig:
       type: object
-      required: [shortKeyLength]
+      required: [id, shortKeyLength, maxShortKeyRetries, auditDetail]
       properties:
         id:
           type: string
@@ -626,7 +653,9 @@ components:
           example: 4
         maxShortKeyRetries:
           type: integer
-          description: Maximum count of short key retries
+          description: |
+            Maximum count of short key generation attempts. Defaults to 10 on create;
+            retains the current value when omitted on update.
           minimum: 1
           maximum: 20
           default: 10
@@ -642,7 +671,12 @@ components:
           type: string
           format: uri
           maxLength: 8192
-          description: The long URL to shorten
+          description: |
+            The long URL to shorten. Must be non-blank and parseable as a URL: a scheme is
+            required; the host may only contain valid host characters and a numeric port;
+            ASCII control characters and malformed %-escapes are rejected. Unescaped
+            spaces and other non-RFC characters in path/query/fragment are accepted.
+            Stored and redirected verbatim.
           example: https://example.com/some/very/long/path?with=query&params=here
         validFrom:
           type: integer
@@ -664,7 +698,7 @@ components:
 
     UrlShortenResponse:
       type: object
-      required: [shortUrl]
+      required: [id, shortUrl, auditDetail]
       properties:
         id:
           type: string
@@ -676,25 +710,25 @@ components:
           type: string
           format: uri
           readOnly: true
-          description: The full short URL including the configured hostname
-          example: http://localhost:8080/aB3x
+          description: |
+            The full short URL: configured host name (`url-shortener.host-name`) + service
+            mount path (context path, or `url-shortener.base-path` when bundled) + key.
+          example: http://localhost:8098/url-shortener/aB3x
         validFrom:
           type: integer
           format: int64
           minimum: 0
           maximum: 9007199254740991
-          nullable: true
           description: |
             Epoch milliseconds (UTC) when the short URL becomes active.
-            Absent if no activation delay was specified.
+            Omitted from the response (not null) if no activation delay was specified.
         validTill:
           type: integer
           format: int64
           minimum: 0
           maximum: 9007199254740991
-          nullable: true
           description: |
             Epoch milliseconds (UTC) when the short URL expires.
-            Absent if no expiry was specified.
+            Omitted from the response (not null) if no expiry was specified.
         auditDetail:
           $ref: '#/components/schemas/AuditDetail'

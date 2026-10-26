@@ -5,10 +5,29 @@ info:
 
     Supports schema definition management and master data CRUD operations.
 
+
+    The service is mounted at the context path /mdms-v2. Schema definitions live under
+    /v1/schema (POST, GET), v2 master data under /v2 (POST, PUT, GET) and the legacy
+    module/master view under /v1/mdms (GET).
+
+
+    Error handling: every error the service itself produces is rendered in the envelope
+    {"ResponseInfo":null,"Errors":[...]} (see ErrorRes). The HTTP status is 400 for all
+    validation, header, JSON parsing and unhandled errors - including unsupported media
+    types, unsupported methods and unknown paths under /mdms-v2 - except for database
+    errors: a unique-key violation is 409 (DUPLICATE_RECORD) and any other database
+    error is 500 (DB_ERROR). A request whose Accept header cannot be satisfied (for
+    example application/xml) gets a 406 with no body.
+
+
+    Bean validation (@NotNull/@Size) is not active in the service: the length limits
+    on the models are not enforced and a missing mandatory field surfaces as a 400
+    "unhandled exception" entry rather than a validation message.
+
     '
   version: 3.0.0
 servers:
-- url: /mdms/v3
+- url: /mdms-v2
 security:
 - BearerAuth: []
 tags:
@@ -16,11 +35,21 @@ tags:
   description: Operations for managing schema definitions
 - name: Master Data
   description: REST-compliant operations for managing master data
+- name: Master Data (v1)
+  description: Legacy module/master view over the same master data
 paths:
-  /schema:
+  /v1/schema:
     post:
       summary: Create a new schema definition
-      description: Creates a new schema definition for validating master data records. The schema must be a valid JSON Schema v7 definition.
+      description: 'Creates a schema definition that master data records of the same
+        code are validated against. The schema is always stored at the state-level
+        tenant (the first dot-separated segment of X-Tenant-ID, e.g. pg.citya -> pg);
+        any tenantId in the body is overwritten. The definition must contain a non-empty
+        `required` array and a non-empty `x-unique` array whose entries are a subset of
+        `required`; the x-unique fields form the composite uniqueIdentifier of each
+        record. The definition is otherwise stored as given (it is only validated as a
+        JSON Schema when data is created against it). id and auditDetails are generated
+        by the service.'
       tags:
       - Schema Definition
       operationId: createSchema
@@ -42,7 +71,7 @@ paths:
       - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '201':
-          description: Schema created successfully
+          description: Schema created successfully. The single created schema is returned in a list.
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -65,19 +94,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/SchemaDefinitionResponse'
         '400':
-          description: Bad Request
+          description: 'Bad Request. Error codes: TENANT_ID_MISSING, CLIENT_ID_MISSING
+            (header missing or blank; both may be reported together);
+            REQUIRED_ATTRIBUTE_LIST_ERR (definition has no non-empty `required` array);
+            UNIQUE_ATTRIBUTE_LIST_ERR (definition has no non-empty `x-unique` array, or
+            x-unique is not a subset of required); DUPLICATE_SCHEMA_CODE (a schema with
+            this code already exists for the state-level tenant); JsonParseException /
+            JsonMappingException / MissingJsonException (unreadable, mistyped or empty
+            body); UnsupportedMediaType (Content-Type other than application/json);
+            or an unhandled-exception entry (id = exception class, e.g. NullPointerException
+            when SchemaDefinition, code or definition is missing, JSONException when
+            definition is not an object).'
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: The database rejected the insert with a unique-key violation (DUPLICATE_RECORD).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRes'
         '429':
           description: Too many requests - rate limit exceeded
           headers:
@@ -96,14 +139,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Database error other than a unique-key violation (DB_ERROR).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
     get:
       summary: Search schema definitions
-      description: Retrieves schema definitions based on filter criteria. Returns all schemas if no filters are provided.
+      description: 'Retrieves the schema definitions of the state-level tenant derived
+        from X-Tenant-ID (pg.citya -> pg), optionally filtered to one code, paged by
+        offset/limit. Returns {"SchemaDefinitions":[]} when nothing matches.'
       tags:
       - Schema Definition
       operationId: searchSchemas
@@ -120,7 +165,24 @@ paths:
         name: code
         schema:
           type: string
-        description: Filter by schema code
+        description: Return only the schema with this exact code.
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+        description: Number of schemas to skip. Must be >= 0 (400 INVALID_OFFSET otherwise); defaults to 0.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 1000
+          default: 100
+        description: Page size. Must be between 1 and 1000 (400 INVALID_LIMIT otherwise); defaults to 100.
       responses:
         '200':
           description: List of schema definitions
@@ -146,13 +208,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/SchemaDefinitionResponse'
         '400':
-          description: Bad Request
+          description: 'Bad Request. Error codes: TENANT_ID_MISSING, CLIENT_ID_MISSING;
+            INVALID_OFFSET (offset < 0); INVALID_LIMIT (limit < 1 or > 1000); or an
+            unhandled-exception entry (MethodArgumentTypeMismatchException when offset
+            or limit is not an integer).'
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
         '401':
           description: Unauthorized
           content:
@@ -177,15 +240,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Database error (DB_ERROR).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  /data:
+                $ref: '#/components/schemas/ErrorRes'
+  /v2:
     post:
       summary: Create new master data records
-      description: Creates new master data records. Data is validated against the corresponding schema definition before creation.
+      description: 'Creates one or more master data records in a single transaction.
+        The schema is looked up once, by the schemaCode of the first record, at the
+        state-level tenant of X-Tenant-ID; every record is then validated against it
+        (JSON Schema validation of `data`, duplicate check on the composite unique
+        identifier built from the schema''s x-unique fields, and - when the schema has an
+        `x-ref-schema` array of {fieldPath, schemaCode} - a check that each referenced
+        value exists as an active record of the referenced schema in this tenant or one
+        of its parents). tenantId is overwritten from X-Tenant-ID and id, uniqueIdentifier
+        and auditDetails are generated by the service; client-supplied values for them
+        are ignored. All records are inserted only if every record passes validation.'
       tags:
       - Master Data
       operationId: createMasterData
@@ -207,7 +279,7 @@ paths:
               $ref: '#/components/schemas/MdmsRequest'
       responses:
         '201':
-          description: Master data created successfully
+          description: Master data created successfully. The created records are returned under `mdms`; totalCount, offset and limit are present but null.
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -230,19 +302,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/MdmsResponseV2'
         '400':
-          description: Validation error or bad request
+          description: 'Validation error or bad request. Error codes: TENANT_ID_MISSING,
+            CLIENT_ID_MISSING; MDMS_LIST_EMPTY (Mdms missing, null or empty);
+            SCHEMA_DEFINITION_NOT_FOUND_ERR (no schema with the first record''s schemaCode
+            for the state-level tenant); INVALID_REQUEST or INVALID_REQUEST_<KEYWORD><n>
+            (one entry per JSON Schema violation of `data`, e.g. "required key [name] not
+            found"); MASTER_DATA_VALIDATION_ERR (`data` is not a JSON object or the schema
+            could not be applied); UNIQUE_IDENTIFIER_EMPTY_ERR (a field listed in x-unique
+            is missing or empty); DUPLICATE_RECORD (an active record with the same unique
+            identifier exists); DUPLICATE_INACTIVE_RECORD (an inactive one exists - the
+            message carries its id for reactivation via PUT); REFERENCE_VALIDATION_ERR
+            (x-ref-schema value missing, or not a string, number or list of those);
+            JsonParseException / JsonMappingException / MissingJsonException (unreadable
+            or mistyped body, e.g. Mdms given as an object instead of an array);
+            UnsupportedMediaType.'
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: The database rejected the insert with a unique-key violation (DUPLICATE_RECORD), e.g. a concurrent insert of the same unique identifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRes'
         '429':
           description: Too many requests - rate limit exceeded
           headers:
@@ -261,14 +350,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Database error other than a unique-key violation (DB_ERROR).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
     put:
       summary: Update existing master data records
-      description: Updates existing master data records. Data is validated against the corresponding schema definition before update.
+      description: 'Updates one or more existing master data records in a single
+        transaction. Each record must carry the id of an existing record of this tenant
+        and an auditDetails object (it may be empty; createdBy/createdTime are taken from
+        it, lastModifiedBy/lastModifiedTime are set by the service). The schema is looked
+        up per record by its schemaCode; `data` is validated against it and replaces the
+        stored data in full; isActive is updated as sent (inactive records can be
+        reactivated this way). The fields listed in the schema''s x-unique must not change
+        their values. tenantId is overwritten from X-Tenant-ID. The response echoes the
+        request records (uniqueIdentifier is whatever the client sent, typically null)
+        with the refreshed auditDetails.'
       tags:
       - Master Data
       operationId: updateMasterData
@@ -290,7 +388,7 @@ paths:
               $ref: '#/components/schemas/MdmsRequest'
       responses:
         '200':
-          description: Master data updated successfully
+          description: Master data updated successfully. The updated records are returned under `mdms`; totalCount, offset and limit are present but null.
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -313,25 +411,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/MdmsResponseV2'
         '400':
-          description: Validation error or bad request
+          description: 'Validation error or bad request. Error codes: TENANT_ID_MISSING,
+            CLIENT_ID_MISSING; MDMS_LIST_EMPTY; SCHEMA_DEFINITION_NOT_FOUND_ERR;
+            MASTER_DATA_ID_ABSENT_ERR (record without id); MASTER_DATA_NOT_FOUND (no
+            record with that id in this tenant - note 400, not 404); UNIQUE_KEY_UPDATE_ERR
+            (a value of an x-unique field differs from the stored record);
+            AUDIT_DETAILS_ABSENT_ERR (auditDetails missing); INVALID_REQUEST /
+            INVALID_REQUEST_<KEYWORD><n> (JSON Schema violations of `data`);
+            MASTER_DATA_VALIDATION_ERR; UNIQUE_IDENTIFIER_EMPTY_ERR;
+            REFERENCE_VALIDATION_ERR; JsonParseException / JsonMappingException /
+            MissingJsonException; UnsupportedMediaType.'
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '404':
-          description: Record not found
+        '409':
+          description: The database rejected the update with a unique-key violation (DUPLICATE_RECORD).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
         '429':
           description: Too many requests - rate limit exceeded
           headers:
@@ -350,14 +455,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Database error other than a unique-key violation (DB_ERROR).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
     get:
       summary: Search master data records
-      description: Searches master data records based on filter criteria. Supports pagination and filtering by schema code, identifiers, and active status.
+      description: 'Searches master data records of the X-Tenant-ID tenant with tenant
+        fallback: the search is run for the tenant, then for each parent obtained by
+        dropping the last dot-separated segment (pg.citya.zone -> pg.citya -> pg), and the
+        first tenant that has at least one matching row (regardless of the page) supplies
+        the result. Results are ordered by createdTime descending, then id. Any query
+        parameter other than the six listed below is treated as a filter on `data`: the
+        name is a dot-separated path into the record data (e.g. meta.z) and the value must
+        match exactly (compared as string, and also as number or boolean when it parses as
+        one; nested objects and array elements are searched), or, when the value starts
+        with "regex:", the rest is a case-insensitive POSIX regular expression applied to
+        the text at that path. Only the first value of a repeated filter parameter is used.
+        Results are cached per criteria and invalidated by create/update.'
       tags:
       - Master Data
       operationId: searchMasterData
@@ -374,14 +490,14 @@ paths:
         name: schemaCode
         schema:
           type: string
-        description: Filter by schema code
+        description: Return only records of this schema code. When omitted, records of every schema are searched.
       - in: query
         name: uniqueIdentifiers
         schema:
           type: array
           items:
             type: string
-        description: Filter by unique identifiers
+        description: Return only records whose composite uniqueIdentifier is one of these. May be repeated and/or comma-separated.
         style: form
         explode: true
       - in: query
@@ -390,29 +506,37 @@ paths:
           type: array
           items:
             type: string
-        description: Filter by database entity IDs
+        description: Return only records whose id is one of these. May be repeated and/or comma-separated.
         style: form
         explode: true
       - in: query
         name: isActive
         schema:
           type: boolean
-        description: Filter by active status
+        description: Return only active (true) or inactive (false) records; both when omitted. Parsed case-insensitively; any other value is a 400.
       - in: query
         name: offset
         schema:
           type: integer
           format: int32
-        description: Offset for pagination
+          minimum: 0
+          default: 0
+        description: Number of records to skip. Must be >= 0 (400 INVALID_OFFSET otherwise); defaults to 0.
       - in: query
         name: limit
         schema:
           type: integer
           format: int32
-        description: Limit for pagination
+          minimum: 1
+          maximum: 1000
+          default: 100
+        description: Page size. Must be between 1 and 1000 (400 INVALID_LIMIT otherwise); defaults to 100.
       responses:
         '200':
-          description: List of matching master data
+          description: 'The matching page under `mdms`, with totalCount (all rows matching
+            the criteria in the tenant that answered, regardless of paging) and the offset
+            and limit actually applied. {"mdms":[],"totalCount":0,"offset":..,"limit":..}
+            when nothing matches in the tenant or any parent.'
           headers:
             X-Response-Time:
               $ref: '#/components/headers/X-Response-Time'
@@ -435,13 +559,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/MdmsResponseV2'
         '400':
-          description: Bad Request
+          description: 'Bad Request. Error codes: TENANT_ID_MISSING, CLIENT_ID_MISSING;
+            INVALID_OFFSET (offset < 0); INVALID_LIMIT (limit < 1 or > 1000); or an
+            unhandled-exception entry (MethodArgumentTypeMismatchException when offset or
+            limit is not an integer or isActive is not a boolean).'
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorRes'
         '401':
           description: Unauthorized
           content:
@@ -466,11 +591,129 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '500':
-          description: Internal server error
+          description: Database error (DB_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRes'
+  /v1/mdms:
+    get:
+      summary: Search master data in the legacy module/master layout
+      description: 'Returns the `data` of active master data records grouped by module
+        and master, where a schema code "common.Department" is module "common" and master
+        "Department". Modules and masters are paired positionally: the i-th moduleName
+        goes with the i-th masterName and masterFilter. The search runs at the state-level
+        tenant of X-Tenant-ID and then falls back per master to the nearest tenant in the
+        hierarchy that has data for it. Both moduleName and masterName must be given; a
+        request without them fails with a 400 unhandled-exception entry
+        (NullPointerException). Results are cached per criteria.'
+      tags:
+      - Master Data (v1)
+      operationId: searchMasterDataV1
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      - in: query
+        name: moduleName
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+        description: Module name(s), i.e. the part of the schema code before the dot. Repeat once per module/master pair.
+        style: form
+        explode: true
+      - in: query
+        name: masterName
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+        description: Master name(s), i.e. the part of the schema code after the dot, paired positionally with moduleName.
+        style: form
+        explode: true
+      - in: query
+        name: masterFilter
+        schema:
+          type: array
+          items:
+            type: string
+        description: Optional JsonPath filter expression per pair (e.g. $[?(@.rank==5)]), applied to the records of that master.
+        style: form
+        explode: true
+      - in: query
+        name: uniqueIdentifier
+        schema:
+          type: string
+        description: Return only the record with this composite unique identifier.
+      responses:
+        '200':
+          description: Master data grouped as MdmsRes.<moduleName>.<masterName> = array of record `data` objects.
+          headers:
+            X-Response-Time:
+              $ref: '#/components/headers/X-Response-Time'
+            X-Response-Timestamp:
+              $ref: '#/components/headers/X-Response-Timestamp'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+            X-Correlation-ID:
+              $ref: '#/components/headers/X-Correlation-ID'
+            X-Tenant-ID:
+              $ref: '#/components/headers/X-Tenant-ID'
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MdmsResponse'
+        '400':
+          description: 'Bad Request. Error codes: TENANT_ID_MISSING, CLIENT_ID_MISSING; or
+            an unhandled-exception entry (NullPointerException when moduleName/masterName
+            are absent).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRes'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying.
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+            X-Rate-Limit-Remaining:
+              $ref: '#/components/headers/X-Rate-Limit-Remaining'
+            X-Rate-Limit-Reset:
+              $ref: '#/components/headers/X-Rate-Limit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Database error (DB_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRes'
 components:
   securitySchemes:
     BearerAuth:
@@ -522,33 +765,26 @@ components:
   schemas:
     SchemaDefinition:
       type: object
-      description: Schema definition for master data validation
+      description: Schema definition for master data validation. Unknown properties in the request are ignored; scalar values are coerced where possible (e.g. a numeric code becomes a string, "false" becomes false).
       properties:
         id:
           type: string
-          maxLength: 128
-          minLength: 2
-          description: Unique identifier (auto-generated)
+          description: UUID generated by the service; a client-supplied value is replaced.
           readOnly: true
         tenantId:
           type: string
-          maxLength: 128
-          minLength: 2
-          description: Tenant identifier (set from X-Tenant-ID header)
+          description: Always overwritten from the X-Tenant-ID header and reduced to the state-level tenant (first dot-separated segment).
         code:
           type: string
-          maxLength: 128
-          minLength: 2
-          description: Unique schema code (e.g., common-masters.PropertyType)
+          description: Schema code, unique per state-level tenant, in the form <module>.<master> (the dot is what the v1 search splits on).
           example: common-masters.PropertyType
         description:
           type: string
-          maxLength: 512
-          minLength: 2
+          nullable: true
           description: Description of the schema
         definition:
           type: object
-          description: Valid JSON Schema v7 definition
+          description: 'JSON Schema (draft-07 is what data validation loads). Must contain a non-empty `required` array and a non-empty `x-unique` array that is a subset of `required`; the x-unique fields (dot-separated paths) joined by "." form each record''s uniqueIdentifier. May contain `x-ref-schema`, an array of {fieldPath, schemaCode} objects, in which case data create/update verify that the value at fieldPath (a string, number or list of those) exists as the uniqueIdentifier of an active record of schemaCode.'
           example:
             $schema: http://json-schema.org/draft-07/schema#
             type: object
@@ -565,9 +801,13 @@ components:
         isActive:
           type: boolean
           default: true
-          description: Whether the schema is active
+          nullable: true
+          description: Whether the schema is active. Defaults to true when omitted; an explicit null is stored and echoed as null.
         auditDetails:
-          $ref: '#/components/schemas/AuditDetail'
+          allOf:
+          - $ref: '#/components/schemas/AuditDetails'
+          readOnly: true
+          description: Set by the service on create (createdBy/lastModifiedBy = X-Client-ID, times = now); a client-supplied value is replaced.
       required:
       - code
       - definition
@@ -577,59 +817,59 @@ components:
       properties:
         id:
           type: string
-          maxLength: 64
-          minLength: 2
-          description: Database entity UUID (auto-generated)
-          readOnly: true
+          description: Record UUID. Generated by the service on create (a client-supplied value is replaced); mandatory on update.
         tenantId:
           type: string
-          maxLength: 128
-          minLength: 2
-          description: Tenant identifier (set from X-Tenant-ID header)
+          description: Always overwritten from the X-Tenant-ID header (not reduced to the state level).
         schemaCode:
           type: string
-          maxLength: 128
-          minLength: 2
-          description: Schema code this data belongs to
+          description: Code of the schema this record belongs to.
           example: common-masters.PropertyType
         uniqueIdentifier:
           type: string
-          maxLength: 128
-          minLength: 1
-          description: Unique identifier for this master data record
+          nullable: true
+          description: Composite unique identifier built by the service on create from the values of the schema's x-unique fields in `data`, joined by ".". Ignored on input; on update responses it is echoed as sent (null when omitted).
         data:
           type: object
-          description: Master data JSON (validated against schema definition)
+          description: The record itself, validated against the schema definition. On update it replaces the stored data in full; the x-unique field values must stay the same.
           additionalProperties: true
         isActive:
           type: boolean
           default: true
-          description: Whether the record is active
+          nullable: true
+          description: Whether the record is active. Defaults to true when omitted; an explicit null is stored and echoed as null. An inactive record keeps its uniqueIdentifier reserved (DUPLICATE_INACTIVE_RECORD on create) and can be reactivated with PUT.
         auditDetails:
-          $ref: '#/components/schemas/AuditDetail'
+          allOf:
+          - $ref: '#/components/schemas/AuditDetails'
+          description: On create it is generated by the service (createdBy/lastModifiedBy = X-Client-ID, times = now) and any client value is ignored. On update it is mandatory (AUDIT_DETAILS_ABSENT_ERR when absent; {} is accepted); createdBy/createdTime are kept from it and lastModifiedBy/lastModifiedTime are set by the service.
       required:
       - schemaCode
       - data
-    Workflow:
+    AuditDetails:
       type: object
+      description: Audit fields as the service names them (createdBy/lastModifiedBy/createdTime/lastModifiedTime, epoch milliseconds).
       properties:
-        action:
+        createdBy:
           type: string
-          description: Action of the workflow to be performed on the request
-        comment:
+          nullable: true
+          description: X-Client-ID of the creating request.
+        lastModifiedBy:
           type: string
-          description: Comment for the workflow action to be performed
-        assignees:
-          type: array
-          items:
-            type: string
-          description: UUIDs of the users in the system to assign workflow to specific
-            users
-      required:
-      - action
+          nullable: true
+          description: X-Client-ID of the last creating or updating request.
+        createdTime:
+          type: integer
+          format: int64
+          nullable: true
+          description: Creation time in epoch milliseconds.
+        lastModifiedTime:
+          type: integer
+          format: int64
+          nullable: true
+          description: Last modification time in epoch milliseconds.
     SchemaDefinitionRequest:
       type: object
-      description: Request wrapper for schema definition
+      description: Request wrapper for schema definition. Other top-level properties (e.g. RequestInfo) are ignored.
       properties:
         SchemaDefinition:
           $ref: '#/components/schemas/SchemaDefinition'
@@ -643,92 +883,122 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SchemaDefinition'
-    SchemaDefCriteria:
-      type: object
-      properties:
-        tenantId:
-          type: string
-          maxLength: 100
-          minLength: 1
-          description: Unique id for a tenant
-        codes:
-          type: array
-          description: Search by schema unique identifiers
-          items:
-            type: string
-    SchemaDefSearchRequest:
-      type: object
-      properties:
-        SchemaDefCriteria:
-          $ref: '#/components/schemas/SchemaDefCriteria'
     MdmsRequest:
       type: object
-      description: Request wrapper for master data operations
+      description: Request wrapper for master data create and update. Must be a JSON array under `Mdms` with at least one record (MDMS_LIST_EMPTY otherwise). No Workflow is processed; any other top-level property is ignored.
       properties:
         Mdms:
           type: array
+          minItems: 1
           description: Array of master data records
           items:
             $ref: '#/components/schemas/Mdms'
-        Workflow:
-          $ref: '#/components/schemas/Workflow'
       required:
       - Mdms
-    MdmsCriteriaV2:
-      type: object
-      required:
-      - tenantId
-      properties:
-        tenantId:
-          type: string
-          maxLength: 100
-          minLength: 1
-          description: Tenant ID against which master data needs to be searched
-        schemaCode:
-          type: string
-          description: Schema code for which master data needs to be searched
-        uniqueIdentifiers:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-          description: Unique identifiers of the master data to be fetched
-        ids:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-          description: Database entity IDs to search master data
-        filters:
-          type: object
-          additionalProperties:
-            type: string
-          description: Filter map to filter master data (custom field filters)
-        isActive:
-          type: boolean
-          description: Search master data whether it is enabled or disabled
-        offset:
-          type: integer
-          format: int32
-          description: Offset from which data should be fetched
-        limit:
-          type: integer
-          format: int32
-          description: Number of records to be fetched in search response
-    MdmsCriteriaReqV2:
-      type: object
-      description: V2 search request wrapper
-      properties:
-        MdmsCriteria:
-          $ref: '#/components/schemas/MdmsCriteriaV2'
     MdmsResponseV2:
       type: object
-      description: V2 response wrapper for master data
+      description: V2 response wrapper for master data. All four properties are always present; totalCount, offset and limit are null on create and update responses and populated on search responses.
       properties:
         mdms:
           type: array
           items:
             $ref: '#/components/schemas/Mdms'
+        totalCount:
+          type: integer
+          format: int64
+          nullable: true
+          description: Search only - number of records matching the criteria in the answering tenant, regardless of offset/limit.
+        offset:
+          type: integer
+          format: int32
+          nullable: true
+          description: Search only - the offset actually applied (the request value or the default 0).
+        limit:
+          type: integer
+          format: int32
+          nullable: true
+          description: Search only - the limit actually applied (the request value or the default 100).
+    MdmsResponse:
+      type: object
+      description: Legacy v1 response - record `data` objects grouped by module name and then master name.
+      properties:
+        MdmsRes:
+          type: object
+          additionalProperties:
+            type: object
+            description: Masters of one module, keyed by master name.
+            additionalProperties:
+              type: array
+              description: The `data` of each matching active record.
+              items:
+                type: object
+                additionalProperties: true
+      example:
+        MdmsRes:
+          common:
+            Department:
+            - code: D1
+              name: Engineering
+    ErrorRes:
+      type: object
+      description: 'Error envelope produced by the service for every error it renders.
+        ResponseInfo is always null. Three layouts of entry occur: validation and business
+        errors carry the error code in `code` and the text in `message` (id null);
+        database errors from the 409/500 handler carry the code (DUPLICATE_RECORD, DB_ERROR)
+        in `id` and the text in `code` (message null); unhandled errors carry the exception
+        class name in `id`, "An unhandled exception occurred on the server" in `code` and the
+        exception message in `message`. A missing query parameter is reported with an empty
+        `code` and the parameter name in `params`.'
+      properties:
+        ResponseInfo:
+          type: object
+          nullable: true
+          description: Always null.
+        Errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorEntry'
+      required:
+      - Errors
+      example:
+        ResponseInfo: null
+        Errors:
+        - id: null
+          parentId: null
+          code: DUPLICATE_SCHEMA_CODE
+          message: Schema code already exists
+          description: null
+          params: null
+    ErrorEntry:
+      type: object
+      description: One entry of the error envelope. All six properties are always serialised, null when unset.
+      properties:
+        id:
+          type: string
+          nullable: true
+          description: Null for validation errors; the error code for database errors; the exception class name for unhandled errors.
+        parentId:
+          type: string
+          nullable: true
+          description: Always null.
+        code:
+          type: string
+          nullable: true
+          description: The error code for validation errors; the error text for database errors; "An unhandled exception occurred on the server" for unhandled errors.
+        message:
+          type: string
+          nullable: true
+          description: The error text for validation errors; the exception message for unhandled errors; null for database errors.
+        description:
+          type: string
+          nullable: true
+          description: Always null (empty string when tracer.errors.provideExceptionInDetails is on).
+        params:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Only set for a missing request parameter (its name).
     Error:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
     AuditDetail:

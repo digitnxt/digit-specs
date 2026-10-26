@@ -21,16 +21,19 @@ paths:
       summary: API endpoint to search boundary entities.
       operationId: searchBoundaries
       description: 'Provides a list of boundary entities based on the provided search
-        criteria.
+        criteria. At least one of `codes` or the `latitude`+`longitude` pair must be
+        supplied; when both are given the codes narrow the spatial matches.
 
         '
       parameters:
       - name: codes
         in: query
-        description: unique list of boundary codes.
+        description: Boundary codes to look up. Repeat the parameter for each code
+          (`codes=A&codes=B`); a comma-joined value is treated as a single code.
+          Required unless `latitude` and `longitude` are given.
         style: form
-        explode: false
-        required: true
+        explode: true
+        required: false
         schema:
           type: array
           minItems: 1
@@ -39,18 +42,41 @@ paths:
             minLength: 1
             maxLength: 64
             format: varchar
+      - name: latitude
+        in: query
+        description: WGS84 latitude (-90..90). Must be sent together with `longitude`;
+          returns the boundaries whose geometry contains the point.
+        required: false
+        schema:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+      - name: longitude
+        in: query
+        description: WGS84 longitude (-180..180). Must be sent together with `latitude`.
+        required: false
+        schema:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
       - name: limit
         in: query
-        description: Maximum number of results to return
+        description: Maximum number of results to return. Must be at least 1; a
+          non-integer value is rejected with 400.
         required: false
         schema:
           type: integer
+          minimum: 1
       - name: offset
         in: query
-        description: Number of results to skip
+        description: Number of results to skip. Must be at least 0; a non-integer
+          value is rejected with 400.
         required: false
         schema:
           type: integer
+          minimum: 0
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
@@ -84,7 +110,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/BoundaryResponse'
         '400':
-          description: Invalid input.
+          description: Invalid input (code BAD_REQUEST), or the search itself failed
+            (code INTERNAL_SERVER_ERROR). Database failures are reported as 500.
           content:
             '*/*':
               schema:
@@ -139,6 +166,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -218,7 +246,8 @@ paths:
       - Boundary Entities
       summary: API endpoint to update Boundary.
       operationId: updateBoundary
-      description: 'Provides functionality to update boundary data.
+      description: 'Provides functionality to update boundary data. A malformed
+        (non-UUID) id is rejected with 400 before lookup.
 
         '
       parameters:
@@ -233,6 +262,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -291,6 +321,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '409':
+          description: Another boundary in the tenant already uses the new code.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -326,6 +364,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -410,17 +449,19 @@ paths:
       summary: API endpoint to search boundary hierarchy.
       operationId: searchBoundaryHierarchy
       description: 'Provides boundary type hierarchy based on the provided search
-        criteria.
+        criteria. When no hierarchy matches, `hierarchy` is `null` rather than an
+        empty array.
 
         '
       parameters:
       - name: hierarchyType
         in: query
-        description: Search by hierarchy type.
-        required: true
+        description: Filter by hierarchy type. When omitted, every hierarchy of the
+          tenant is returned.
+        required: false
         schema:
           minLength: 1
-          maxLength: 256
+          maxLength: 64
           type: string
           format: varchar
       - $ref: '#/components/parameters/RequestIdHeader'
@@ -456,7 +497,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/BoundaryHierarchyResponse'
         '400':
-          description: Invalid input.
+          description: Invalid input (code BAD_REQUEST), or the search itself failed
+            (code INTERNAL_SERVER_ERROR).
           content:
             '*/*':
               schema:
@@ -498,7 +540,9 @@ paths:
       - Hierarchy Definition
       summary: API endpoint to update boundary hierarchy.
       operationId: updateBoundaryHierarchy
-      description: 'Updates an existing boundary type hierarchy definition.
+      description: 'Updates an existing boundary type hierarchy definition. The
+        `hierarchyType` in the body is ignored: the stored value is kept. A malformed
+        (non-UUID) id is rejected with 400 before lookup.
 
         '
       parameters:
@@ -513,6 +557,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -571,6 +616,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict with an existing hierarchy definition.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -606,6 +659,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -699,16 +753,18 @@ paths:
       summary: API endpoint to search linked boundaries.
       operationId: searchBoundaryRelationships
       description: 'Provides functionality to search linked boundaries based on the
-        provided search criteria
+        provided search criteria. `hierarchyType` is mandatory. When no relationship
+        matches, `tenantBoundary[0].boundary` is `null` rather than an empty array.
 
         '
       parameters:
       - name: hierarchyType
         in: query
-        description: Type Of the BoundaryType Like REVENUE, ADMIN
+        description: Type Of the BoundaryType Like REVENUE, ADMIN. Required; omitting it is a 400.
+        required: true
         schema:
           minLength: 1
-          maxLength: 128
+          maxLength: 64
           type: string
           format: varchar
       - name: boundaryType
@@ -721,9 +777,10 @@ paths:
           format: varchar
       - name: codes
         in: query
-        description: unique List of boundary codes.
+        description: Boundary codes to filter by. Repeat the parameter for each code
+          (`codes=A&codes=B`); a comma-joined value is treated as a single code.
         style: form
-        explode: false
+        explode: true
         schema:
           type: array
           items:
@@ -736,30 +793,54 @@ paths:
           type: string
       - name: includeChildren
         in: query
-        description: boolean flag to inform the service if children need to be part
-          of search.
+        description: Include each matched boundary's descendants. Only the exact value
+          `true` enables it; any other value (`1`, `TRUE`, `yes`) is treated as false.
         required: false
         schema:
           type: boolean
       - name: includeParents
         in: query
-        description: boolean flag to inform the service if parents need to be part
-          of search.
+        description: Include each matched boundary's ancestors. Only the exact value
+          `true` enables it; any other value is treated as false.
         required: false
         schema:
           type: boolean
+      - name: latitude
+        in: query
+        description: WGS84 latitude (-90..90). Must be sent together with `longitude`;
+          restricts the search to the boundaries whose geometry contains the point.
+          When `codes` is also given, only codes that contain the point are kept.
+        required: false
+        schema:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+      - name: longitude
+        in: query
+        description: WGS84 longitude (-180..180). Must be sent together with `latitude`.
+        required: false
+        schema:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
       - name: limit
         in: query
-        description: Maximum number of results to return
+        description: Maximum number of results to return. Must be at least 1 when
+          numeric; a non-integer value is silently ignored.
         required: false
         schema:
           type: integer
+          minimum: 1
       - name: offset
         in: query
-        description: Number of results to skip
+        description: Number of results to skip. Must be at least 0 when numeric; a
+          non-integer value is silently ignored.
         required: false
         schema:
           type: integer
+          minimum: 0
       - $ref: '#/components/parameters/RequestIdHeader'
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
@@ -793,7 +874,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/BoundarySearchResponse'
         '400':
-          description: Invalid input.
+          description: Invalid input or missing `hierarchyType` (code BAD_REQUEST), or
+            the search itself failed (code INTERNAL_SERVER_ERROR).
           content:
             '*/*':
               schema:
@@ -829,6 +911,64 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+  /relationship/_bulk:
+    post:
+      tags:
+      - Boundary Relationships
+      summary: Create many boundary relationships of one level of one hierarchy.
+      operationId: createBoundaryRelationshipsBulk
+      description: 'Creates all relationships in the request atomically. Every entry must share
+        the same hierarchyType and boundaryType (one level per request); parents must already
+        exist. Validation is all-or-nothing: a 4xx means nothing was created.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/RequestIdHeader'
+      - $ref: '#/components/parameters/CorrelationIdHeader'
+      - $ref: '#/components/parameters/UserAgentHeader'
+      - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
+      - $ref: '#/components/parameters/ForwardedForHeader'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/ClientSecret'
+      - $ref: '#/components/parameters/TimeStamp'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoundaryRelationshipBulkRequest'
+      responses:
+        '201':
+          description: All relationships created.
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BoundaryRelationshipResponse'
+        '400':
+          description: Invalid input, mixed hierarchyType/boundaryType, wrong parent level, or batch too large.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '404':
+          description: Hierarchy, a boundary code, or a parent relationship does not exist (codes named in the message).
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
+        '409':
+          description: A code repeats in the request or already has a relationship in this hierarchy (codes named in the message).
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
   /relationship/{id}:
     put:
       tags:
@@ -836,6 +976,8 @@ paths:
       summary: API endpoint to update relationships between boundaries.
       operationId: updateBoundaryRelationship
       description: 'Provides functionality to update relationships between boundaries.
+        The `code` in the body is ignored: the stored code is kept. A malformed
+        (non-UUID) id is rejected with 400 before lookup.
 
         '
       parameters:
@@ -850,6 +992,7 @@ paths:
       - $ref: '#/components/parameters/CorrelationIdHeader'
       - $ref: '#/components/parameters/UserAgentHeader'
       - $ref: '#/components/parameters/TenantIdHeader'
+      - $ref: '#/components/parameters/UserIdHeader'
       - $ref: '#/components/parameters/ForwardedForHeader'
       - $ref: '#/components/parameters/ClientId'
       - $ref: '#/components/parameters/ClientSecret'
@@ -908,6 +1051,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict with an existing relationship.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Error'
         '429':
           description: Too many requests.
           headers:
@@ -942,6 +1093,8 @@ components:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserAgentHeader
     TenantIdHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/TenantIdHeader
+    UserIdHeader:
+      $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/UserIdHeader
     ForwardedForHeader:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/parameters/ForwardedForHeader
     ClientId:
@@ -972,21 +1125,28 @@ components:
       $ref: https://raw.githubusercontent.com/digitnxt/digit-specs/refs/heads/main/v3.0.0/common.yaml#/components/schemas/Error
     Geometry:
       type: object
+      description: GeoJSON geometry. `type` is validated against the GeoJSON set below
+        and `coordinates` must have the nesting that type requires (Point `[x, y]`,
+        Polygon `[[[x, y], ...]]`, and so on). An explicit `null` geometry is rejected;
+        omitting the field is allowed.
+      required:
+      - type
+      - coordinates
       properties:
         type:
           type: string
           enum:
-          - Polygon
           - Point
+          - LineString
+          - Polygon
+          - MultiPoint
+          - MultiLineString
           - MultiPolygon
+          - GeometryCollection
         coordinates:
           type: array
-          items:
-            type: array
-            items:
-              type: array
-              items:
-                type: number
+          description: Coordinate array whose nesting depends on `type`.
+          items: {}
     Boundary:
       required:
       - code
@@ -996,6 +1156,10 @@ components:
           type: string
           readOnly: true
           description: read-only db entity uuid.
+        tenantId:
+          type: string
+          readOnly: true
+          description: Tenant the boundary belongs to; taken from X-Tenant-ID, any value sent in the body is ignored.
         code:
           type: string
           minLength: 1
@@ -1029,7 +1193,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EnrichedBoundary'
-          description: children boundaries of the current boundary
+          description: children boundaries of the current boundary; omitted when empty
         auditDetails:
           $ref: '#/components/schemas/AuditDetail'
     BoundaryRelation:
@@ -1043,6 +1207,10 @@ components:
           type: string
           readOnly: true
           description: read-only db entity uuid.
+        tenantId:
+          type: string
+          readOnly: true
+          description: Tenant the relationship belongs to; taken from X-Tenant-ID, any value sent in the body is ignored.
         code:
           type: string
           minLength: 1
@@ -1061,10 +1229,10 @@ components:
           description: Boundary type from master data.
         parent:
           type: string
-          description: Parent boundary code.
+          description: Parent boundary code. Always present in responses; empty string for a root boundary.
         ancestralMaterializedPath:
           type: string
-          description: Materialized path representing the ancestral hierarchy
+          description: Materialized path representing the ancestral hierarchy. Always present in responses; empty string for a root boundary.
         requestId:
           type: string
           description: Request ID for tracking
@@ -1073,22 +1241,38 @@ components:
     HierarchyRelation:
       type: object
       properties:
+        tenantId:
+          type: string
+          description: Tenant the relationships belong to
         hierarchyType:
           type: string
           description: Hierarchy type from master data
         boundary:
           type: array
+          nullable: true
           items:
             $ref: '#/components/schemas/EnrichedBoundary'
-          description: Root boundaries in the hierarchy
+          description: Root boundaries in the hierarchy; `null` when nothing matched
     BoundaryRelationshipRequest:
       type: object
+      description: Unknown properties are ignored.
       required:
       - relationship
-      additionalProperties: false
       properties:
         relationship:
           $ref: '#/components/schemas/BoundaryRelation'
+    BoundaryRelationshipBulkRequest:
+      type: object
+      description: Unknown properties are ignored.
+      required:
+      - relationships
+      properties:
+        relationships:
+          type: array
+          minItems: 1
+          description: All entries must share hierarchyType and boundaryType.
+          items:
+            $ref: '#/components/schemas/BoundaryRelation'
     BoundaryRelationshipResponse:
       type: object
       properties:
@@ -1129,6 +1313,8 @@ components:
       properties:
         hierarchy:
           type: array
+          nullable: true
+          description: Matching hierarchy definitions; `null` when nothing matched
           items:
             $ref: '#/components/schemas/BoundaryHierarchyDefinition'
     BoundaryHierarchyDefinition:
@@ -1140,6 +1326,10 @@ components:
         id:
           type: string
           description: UUID of the hierarchy definition
+        tenantId:
+          type: string
+          readOnly: true
+          description: Tenant the hierarchy belongs to; taken from X-Tenant-ID, any value sent in the body is ignored.
         hierarchyType:
           type: string
           minLength: 1
@@ -1157,17 +1347,17 @@ components:
           $ref: '#/components/schemas/AuditDetail'
     BoundaryHierarchyRequest:
       type: object
+      description: Unknown properties are ignored.
       required:
       - hierarchy
-      additionalProperties: false
       properties:
         hierarchy:
           $ref: '#/components/schemas/BoundaryHierarchyDefinition'
     BoundaryRequest:
       type: object
+      description: Unknown properties are ignored.
       required:
       - boundary
-      additionalProperties: false
       properties:
         boundary:
           type: array
